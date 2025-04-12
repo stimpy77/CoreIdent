@@ -13,43 +13,44 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Core Package Structure & Setup
 
 *   **Component:** `CoreIdent.Core` NuGet Package Project
-    - [ ] Create initial `.csproj` file targeting .NET 9/10+.
+    - [x] Create initial `.csproj` file targeting .NET 9/10+.
         *   *Guidance:* Define basic metadata (PackageId, Version, Authors, Description, License).
-    - [ ] Define core namespace (e.g., `CoreIdent`).
+    - [x] Define core namespace (e.g., `CoreIdent`).
 *   **Component:** Configuration (`CoreIdentOptions`)
-    - [ ] Define `CoreIdentOptions` class.
+    - [x] Define `CoreIdentOptions` class.
         *   *Guidance:* Include properties for
 	        * `Issuer`, 
 	        * `Audience`, 
 	        * `SigningKeySecret` (for symmetric initially), 
 	        * `AccessTokenLifetime`, 
 	        * `RefreshTokenLifetime`. Use `TimeSpan` for lifetimes.
-    - [ ] Implement validation for `CoreIdentOptions` 
+    - [x] Implement validation for `CoreIdentOptions` 
           (e.g., using `IValidateOptions<CoreIdentOptions>`).
         *   *Guidance:* Ensure required fields like Issuer, Audience, SigningKeySecret are provided. Check lifetime values.
 *   **Component:** Dependency Injection Setup
-    - [ ] Create `IServiceCollection` extension method: 
+    - [x] Create `IServiceCollection` extension method: 
           `AddCoreIdent(Action<CoreIdentOptions> configureOptions)`.
         *   *Guidance:* 
-	        * Register 
-		        * `CoreIdentOptions`, 
-		        * core services (`ITokenService`, `IUserStore`, `IPasswordHasher`), 
-		        * and necessary ASP.NET Core services. 
-			* Validate options during setup.
-    - [ ] Create `IApplicationBuilder` or `WebApplication` extension method 
-          for endpoint mapping (e.g., `MapCoreIdentEndpoints()`).
-        *   *Guidance:* Map the core Minimal API endpoints defined below.
+            * Register 
+                * `CoreIdentOptions`, 
+                * core services (`ITokenService`, `IUserStore`, `IPasswordHasher`), 
+                * and necessary ASP.NET Core services. 
+            * Validate options during setup.
+    - [x] Create `IEndpointRouteBuilder` extension method for endpoint mapping (e.g., `MapCoreIdentEndpoints()`).
+        *   *Guidance:* Map the core Minimal API endpoints defined below (`/register`, `/login`, `/token/refresh`).
 *   **Test Case:**
-    - [ ] Verify `AddCoreIdent` successfully registers required services in the DI container.
-    - [ ] Verify `AddCoreIdent` throws an exception if essential configuration is missing.
-    - [ ] Verify `MapCoreIdentEndpoints` correctly maps expected HTTP routes.
+    - [x] Verify `AddCoreIdent` successfully registers required services in the DI container.
+    - [x] Verify `AddCoreIdent` throws an exception if essential configuration is missing.
+    - [x] Verify `MapCoreIdentEndpoints` correctly maps expected HTTP routes.
+        - [*Note:* Requires integration testing setup (e.g., WebApplicationFactory) with an ASP.NET Core host.]
+    - [*Note:* Test suite refactored to use Shouldly; build errors and warnings resolved.]
 
 ---
 
 ### Feature: User Registration
 
 *   **Component:** Registration Endpoint (`POST /register`)
-    - [ ] Implement Minimal API endpoint for user registration.
+    - [x] Implement Minimal API endpoint for user registration.
         *   *Guidance:* Accepts DTO (e.g., `RegisterRequest { Email, Password }`). Validate input (e.g., email format, password complexity minimums).
     - [ ] Integrate with `IPasswordHasher` to hash the password.
     - [ ] Integrate with `IUserStore` to create the user.
@@ -61,19 +62,19 @@ This document provides a detailed breakdown of tasks, components, features, test
           using `Microsoft.AspNetCore.Identity.PasswordHasher<TUser>`.
         *   *Guidance:* Configure appropriate compatibility mode and iteration count. Register this as the default implementation.
 *   **Component:** User Storage (`IUserStore`, `InMemoryUserStore`)
-    - [ ] Define `IUserStore` interface 
-          (methods: `CreateUserAsync`, `FindUserByIdAsync`, `FindUserByUsernameAsync`). 
-          Define a basic `CoreIdentUser` model (Id, Username, HashedPassword).
-    - [ ] Implement `InMemoryUserStore`.
-        *   *Guidance:* Use thread-safe collections (e.g., `ConcurrentDictionary`) to store users in memory. Register this as the default store for Phase 1.
+    - [x] Define `IUserStore` interface 
+          (methods: `CreateUserAsync`, `FindUserByIdAsync`, `FindUserByUsernameAsync`, `UpdateUserAsync`, `DeleteUserAsync`). 
+          Define `StoreResult` enum/class (Success, Failure, Conflict).
+    - [x] Implement `InMemoryUserStore`.
+        *   *Guidance:* Use thread-safe collections (e.g., `ConcurrentDictionary`) to store users in memory. Implement username normalization (e.g., `ToUpperInvariant`). Register this as the default store for Phase 1.
 *   **Test Case (Unit):**
-    - [ ] `DefaultPasswordHasher` correctly hashes and verifies passwords.
-    - [ ] `InMemoryUserStore` correctly creates and retrieves users. 
+    - [x] `DefaultPasswordHasher` correctly hashes and verifies passwords.
+    - [x] `InMemoryUserStore` correctly creates and retrieves users. 
           Handles non-existent users. Prevents duplicate usernames.
 *   **Test Case (Integration):**
-    - [ ] `POST /register` with valid data creates a user and returns 201.
-    - [ ] `POST /register` with an existing email returns 409.
-    - [ ] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
+    - [X] `POST /register` with valid data creates a user and returns 201.
+    - [X] `POST /register` with an existing email returns 409.
+    - [X] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
 
 ---
 
@@ -242,7 +243,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Test Case (Integration):**
     - [ ] Refresh token flow works correctly with EF Core persistence.
     - [ ] Using a refresh token successfully invalidates it and issues a new one (rotation).
-    - [ ] Attempting to reuse a rotated refresh token fails.
+    - [ ] Attempting to use a refresh token twice fails.
     - [ ] Refresh tokens expire correctly based on stored lifetime.
 
 ---
@@ -659,4 +660,4 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Create `CODE_OF_CONDUCT.md`.
     - [ ] Enable GitHub Discussions.
 *   **Test Case (N/A):**
-    - [ ] Community resources are in place. 
+    - [ ] Community resources are in place.
