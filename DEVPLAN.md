@@ -52,13 +52,13 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Component:** Registration Endpoint (`POST /register`)
     - [x] Implement Minimal API endpoint for user registration.
         *   *Guidance:* Accepts DTO (e.g., `RegisterRequest { Email, Password }`). Validate input (e.g., email format, password complexity minimums).
-    - [ ] Integrate with `IPasswordHasher` to hash the password.
-    - [ ] Integrate with `IUserStore` to create the user.
+    - [x] Integrate with `IPasswordHasher` to hash the password.
+    - [x] Integrate with `IUserStore` to create the user.
         *   *Guidance:* Handle potential conflicts (e.g., username/email already exists). Return appropriate HTTP status codes (e.g., 201 Created, 409 Conflict).
 *   **Component:** Password Hashing (`IPasswordHasher`, `DefaultPasswordHasher`)
-    - [ ] Define `IPasswordHasher` interface 
+    - [x] Define `IPasswordHasher` interface 
           (`HashPassword`, `VerifyHashedPassword`).
-    - [ ] Implement `DefaultPasswordHasher` 
+    - [x] Implement `DefaultPasswordHasher` 
           using `Microsoft.AspNetCore.Identity.PasswordHasher<TUser>`.
         *   *Guidance:* Configure appropriate compatibility mode and iteration count. Register this as the default implementation.
 *   **Component:** User Storage (`IUserStore`, `InMemoryUserStore`)
@@ -72,78 +72,78 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `InMemoryUserStore` correctly creates and retrieves users. 
           Handles non-existent users. Prevents duplicate usernames.
 *   **Test Case (Integration):**
-    - [X] `POST /register` with valid data creates a user and returns 201.
-    - [X] `POST /register` with an existing email returns 409.
-    - [X] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
+    - [x] `POST /register` with valid data creates a user and returns 201.
+    - [x] `POST /register` with an existing email returns 409.
+    - [x] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
 
 ---
 
 ### Feature: User Login & Token Issuance
 
 *   **Component:** Login Endpoint (`POST /login`)
-    - [ ] Implement Minimal API endpoint for user login.
+    - [x] Implement Minimal API endpoint for user login.
         *   *Guidance:* Accepts DTO (e.g., `LoginRequest { Email, Password }`). Validate input.
-    - [ ] Integrate with `IUserStore` to find the user by email/username.
-    - [ ] Integrate with `IPasswordHasher` to verify the password.
+    - [x] Integrate with `IUserStore` to find the user by email/username.
+    - [x] Integrate with `IPasswordHasher` to verify the password.
         *   *Guidance:* Return 401 Unauthorized if user not found or password incorrect.
-    - [ ] If login successful, integrate with `ITokenService` to generate tokens.
-    - [ ] Return tokens (Access, potentially Refresh) in the response (e.g., `LoginResponse { AccessToken, RefreshToken, ExpiresIn }`).
+    - [x] If login successful, integrate with `ITokenService` to generate tokens.
+    - [x] Return tokens (Access, potentially Refresh) in the response (e.g., `LoginResponse { AccessToken, RefreshToken, ExpiresIn }`).
 *   **Component:** Token Service (`ITokenService`, `JwtTokenService`)
-    - [ ] Define `ITokenService` interface 
+    - [x] Define `ITokenService` interface 
           (`GenerateAccessTokenAsync`, `GenerateRefreshTokenAsync` 
             - simple string initially).
-    - [ ] Implement `JwtTokenService`.
+    - [x] Implement `JwtTokenService`.
         *   *Guidance:* Use `System.IdentityModel.Tokens.Jwt`. 
             Read configuration (`Issuer`, `Audience`, `SigningKeySecret`, `AccessTokenLifetime`) from `CoreIdentOptions`.
         *   *Guidance:* Include standard claims 
           (`sub`, `iss`, `aud`, `exp`, `iat`, `jti`). 
             Add user-specific claims (e.g., `name`, `email`) retrieved from `IUserStore`.
         *   *Guidance:* Implement basic refresh token generation (e.g., secure random string).
-    - [ ] Register `JwtTokenService` as the default `ITokenService`.
+    - [x] Register `JwtTokenService` as the default `ITokenService`.
 *   **Test Case (Unit):**
-    - [ ] `JwtTokenService` generates valid JWTs with correct claims, 
+    - [x] `JwtTokenService` generates valid JWTs with correct claims, 
           issuer, audience, expiry, and signature (using configured key).
 *   **Test Case (Integration):**
-    - [ ] `POST /login` with valid credentials returns 200 and expected token structure.
-    - [ ] `POST /login` with invalid username returns 401.
-    - [ ] `POST /login` with valid username but invalid password returns 401.
-    - [ ] Access token can be validated using standard JWT middleware (`AddJwtBearer`).
+    - [x] `POST /login` with valid credentials returns 200 and expected token structure.
+    - [x] `POST /login` with invalid username returns 401.
+    - [x] `POST /login` with valid username but invalid password returns 401.
+    - [x] Access token can be validated using standard JWT middleware (`AddJwtBearer`).
 
 ---
 
 ### Feature: Basic Refresh Token Flow (Optional in MVP)
 
 *   **Component:** Refresh Token Endpoint (`POST /token/refresh`)
-    - [ ] Implement Minimal API endpoint for refreshing tokens.
+    - [x] Implement Minimal API endpoint for refreshing tokens.
         *   *Guidance:* Accepts DTO (e.g., `RefreshTokenRequest { RefreshToken }`).
-    - [ ] Validate the incoming refresh token (initially: check if it exists in a simple in-memory store/list associated with the user).
+    - [x] Validate the incoming refresh token (initially: check if it exists in a simple in-memory store/list associated with the user).
         *   *Guidance:* This will be significantly improved in Phase 2 with `IRefreshTokenStore`.
-    - [ ] If valid, invalidate the old refresh token (remove from store).
-    - [ ] Generate new Access and Refresh tokens using `ITokenService`.
-    - [ ] Store the new refresh token.
-    - [ ] Return new tokens in the response.
+    - [x] If valid, invalidate the old refresh token (remove from store).
+    - [x] Generate new Access and Refresh tokens using `ITokenService`.
+    - [x] Store the new refresh token.
+    - [x] Return new tokens in the response.
 *   **Test Case (Integration):**
-    - [ ] `POST /token/refresh` with a valid refresh token 
+    - [x] `POST /token/refresh` with a valid refresh token 
           returns new access and refresh tokens.
-    - [ ] `POST /token/refresh` with an invalid or expired refresh token 
+    - [x] `POST /token/refresh` with an invalid or expired refresh token 
           returns 401/400.
-    - [ ] Attempting to use a refresh token twice fails.
+    - [x] Attempting to use a refresh token twice fails.
 
 ---
 
 ### Feature: Basic Documentation & Testing
 
 *   **Component:** README.md
-    - [ ] Create initial `README.md` with project vision, 
+    - [x] Create initial `README.md` with project vision, 
           basic setup instructions (`AddCoreIdent`, minimal configuration), 
           and how to run.
 *   **Component:** Unit Tests
-    - [ ] Set up unit test project (e.g., xUnit).
-    - [ ] Write unit tests covering core services (`JwtTokenService`, `DefaultPasswordHasher`, `InMemoryUserStore`). 
+    - [x] Set up unit test project (e.g., xUnit).
+    - [x] Write unit tests covering core services (`JwtTokenService`, `DefaultPasswordHasher`, `InMemoryUserStore`). 
           Use mocking (e.g., Moq) for dependencies.
 *   **Component:** Integration Tests
-    - [ ] Set up integration test project using `Microsoft.AspNetCore.Mvc.Testing`.
-    - [ ] Write integration tests covering API endpoints 
+    - [x] Set up integration test project using `Microsoft.AspNetCore.Mvc.Testing`.
+    - [x] Write integration tests covering API endpoints 
           (`/register`, `/login`, `/token/refresh`).
 
 ---

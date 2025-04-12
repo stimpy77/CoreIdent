@@ -12,9 +12,11 @@ using Microsoft.Extensions.DependencyInjection; // GetRequiredService
 using Microsoft.Extensions.Logging; // ILoggerFactory
 using Microsoft.Extensions.Options; // IOptions
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations; // ValidationResult
 using System.Linq; // For validation results
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +27,10 @@ namespace CoreIdent.Core.Extensions;
 /// </summary>
 public static class CoreIdentEndpointRouteBuilderExtensions
 {
+    // WARNING: TEMPORARY Phase 1 In-Memory Refresh Token Store.
+    // This is NOT suitable for production. Phase 2 will use IRefreshTokenStore.
+    private static readonly ConcurrentDictionary<string, string> _refreshTokens = new();
+
     /// <summary>
     /// Maps the CoreIdent core authentication endpoints (/register, /login, /token/refresh).
     /// </summary>
@@ -59,7 +65,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             var newUser = new CoreIdentUser
             {
                 UserName = request.Email, // Assuming email is username for now
-                PasswordHash = passwordHasher.HashPassword(null, request.Password!) // Request validation ensures Password is not null
+                PasswordHash = passwordHasher.HashPassword(null, request.Password!) // Pass null for user context during creation
             };
 
             try
@@ -68,7 +74,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
                 return result switch
                 {
-                    StoreResult.Success => Results.Ok(new { UserId = newUser.Id, Message = "User registered successfully." }), // Consider CreatedAtRoute if exposing a GET /users/{id} later
+                    StoreResult.Success => Results.Created($"/{newUser.Id}", new { UserId = newUser.Id, Message = "User registered successfully." }), // Use Created (201) for resource creation
                     StoreResult.Conflict => Results.Conflict(new { Message = $"Username '{request.Email}' already exists." }),
                     _ => Results.Problem("An unexpected error occurred during registration.", statusCode: StatusCodes.Status500InternalServerError),
                 };
@@ -81,7 +87,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         })
         .WithName("RegisterUser")
         .WithTags("CoreIdent")
-        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status201Created)
         .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status409Conflict)
         .Produces(StatusCodes.Status500InternalServerError)
@@ -128,43 +134,53 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             }
 
             // Verify password
-            var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!); // Request validation ensures Password is not null
+            var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!);
 
             if (passwordVerificationResult == PasswordVerificationResult.Failed)
             {
-                return Results.Unauthorized(); // Invalid password
+                logger.LogWarning("Password verification failed for user {Username}", request.Email);
+                return Results.Unauthorized(); // Incorrect password
             }
 
-            // Handle SuccessRehashNeeded - Optional: Update hash in store (consider for Phase 2)
+            // Password verification successful (or needs rehashing - handle later if needed)
             if (passwordVerificationResult == PasswordVerificationResult.SuccessRehashNeeded)
             {
-                // Log or schedule rehash? For now, proceed with login.
-                logger.LogInformation("Password rehash needed for user {UserId}", user.Id);
-                // In Phase 2, might update user.PasswordHash = passwordHasher.HashPassword(user, request.Password!);
-                // and call userStore.UpdateUserAsync(user, cancellationToken);
+                // Optionally rehash and update the password hash in the store
+                // var newHash = passwordHasher.HashPassword(user, request.Password!);
+                // user.PasswordHash = newHash;
+                // await userStore.UpdateUserAsync(user, cancellationToken); // Add UpdateUserAsync if not present
+                logger.LogInformation("Password requires rehashing for user {Username}", request.Email);
             }
 
             // Generate tokens
+            string accessToken;
+            string refreshToken;
             try
             {
-                var accessToken = await tokenService.GenerateAccessTokenAsync(user);
-                var refreshToken = await tokenService.GenerateRefreshTokenAsync(user); // Simple refresh token for Phase 1
-
-                var response = new TokenResponse
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    AccessTokenLifetime = options.Value.AccessTokenLifetime,
-                    RefreshTokenLifetime = options.Value.RefreshTokenLifetime
-                };
-
-                return Results.Ok(response);
+                accessToken = await tokenService.GenerateAccessTokenAsync(user);
+                refreshToken = await tokenService.GenerateRefreshTokenAsync(user); // Basic refresh token for Phase 1
+                 // In Phase 2, we'll store the refresh token hash using IRefreshTokenStore
             }
-             catch (Exception ex)
+            catch (Exception ex)
             {
-                 logger.LogError(ex, "Error generating tokens for user {UserId} during login", user.Id);
-                 return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
+                logger.LogError(ex, "Error generating tokens for user {Username}", request.Email);
+                return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
             }
+
+            // Phase 1: Store the initial refresh token in the static dictionary
+            _refreshTokens.TryAdd(refreshToken, user.Id);
+
+            var response = new TokenResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken, // Return refresh token
+                AccessTokenLifetime = options.Value.AccessTokenLifetime, // Set required property
+                RefreshTokenLifetime = options.Value.RefreshTokenLifetime // Set required property
+            };
+
+            logger.LogInformation("User {Username} successfully logged in.", request.Email);
+            return Results.Ok(response);
+
         })
         .WithName("LoginUser")
         .WithTags("CoreIdent")
@@ -172,25 +188,90 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status500InternalServerError)
-        .WithSummary("Authenticates a user and returns tokens.")
-        .WithDescription("Logs in a user with email and password, providing access and refresh tokens upon success.");
+        .WithSummary("Logs in a user.")
+        .WithDescription("Authenticates a user with email and password, returning JWT tokens.");
 
-        // Endpoint: /token/refresh (Phase 1 - Stub)
-        routeGroup.MapPost("token/refresh", (
-             [FromBody] RefreshTokenRequest request) =>
-             {
-                 // Phase 1: Not implemented. Return 501.
-                 // Phase 2 will involve validating the refresh token, finding the associated user,
-                 // potentially revoking the old token, and issuing new access/refresh tokens.
-                 return Results.StatusCode(StatusCodes.Status501NotImplemented);
-             })
+        // Endpoint: /token/refresh (Phase 1 - Basic Implementation)
+        routeGroup.MapPost("token/refresh", async (
+            [FromBody] RefreshTokenRequest request,
+            IUserStore userStore,
+            ITokenService tokenService,
+            IOptions<CoreIdentOptions> options,
+            ILoggerFactory loggerFactory,
+            CancellationToken cancellationToken) =>
+        {
+            var logger = loggerFactory.CreateLogger("CoreIdent.RefreshToken");
+
+            // Basic validation
+            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                return Results.BadRequest(new { Message = "Refresh token is required." });
+            }
+
+            // Phase 1: Validate and consume token from static dictionary
+            if (!_refreshTokens.TryRemove(request.RefreshToken, out var userId) || string.IsNullOrEmpty(userId))
+            {
+                logger.LogWarning("Invalid or expired refresh token presented.");
+                return Results.Unauthorized(); // Token not found or already used
+            }
+
+            // Found token, now find user
+            CoreIdentUser? user;
+            try
+            {
+                user = await userStore.FindUserByIdAsync(userId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error finding user {UserId} during token refresh", userId);
+                // Restore the token if user lookup fails unexpectedly?
+                // For simplicity in Phase 1, we won't restore. The token is considered consumed.
+                return Results.Problem("An unexpected error occurred during user lookup.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+
+            if (user == null)
+            {
+                logger.LogError("User {UserId} associated with refresh token not found.", userId);
+                // Don't restore the token, it's potentially compromised or stale.
+                return Results.Unauthorized(); // User associated with token no longer exists
+            }
+
+            // Generate new tokens
+            string newAccessToken;
+            string newRefreshToken;
+            try
+            {
+                newAccessToken = await tokenService.GenerateAccessTokenAsync(user);
+                newRefreshToken = await tokenService.GenerateRefreshTokenAsync(user);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error generating new tokens for user {UserId} during refresh", userId);
+                return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+
+            // Phase 1: Store the new refresh token in the static dictionary
+            _refreshTokens.TryAdd(newRefreshToken, user.Id); // Store new token
+
+            var response = new TokenResponse
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+                AccessTokenLifetime = options.Value.AccessTokenLifetime, // Set required property
+                RefreshTokenLifetime = options.Value.RefreshTokenLifetime // Set required property
+            };
+
+            logger.LogInformation("Tokens refreshed successfully for user {UserId}", userId);
+            return Results.Ok(response);
+        })
         .WithName("RefreshToken")
         .WithTags("CoreIdent")
-        .Produces(StatusCodes.Status501NotImplemented)
-        .Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest) // Still validate input
-        .WithSummary("Refreshes an access token using a refresh token (Not Implemented in Phase 1).")
-        .WithDescription("Exchanges a valid refresh token for a new access token and refresh token. This functionality is planned for Phase 2.");
-
+        .Produces<TokenResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest) // Invalid request (e.g., missing token)
+        .Produces(StatusCodes.Status401Unauthorized) // Invalid/Expired token
+        .Produces(StatusCodes.Status500InternalServerError)
+        .WithSummary("Exchanges a refresh token for new tokens.")
+        .WithDescription("Provides a new access and refresh token if the provided refresh token is valid.");
 
         return routeGroup;
     }

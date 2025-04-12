@@ -42,7 +42,7 @@ public class RegistrationEndpointTests : IClassFixture<WebApplicationFactory<Pro
         var response = await _client.PostAsJsonAsync("/auth/register", request);
 
         // Assert: Check HTTP response
-        response.StatusCode.ShouldBe(HttpStatusCode.OK); // Endpoint returns OK currently, not Created
+        response.StatusCode.ShouldBe(HttpStatusCode.Created); // Expect 201 Created for resource creation
         var responseBody = await response.Content.ReadFromJsonAsync<RegistrationSuccessResponse>(); // Assuming a simple response structure
         responseBody.ShouldNotBeNull();
         responseBody.Message.ShouldBe("User registered successfully.");
@@ -82,7 +82,7 @@ public class RegistrationEndpointTests : IClassFixture<WebApplicationFactory<Pro
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         var errorBody = await response.Content.ReadFromJsonAsync<ErrorResponse>(); // Assuming an error response structure
         errorBody.ShouldNotBeNull();
-        errorBody.Message.ShouldContain($"Username '{existingEmail}' already exists.");
+        errorBody.Message!.ShouldContain($"Username '{existingEmail}' already exists."); // Add ! to suppress CS8604 warning
     }
 
     [Theory]
