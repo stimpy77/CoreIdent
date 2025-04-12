@@ -229,6 +229,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Unit test EF Core store implementations 
           using `Mock<DbSet<T>>` or InMemory provider.
 - [ ] **Update README.md** with EF Core setup instructions and configuration.
+    *   *Decision:* Use **SQLite** as the initial database provider (`Microsoft.EntityFrameworkCore.Sqlite`) for ease of development and testing.
 
 ---
 
@@ -259,32 +260,6 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Delegated User Store Adapter (Optional Integration Path)
 
 *   **Component:** `CoreIdent.Adapters.DelegatedUserStore` NuGet Package
-    - [ ] Create `.csproj` file.
-*   **Component:** `DelegatedUserStore` Implementation
-    - [ ] Implement `DelegatedUserStore` : `IUserStore`.
-        *   *Guidance:* 
-            * Constructor accepts configuration (`DelegatedUserStoreOptions`) containing delegates 
-              (e.g., `Func<string, Task<CoreIdentUser>> findUserByIdDelegate`, 
-                     `Func<string, string, Task<bool>> validateCredentialsDelegate`).
-        *   *Guidance:* 
-            * Implementation calls the provided delegates to interact with the external user system. 
-            * Handles cases where delegates are not provided.
-*   **Component:** Configuration (`DelegatedUserStoreOptions`)
-    - [ ] Define `DelegatedUserStoreOptions` class 
-          to hold delegates for finding users, validating credentials, getting claims, etc.
-*   **Component:** Setup Extension
-    - [ ] Create `IServiceCollection` extension: 
-          `AddCoreIdentDelegatedUserStore(Action<DelegatedUserStoreOptions> configure)`.
-        *   *Guidance:* 
-            * Registers `DelegatedUserStore` as the `IUserStore`. 
-            * Requires essential delegates (like finding user) to be configured.
-*   **Test Case (Integration):**
-    - [ ] Configure CoreIdent with `DelegatedUserStore` and mock delegates. 
-          Verify login flow calls the `validateCredentialsDelegate`.
-    - [ ] Verify token issuance uses user data returned by the 
-          `findUserByIdDelegate` or `findUserByUsernameDelegate`.
-- [ ] **Update README.md** with Delegated User Store setup instructions and configuration.
-*   **Component:** `CoreIdent.Adapters.DelegatedUserStore` NuGet Package Project
     - [ ] Create `.csproj` file.
 *   **Component:** `DelegatedUserStore` Implementation
     - [ ] Implement `DelegatedUserStore` : `IUserStore`.
