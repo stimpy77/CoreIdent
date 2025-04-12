@@ -18,6 +18,10 @@ Empower .NET developers to quickly implement secure authentication and authoriza
 *   **Protocol Support:** Designed for modern web communication (HTTP/1.1, HTTP/2, HTTP/3, WebSocket-ready).
 *   **Future-Ready Authentication:** Traditional credentials, Passkeys, Web3, LNURL.
 
+## Developer Guide
+
+For a detailed walkthrough of the architecture, setup, and Phase 1 features, please refer to the **[Developer Training Guide](./docs/Developer_Training_Guide.md)**.
+
 ## Getting Started (Phase 1 - MVP)
 
 This guide covers the initial setup for the core functionality available in Phase 1.
