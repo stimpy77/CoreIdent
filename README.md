@@ -13,6 +13,25 @@
 
 **CoreIdent** aims to be the modern, open-source, developer-friendly identity and authentication solution for the .NET ecosystem. It prioritizes convention over configuration, modularity, and ease of integration.
 
+## Why CoreIdent?
+
+In a world where authentication solutions are often complex or tied to specific vendors, CoreIdent stands out by offering:
+*   **Developer Freedom:** Open-source (MIT) with no vendor lock-in. Build authentication your way.
+*   **Ease of Use:** Minimize boilerplate with sensible defaults and clear APIs. Get secure auth up and running fast.
+*   **Modularity:** Core is lean; add only the features you need via separate NuGet packages.
+*   **Future-Proof:** Built on modern .NET (9+), supporting traditional logins, passwordless methods (Passkeys/WebAuthn), and even decentralized identity (Web3, LNURL).
+*   **Security First:** Best practices baked in for token handling, password storage, and endpoint protection.
+
+## Future Vision
+
+CoreIdent is just getting started. Beyond Phase 1, we're building towards:
+*   Full OAuth 2.0 / OIDC support for standard web and mobile app flows.
+*   Pluggable providers for social logins, MFA, and cutting-edge auth (Passkeys, Web3 wallets).
+*   User-friendly UI components and admin portals.
+*   Comprehensive docs and `dotnet new` templates for effortless integration.
+
+Join us in shaping the future of .NET identity! Contributions and feedback are welcome.
+
 ## Vision
 
 Empower .NET developers to quickly implement secure authentication and authorization without vendor lock-in, embracing both traditional and emerging identity paradigms. Provide a clear path for extending functionality through a pluggable provider model.
