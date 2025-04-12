@@ -17,6 +17,7 @@
 
 In a world where authentication solutions are often complex or tied to specific vendors, CoreIdent stands out by offering:
 *   **Developer Freedom:** Open-source (MIT) with no vendor lock-in. Build authentication your way.
+*   **Convention Over Configuration:** Spend less time on setup. Our streamlined `AddCoreIdent()` method and sensible defaults get you started quickly with minimal code.
 *   **Ease of Use:** Minimize boilerplate with sensible defaults and clear APIs. Get secure auth up and running fast.
 *   **Modularity:** Core is lean; add only the features you need via separate NuGet packages.
 *   **Future-Proof:** Built on modern .NET (9+), supporting traditional logins, passwordless methods (Passkeys/WebAuthn), and even decentralized identity (Web3, LNURL).

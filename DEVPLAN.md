@@ -710,3 +710,10 @@ This document provides a detailed breakdown of tasks, components, features, test
 - [ ] **Update README.md** with links to contribution guidelines and community channels.
 
 *(Note: The specific 'Developer Training Guide' feature merges into the main documentation effort in this phase, but the goal is to ensure that detailed training material exists and is incorporated.)*
+
+### Follow-Up Step: Convention Over Configuration Review (Phase 1)
+- [ ] **Review Setup Process:** Ensure `AddCoreIdent()` and related extensions provide sensible defaults and minimize required configuration. Refine API design to reduce boilerplate code for common use cases, reinforcing the 'convention over configuration' principle.
+
+---
+ 
+#### Phase 3: Enhanced Token Management & Security
