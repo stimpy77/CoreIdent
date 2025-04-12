@@ -75,7 +75,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /register` with valid data creates a user and returns 201.
     - [x] `POST /register` with an existing email returns 409.
     - [x] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
-
+- [ ] **Update README.md** with registration endpoint details and usage examples.
 ---
 
 ### Feature: User Login & Token Issuance
@@ -108,7 +108,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /login` with invalid username returns 401.
     - [x] `POST /login` with valid username but invalid password returns 401.
     - [x] Access token can be validated using standard JWT middleware (`AddJwtBearer`).
-
+- [ ] **Update README.md** with login endpoint details, token structure, and configuration notes.
 ---
 
 ### Feature: Basic Refresh Token Flow (Optional in MVP)
@@ -128,7 +128,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /token/refresh` with an invalid or expired refresh token 
           returns 401/400.
     - [x] Attempting to use a refresh token twice fails.
-
+- [ ] **Update README.md** with refresh token endpoint details and usage.
 ---
 
 ### Feature: Basic Documentation & Testing
@@ -145,6 +145,13 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Set up integration test project using `Microsoft.AspNetCore.Mvc.Testing`.
     - [x] Write integration tests covering API endpoints 
           (`/register`, `/login`, `/token/refresh`).
+- [ ] Review and finalize README.md for Phase 1 completeness.
+
+### Feature: Developer Training Guide (Phase 1)
+
+*   **Goal:** Provide foundational learning material for developers using CoreIdent.
+*   **Component:** Training Document
+    - [ ] Create initial Developer Training Guide covering Phase 1 concepts (Core setup, Registration, Login, Token basics - JWTs, Hashing, In-Memory stores, Security fundamentals).
 
 ---
 
@@ -221,6 +228,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Test Case (Unit):**
     - [ ] Unit test EF Core store implementations 
           using `Mock<DbSet<T>>` or InMemory provider.
+- [ ] **Update README.md** with EF Core setup instructions and configuration.
 
 ---
 
@@ -245,7 +253,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Using a refresh token successfully invalidates it and issues a new one (rotation).
     - [ ] Attempting to use a refresh token twice fails.
     - [ ] Refresh tokens expire correctly based on stored lifetime.
-
+- [ ] **Update README.md** with details on persistent refresh token handling.
 ---
 
 ### Feature: Delegated User Store Adapter (Optional Integration Path)
@@ -275,6 +283,39 @@ This document provides a detailed breakdown of tasks, components, features, test
           Verify login flow calls the `validateCredentialsDelegate`.
     - [ ] Verify token issuance uses user data returned by the 
           `findUserByIdDelegate` or `findUserByUsernameDelegate`.
+- [ ] **Update README.md** with Delegated User Store setup instructions and configuration.
+*   **Component:** `CoreIdent.Adapters.DelegatedUserStore` NuGet Package Project
+    - [ ] Create `.csproj` file.
+*   **Component:** `DelegatedUserStore` Implementation
+    - [ ] Implement `DelegatedUserStore` : `IUserStore`.
+        *   *Guidance:* 
+            * Constructor accepts configuration (`DelegatedUserStoreOptions`) containing delegates 
+              (e.g., `Func<string, Task<CoreIdentUser>> findUserByIdDelegate`, 
+                     `Func<string, string, Task<bool>> validateCredentialsDelegate`).
+        *   *Guidance:* 
+            * Implementation calls the provided delegates to interact with the external user system. 
+            * Handles cases where delegates are not provided.
+*   **Component:** Configuration (`DelegatedUserStoreOptions`)
+    - [ ] Define `DelegatedUserStoreOptions` class 
+          to hold delegates for finding users, validating credentials, getting claims, etc.
+*   **Component:** Setup Extension
+    - [ ] Create `IServiceCollection` extension: 
+          `AddCoreIdentDelegatedUserStore(Action<DelegatedUserStoreOptions> configure)`.
+        *   *Guidance:* 
+            * Registers `DelegatedUserStore` as the `IUserStore`. 
+            * Requires essential delegates (like finding user) to be configured.
+*   **Test Case (Integration):**
+    - [ ] Configure CoreIdent with `DelegatedUserStore` and mock delegates. 
+          Verify login flow calls the `validateCredentialsDelegate`.
+    - [ ] Verify token issuance uses user data returned by the 
+          `findUserByIdDelegate` or `findUserByUsernameDelegate`.
+- [ ] **Update README.md** with Delegated User Store setup instructions and configuration.
+
+### Feature: Developer Training Guide (Phase 2 Update)
+
+*   **Goal:** Expand training materials to cover persistence and extensibility.
+*   **Component:** Training Document
+    - [ ] Update Developer Training Guide with Phase 2 concepts (Storage interfaces - `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`; EF Core integration; Delegated storage patterns; Refresh token persistence and rotation strategies).
 
 ---
 
@@ -333,6 +374,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] `/token` request fails if PKCE verification fails.
     - [ ] `/token` request fails if client secret is incorrect (for confidential clients).
     - [ ] `/token` request fails if `redirect_uri` does not match the initial request.
+- [ ] **Update README.md** with details on `/authorize` endpoint, PKCE, and related configuration.
 
 ---
 
@@ -358,6 +400,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Token represents the client (e.g., `sub` claim is `client_id`).
     - [ ] Request fails if client credentials are invalid.
     - [ ] Request fails if requested scopes are not allowed for the client.
+- [ ] **Update README.md** with details on `/token` endpoint for `client_credentials` grant type.
 
 ---
 
@@ -384,6 +427,7 @@ This document provides a detailed breakdown of tasks, components, features, test
           with correct endpoint URLs.
     - [ ] `GET /.well-known/jwks.json` returns a valid JWKS document. 
           Public key can be used to validate tokens issued by the server (if using asymmetric keys).
+- [ ] **Update README.md** with details on discovery and JWKS endpoints.
 
 ---
 
@@ -405,6 +449,13 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Generated ID Token is a valid JWT with required claims and correct signature.
     - [ ] User claims included in ID Token match requested scopes.
     - [ ] `nonce` claim matches the value from the authorization request.
+- [ ] **Update README.md** with information on ID Tokens and relevant claims.
+
+### Feature: Developer Training Guide (Phase 3 Update)
+
+*   **Goal:** Explain core OAuth/OIDC concepts as implemented in CoreIdent.
+*   **Component:** Training Document
+    - [ ] Update Developer Training Guide with Phase 3 concepts (OAuth 2.0 flows - Auth Code+PKCE, Client Credentials; OIDC concepts - ID Tokens, Discovery, JWKS; Client/Scope management basics).
 
 ---
 
@@ -442,6 +493,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Submitting consent 'deny' results in error redirect to client.
     - [ ] Subsequent `/authorize` requests for the same client/scopes (within consent lifetime) 
           do not require consent again.
+- [ ] **Update README.md** with details on the consent mechanism and related UI.
 
 ---
 
@@ -472,6 +524,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] During `/authorize` flow, user is presented with the consent page, 
           can grant/deny, and flow completes correctly.
     - [ ] Basic UI elements are reasonably styled and functional.
+- [ ] **Update README.md** with details on UI components setup and basic usage.
 
 ---
 
@@ -491,6 +544,7 @@ This document provides a detailed breakdown of tasks, components, features, test
           redirects the user back correctly.
     - [ ] Calling `/endsession` with an invalid `post_logout_redirect_uri` 
           shows a local logged-out page or error.
+- [ ] **Update README.md** with details on the `/endsession` endpoint and usage.
 
 ---
 
@@ -511,6 +565,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Login flow for MFA-enabled user redirects to MFA prompt after password validation.
     - [ ] Submitting correct MFA challenge completes login.
     - [ ] Submitting incorrect MFA challenge shows error, does not complete login.
+- [ ] **Update README.md** with MFA setup, usage, and provider model.
 
 ---
 
@@ -529,6 +584,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Implement `AddPasskeyProvider()` setup extension.
 *   **Test Case (Integration):**
     - [ ] User can register a passkey (device authenticator or security key).
+- [ ] **Update README.md** with Passkeys provider setup instructions.
 *   **Component:** `CoreIdent.Providers.Totp` Package (MFA Provider)
     - [ ] Create `.csproj`. Add TOTP library dependency (e.g., `Otp.NET`).
     - [ ] Implement `IMfaProvider` for TOTP.
@@ -538,6 +594,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Implement `AddTotpProvider()` setup extension.
 *   **Test Case (Integration):**
     - [ ] User can enable TOTP MFA, scan QR code.
+- [ ] **Update README.md** with TOTP provider setup instructions.
 *   **Component:** `CoreIdent.Providers.Google` Package (Social Login)
     - [ ] Create `.csproj`. Add `Microsoft.AspNetCore.Authentication.Google` dependency.
     - [ ] Implement provider logic using standard ASP.NET Core external login handlers. 
@@ -547,6 +604,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Test Case (Integration):**
     - [ ] User can initiate login via Google, authenticate with Google, 
           and be logged into CoreIdent (new user created or linked).
+- [ ] **Update README.md** with Google provider setup instructions.
 *   **Component:** `CoreIdent.Providers.Web3` Package (Wallet Login)
     - [ ] Create `.csproj`. Add Nethereum or similar library if needed for signature verification.
     - [ ] Implement challenge generation endpoint.
@@ -555,12 +613,14 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Implement `AddWeb3Provider()` setup extension.
 *   **Test Case (Integration):**
     - [ ] User can request challenge, sign with wallet, and log in.
+- [ ] **Update README.md** with Web3 provider setup instructions.
 *   **Component:** `CoreIdent.Providers.LNURL` Package (Lightning Login)
     - [ ] Create `.csproj`. Add LNURL library dependency (or implement spec).
     - [ ] Implement LNURL-auth flow (generate `k1`, provide LNURL endpoint, verify signature against linking key).
     - [ ] Implement `AddLnurlAuthProvider()` setup extension.
 *   **Test Case (Integration):**
     - [ ] User can scan LNURL QR code with wallet, approve login, and be logged in.
+- [ ] **Update README.md** with LNURL-auth provider setup instructions.
 
 ---
 
@@ -577,6 +637,13 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Admin user can log in and access the Admin UI.
     - [ ] Admin can view list of users/clients/scopes.
     - [ ] (If implemented) Admin can perform basic CRUD operations.
+- [ ] **Update README.md** with details on the Admin UI setup and usage (if implemented).
+
+### Feature: Developer Training Guide (Phase 4 Update)
+
+*   **Goal:** Detail user interaction elements and provider integrations.
+*   **Component:** Training Document
+    - [ ] Update Developer Training Guide with Phase 4 concepts (UI integration patterns, Consent flows, Logout mechanisms, MFA implementation details, Provider integration patterns - Passkeys, Social, Web3, LNURL-auth, etc., Admin UI usage).
 
 ---
 
@@ -597,7 +664,8 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Write API Reference (core endpoints).
     - [ ] Write guides for specific features (MFA setup, Passkeys, Custom User Stores).
     - [ ] Write Architecture overview.
-    - [ ] Write Contribution guide.
+    - [ ] Write Contribution guide.    
+    - [ ] **Incorporate and refine Developer Training Guide modules** into the official documentation.
     - [ ] Set up deployment for docs site (e.g., GitHub Pages, Netlify).
 *   **Test Case (Manual):**
     - [ ] Documentation is clear, accurate, and easy to navigate.
@@ -617,6 +685,7 @@ This document provides a detailed breakdown of tasks, components, features, test
           with CoreIdent and default EF Core storage.
     - [ ] `dotnet new coreident-api` creates a runnable API project secured by CoreIdent 
           (requiring a running CoreIdent instance).
+- [ ] **Update README.md** with instructions on using `dotnet new` templates.
 
 ---
 
@@ -632,6 +701,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Example API can be run and endpoints accessed with valid tokens from CoreIdent.
     - [ ] Example SPA can successfully log in via CoreIdent 
           and make authenticated calls to the example API.
+- [ ] **Update README.md** linking to example applications.
 
 ---
 
@@ -648,6 +718,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Test Case:**
     - [ ] CI pipeline runs successfully on PRs.
     - [ ] NuGet packages are published correctly on release.
+- [ ] **Update README.md** with links to build status badges.
 
 ---
 
@@ -661,3 +732,6 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Enable GitHub Discussions.
 *   **Test Case (N/A):**
     - [ ] Community resources are in place.
+- [ ] **Update README.md** with links to contribution guidelines and community channels.
+
+*(Note: The specific 'Developer Training Guide' feature merges into the main documentation effort in this phase, but the goal is to ensure that detailed training material exists and is incorporated.)*
