@@ -2,6 +2,15 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**Current Status:** Phase 1 (MVP - Core Registration/Login/Tokens with In-Memory Storage) is complete. Phase 2 (Persistent Storage) development is underway.
+
+**Development Phases:**
+*   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
+*   **Phase 2 (Current):** Persistent Storage (EF Core) & Interface Refinement.
+*   **Phase 3:** Enhanced Token Management & Security (Revocation, Sliding Expiration).
+*   **Phase 4:** UI/Admin Portal (Basic Management).
+*   **Phase 5:** Pluggable Providers & Advanced Features (Social Logins, Passkeys, etc.).
+
 **CoreIdent** aims to be the modern, open-source, developer-friendly identity and authentication solution for the .NET ecosystem. It prioritizes convention over configuration, modularity, and ease of integration.
 
 ## Vision
