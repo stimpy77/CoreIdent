@@ -29,5 +29,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
 
-    - name: Test
-      run: dotnet test --no-build --verbosity detailed # Assumes tests are runnable with default settings 
+    - name: Test Core Projects
+      run: |
+        dotnet test tests/CoreIdent.Core.Tests/CoreIdent.Core.Tests.csproj --no-build --verbosity detailed
+        dotnet test tests/CoreIdent.Integration.Tests/CoreIdent.Integration.Tests.csproj --no-build --verbosity detailed
