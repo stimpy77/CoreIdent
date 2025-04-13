@@ -122,6 +122,25 @@ builder.Services.AddAuthentication()
 
 builder.Services.AddAuthorization();
 
+// --- Storage Configuration --- 
+
+// Option 1: Default In-Memory Store (Phase 1)
+// If you don't configure anything else after AddCoreIdent(), it uses in-memory stores.
+
+// Option 2: Entity Framework Core (SQLite Example - Phase 2+)
+// First, add the necessary package:
+// dotnet add package CoreIdent.Storage.EntityFrameworkCore 
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+
+// Configure the DbContext for your application
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "DataSource=coreident.db;Cache=Shared";
+builder.Services.AddDbContext<CoreIdentDbContext>(options =>
+    options.UseSqlite(connectionString));
+
+// Tell CoreIdent to use the EF Core stores with your DbContext
+// This MUST be called AFTER AddCoreIdent() and AddDbContext()
+builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
+
 // ... other services like Controllers, Swagger, etc.
 
 var app = builder.Build();
