@@ -166,32 +166,32 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Refined Core Interfaces
 
 *   **Component:** `IUserStore` Interface
-    - [ ] Review and refine `IUserStore`.
-        *   *Guidance:* 
-            * Add methods needed for 
-              * password management (`SetPasswordHashAsync`, `GetPasswordHashAsync`), 
-              * claim management (`GetClaimsAsync`, `AddClaimsAsync`, `ReplaceClaimAsync`, `RemoveClaimsAsync`), 
-              * potentially lockout (`GetLockoutEndDateAsync`, `IncrementAccessFailedCountAsync`, `ResetAccessFailedCountAsync`). 
-            * Ensure methods are suitable for both integrated (EF Core) and delegated implementations. 
+    - [x] Review and refine `IUserStore`.
+        *   *Guidance:*
+            * Add methods needed for
+              * password management (`SetPasswordHashAsync`, `GetPasswordHashAsync`),
+              * claim management (`GetClaimsAsync`, `AddClaimsAsync`, `ReplaceClaimAsync`, `RemoveClaimsAsync`),
+              * potentially lockout (`GetLockoutEndDateAsync`, `IncrementAccessFailedCountAsync`, `ResetAccessFailedCountAsync`).
+            * Ensure methods are suitable for both integrated (EF Core) and delegated implementations.
             * Update `CoreIdentUser` model if needed (e.g., add `Claims` collection, lockout properties).
 *   **Component:** `IRefreshTokenStore` Interface
-    - [ ] Define `IRefreshTokenStore` interface.
-        *   *Guidance:* 
-            * Methods: `StoreRefreshTokenAsync(CoreIdentRefreshToken token)`, `GetRefreshTokenAsync(string tokenHandle)`, `RemoveRefreshTokenAsync(string tokenHandle)`. 
-            * Define `CoreIdentRefreshToken` model 
+    - [x] Define `IRefreshTokenStore` interface.
+        *   *Guidance:*
+            * Methods: `StoreRefreshTokenAsync(CoreIdentRefreshToken token)`, `GetRefreshTokenAsync(string tokenHandle)`, `RemoveRefreshTokenAsync(string tokenHandle)`.
+            * Define `CoreIdentRefreshToken` model
               (e.g., Handle (hashed), SubjectId, ClientId, CreationTime, ExpirationTime, ConsumedTime?).
 *   **Component:** `IClientStore` Interface
-    - [ ] Define `IClientStore` interface.
-        *   *Guidance:* 
-            * Methods: `FindClientByIdAsync(string clientId)`. 
-            * Define `CoreIdentClient` model 
+    - [x] Define `IClientStore` interface.
+        *   *Guidance:*
+            * Methods: `FindClientByIdAsync(string clientId)`.
+            * Define `CoreIdentClient` model
               (e.g., ClientId, ClientSecrets (hashed), AllowedGrantTypes, RedirectUris, AllowedScopes, RequirePkce, AllowOfflineAccess).
 *   **Component:** `IScopeStore` Interface
-    - [ ] Define `IScopeStore` interface.
-        *   *Guidance:* 
-            * Methods: `FindScopesByNameAsync(IEnumerable<string> scopeNames)`, `GetAllScopesAsync()`. 
-            * Define `CoreIdentScope` model 
-              (e.g., Name, DisplayName, Description, Required, Emphasize, UserClaims). 
+    - [x] Define `IScopeStore` interface.
+        *   *Guidance:*
+            * Methods: `FindScopesByNameAsync(IEnumerable<string> scopeNames)`, `GetAllScopesAsync()`.
+            * Define `CoreIdentScope` model
+              (e.g., Name, DisplayName, Description, Required, Emphasize, UserClaims).
             * Include standard OIDC scopes (`openid`, `profile`, `email`, `offline_access`).
 
 ---

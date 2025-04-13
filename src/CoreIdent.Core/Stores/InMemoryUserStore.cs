@@ -4,6 +4,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Security.Claims;
 
 namespace CoreIdent.Core.Stores;
 
@@ -120,5 +122,133 @@ public class InMemoryUserStore : IUserStore
         }
 
         return Task.FromResult(StoreResult.Success);
+    }
+
+    /// <inheritdoc />
+    public Task<string?> GetNormalizedUserNameAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(user.UserName?.ToUpperInvariant()); // Basic implementation ok for InMemory
+    }
+
+    /// <inheritdoc />
+    public Task SetNormalizedUserNameAsync(CoreIdentUser user, string? normalizedName, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.NormalizedUserName = normalizedName; // Basic implementation ok for InMemory
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task SetPasswordHashAsync(CoreIdentUser user, string? passwordHash, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.PasswordHash = passwordHash; // Basic implementation ok for InMemory
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<string?> GetPasswordHashAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(user.PasswordHash);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> HasPasswordAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
+    }
+
+    /// <inheritdoc />
+    public Task<IList<Claim>> GetClaimsAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        // Note: CoreIdentUser.Claims is ICollection<CoreIdentUserClaim>, not IList<Claim>.
+        // This basic InMemory store doesn't handle claims yet.
+        // Consider adding a ConcurrentDictionary<string, List<CoreIdentUserClaim>> if needed here.
+        return Task.FromResult<IList<Claim>>(new List<Claim>()); // Return empty list for now
+    }
+
+    /// <inheritdoc />
+    public Task AddClaimsAsync(CoreIdentUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    {
+        // Basic InMemory store doesn't handle claims yet.
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public Task ReplaceClaimAsync(CoreIdentUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
+    {
+        // Basic InMemory store doesn't handle claims yet.
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public Task RemoveClaimsAsync(CoreIdentUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    {
+        // Basic InMemory store doesn't handle claims yet.
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public Task<IList<CoreIdentUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
+    {
+        // Basic InMemory store doesn't handle claims yet.
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public Task<int> GetAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(user.AccessFailedCount);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> GetLockoutEnabledAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(user.LockoutEnabled);
+    }
+
+    /// <inheritdoc />
+    public Task<DateTimeOffset?> GetLockoutEndDateAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return Task.FromResult(user.LockoutEnd);
+    }
+
+    /// <inheritdoc />
+    public Task<int> IncrementAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.AccessFailedCount++; // Basic implementation ok for InMemory
+        return Task.FromResult(user.AccessFailedCount);
+    }
+
+    /// <inheritdoc />
+    public Task ResetAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.AccessFailedCount = 0; // Basic implementation ok for InMemory
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task SetLockoutEndDateAsync(CoreIdentUser user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.LockoutEnd = lockoutEnd; // Basic implementation ok for InMemory
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task SetLockoutEnabledAsync(CoreIdentUser user, bool enabled, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        user.LockoutEnabled = enabled; // Basic implementation ok for InMemory
+        return Task.CompletedTask;
     }
 }
