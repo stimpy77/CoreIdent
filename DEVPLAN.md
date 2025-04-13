@@ -199,36 +199,25 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Entity Framework Core Storage Provider
 
 *   **Component:** `CoreIdent.Storage.EntityFrameworkCore` NuGet Package
-    - [ ] Create `.csproj` file. 
-          Add dependencies (`Microsoft.EntityFrameworkCore`, `Microsoft.EntityFrameworkCore.Relational`).
+    - [x] Create `.csproj` file. Add dependencies (`Microsoft.EntityFrameworkCore`, `Microsoft.EntityFrameworkCore.Relational`, `Microsoft.EntityFrameworkCore.Sqlite`).
 *   **Component:** EF Core DbContext (`CoreIdentDbContext`)
-    - [ ] Define `CoreIdentDbContext`.
-        *   *Guidance:* 
-            * Include `DbSet` properties for `CoreIdentUser`, `CoreIdentRefreshToken`, `CoreIdentClient`, `CoreIdentScope`. 
-            * Define entity configurations (keys, relationships, indexing, value converters for collections). 
-            * Hash client secrets and refresh token handles before storing.
+    - [x] Define `CoreIdentDbContext`.
+        *   *Guidance:* Include `DbSet` properties for `CoreIdentUser`, `CoreIdentRefreshToken`, `CoreIdentClient`, `CoreIdentScope`, and related entities (`UserClaim`, `ClientSecret`, `ScopeClaim`). Define entity configurations (keys, relationships, indexing, value converters for collections). Hash client secrets and refresh token handles before storing (Hashing to be implemented in store logic where appropriate, not directly in DbContext).
 *   **Component:** EF Core Store Implementations
-    - [ ] Implement `EfUserStore` : `IUserStore`.
-    - [ ] Implement `EfRefreshTokenStore` : `IRefreshTokenStore`.
-    - [ ] Implement `EfClientStore` : `IClientStore`.
-    - [ ] Implement `EfScopeStore` : `IScopeStore`.
+    - [x] Implement `EfUserStore` : `IUserStore`.
+    - [x] Implement `EfRefreshTokenStore` : `IRefreshTokenStore`.
+    - [x] Implement `EfClientStore` : `IClientStore`.
+    - [x] Implement `EfScopeStore` : `IScopeStore`.
 *   **Component:** EF Core Setup Extensions
-    - [ ] Create `IServiceCollection` extension: 
-          `AddCoreIdentEntityFrameworkStores<TContext>(Action<DbContextOptionsBuilder> optionsAction)` 
-          where `TContext : DbContext, ICoreIdentDbContext` 
-          (define marker interface `ICoreIdentDbContext` if needed).
-        *   *Guidance:* 
-            * Registers the `DbContext` and the EF Core store implementations 
-              (`EfUserStore`, etc.) replacing the `InMemory` versions.
+    - [x] Create `IServiceCollection` extension: `AddCoreIdentEntityFrameworkStores<TContext>()`.
+        *   *Guidance:* Registers the `DbContext` (assuming registered by caller) and the EF Core store implementations (`EfUserStore`, etc.) replacing the `InMemory` versions.
 *   **Test Case (Integration):**
-    - [ ] Configure CoreIdent with EF Core (using InMemory provider or SQLite for tests). 
-          Verify user registration persists data.
-    - [ ] Verify login retrieves user from DB.
-    - [ ] Verify client and scope data can be added and retrieved via EF Core stores.
+    - [x] Configure CoreIdent with EF Core (using InMemory provider or SQLite for tests). Verify user registration persists data.
+    - [x] Verify login retrieves user from DB.
+    - [x] Verify client and scope data can be added and retrieved via EF Core stores.
 *   **Test Case (Unit):**
-    - [ ] Unit test EF Core store implementations 
-          using `Mock<DbSet<T>>` or InMemory provider.
-- [ ] **Update README.md** with EF Core setup instructions and configuration.
+    - [x] Unit test EF Core store implementations using `Mock<DbSet<T>>` or InMemory provider.
+- [x] **Update README.md** with EF Core setup instructions and configuration.
     *   *Decision:* Use **SQLite** as the initial database provider (`Microsoft.EntityFrameworkCore.Sqlite`) for ease of development and testing.
 
 ---
