@@ -474,3 +474,92 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Component:** UI Pages/Components
     - [ ] Implement Login Page (`/Account/Login`).
     - [ ] Implement Registration Page (`
+
+## Phase 6: Client Libraries for Mobile & Desktop Applications
+
+**Goal:** Develop client libraries to simplify integration with CoreIdent for mobile and desktop application developers.
+
+**Estimated Duration:** 4-5 weeks / 30-40 hours
+
+---
+
+### Feature: Core Client Library
+
+*   **Component:** `CoreIdent.Client` NuGet Package Project
+    - [ ] Create initial `.csproj` file targeting .NET Standard 2.0 for broad compatibility.
+    - [ ] Define core namespaces and abstractions.
+*   **Component:** Authentication Manager
+    - [ ] Implement `CoreIdentAuthManager` class.
+        *   *Guidance:* Provide methods for login, logout, token refresh, and status checking.
+        *   *Guidance:* Support Authorization Code flow with PKCE.
+        *   *Guidance:* Handle redirect URI interception for OAuth flow completion.
+        *   *Guidance:* Implement token caching and automatic refresh.
+*   **Component:** Configuration (`CoreIdentClientOptions`)
+    - [ ] Define `CoreIdentClientOptions` class.
+        *   *Guidance:* Include properties for `Authority`, `ClientId`, `RedirectUri`, `Scopes`.
+        *   *Guidance:* Configuration for automatic token refresh.
+*   **Component:** Secure Token Storage
+    - [ ] Define `ITokenStorage` interface.
+    - [ ] Implement `MemoryTokenStorage` (for testing).
+    - [ ] Implement `SecureTokenStorage` using platform-appropriate secure storage.
+*   **Test Case (Unit):**
+    - [ ] `CoreIdentAuthManager` correctly generates PKCE challenge/verifier pairs.
+    - [ ] Authentication flow construction generates correct URLs and parameters.
+    - [ ] Token refresh logic works correctly.
+
+---
+
+### Feature: Platform-Specific Implementations
+
+*   **Component:** `CoreIdent.Client.Maui` NuGet Package
+    - [ ] Create package for .NET MAUI applications.
+    - [ ] Implement MAUI-specific browser launcher and redirect interceptor.
+    - [ ] Implement secure storage using MAUI Essentials.
+*   **Component:** `CoreIdent.Client.Wpf` NuGet Package
+    - [ ] Create package for WPF desktop applications.
+    - [ ] Implement embedded browser or system browser launching.
+    - [ ] Implement local HTTP listener for redirect URI interception.
+    - [ ] Implement Windows-specific secure storage.
+*   **Component:** Other Platform Packages (as needed)
+    - [ ] Consider additional platforms (Xamarin.iOS, Xamarin.Android legacy support, WinUI, etc.)
+*   **Test Case (Integration):**
+    - [ ] End-to-end authentication flow works on each supported platform.
+    - [ ] Token refresh works correctly on each platform.
+    - [ ] Tokens are securely stored and retrieved on each platform.
+
+---
+
+### Feature: Sample Applications
+
+*   **Component:** Sample MAUI Application
+    - [ ] Create sample application demonstrating authentication flow.
+    - [ ] Show user profile retrieval using tokens.
+    - [ ] Demonstrate token refresh.
+*   **Component:** Sample WPF Application
+    - [ ] Create sample application demonstrating desktop authentication.
+    - [ ] Show appropriate UI patterns for desktop auth flows.
+*   **Component:** Documentation and Guides
+    - [ ] Create step-by-step integration guides for each platform.
+    - [ ] Document advanced scenarios (offline auth, MFA handling, etc.)
+
+---
+
+### Feature: Offline Authentication Support
+
+*   **Component:** Offline Authentication Logic
+    - [ ] Implement offline authentication capabilities.
+        *   *Guidance:* Cache necessary user information for offline usage.
+        *   *Guidance:* Handle reconnection and token refresh upon network availability.
+        *   *Guidance:* Provide clear API for checking online/offline status.
+*   **Test Case (Integration):**
+    - [ ] Application works in offline mode after initial authentication.
+    - [ ] Reconnection handling works correctly when network becomes available.
+
+---
+
+### Feature: Developer Training Guide (Phase 6)
+
+*   **Goal:** Explain client library concepts and integration patterns.
+*   **Component:** Training Document
+    - [ ] Create Client Libraries section in Developer Training Guide covering
+          client setup, authentication flows, token management, and platform-specific considerations.
