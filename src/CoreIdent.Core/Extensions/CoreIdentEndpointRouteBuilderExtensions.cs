@@ -27,10 +27,6 @@ namespace CoreIdent.Core.Extensions;
 /// </summary>
 public static class CoreIdentEndpointRouteBuilderExtensions
 {
-    // WARNING: TEMPORARY Phase 1 In-Memory Refresh Token Store.
-    // This is NOT suitable for production. Phase 2 will use IRefreshTokenStore.
-    private static readonly ConcurrentDictionary<string, string> _refreshTokens = new();
-
     /// <summary>
     /// Maps the CoreIdent core authentication endpoints (/register, /login, /token/refresh).
     /// </summary>
@@ -102,6 +98,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             IUserStore userStore,
             IPasswordHasher passwordHasher,
             ITokenService tokenService,
+            IRefreshTokenStore refreshTokenStore,
             IOptions<CoreIdentOptions> options,
             ILoggerFactory loggerFactory,
             CancellationToken cancellationToken) =>
@@ -154,12 +151,11 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
             // Generate tokens
             string accessToken;
-            string refreshToken;
+            string refreshTokenHandle;
             try
             {
                 accessToken = await tokenService.GenerateAccessTokenAsync(user);
-                refreshToken = await tokenService.GenerateRefreshTokenAsync(user); // Basic refresh token for Phase 1
-                 // In Phase 2, we'll store the refresh token hash using IRefreshTokenStore
+                refreshTokenHandle = await tokenService.GenerateRefreshTokenAsync(user);
             }
             catch (Exception ex)
             {
@@ -167,15 +163,36 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
-            // Phase 1: Store the initial refresh token in the static dictionary
-            _refreshTokens.TryAdd(refreshToken, user.Id);
+            // Create and store the refresh token entity
+            try
+            {
+                var refreshTokenEntity = new CoreIdentRefreshToken
+                {
+                    Handle = refreshTokenHandle,
+                    SubjectId = user.Id,
+                    // TODO: ClientId Handling - Hardcoded for now as this endpoint lacks client context.
+                    // Associate with a real client when implementing client-specific flows.
+                    ClientId = "__password_flow__",
+                    CreationTime = DateTime.UtcNow,
+                    ExpirationTime = DateTime.UtcNow.Add(options.Value.RefreshTokenLifetime),
+                    ConsumedTime = null // Initially not consumed
+                };
+                await refreshTokenStore.StoreRefreshTokenAsync(refreshTokenEntity, cancellationToken);
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex, "Error storing refresh token for user {Username}", request.Email);
+                // Decide if login should fail if refresh token storage fails.
+                // For now, we'll proceed but log the error.
+                // Consider returning Results.Problem(...) in a production scenario.
+            }
 
             var response = new TokenResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken, // Return refresh token
-                AccessTokenLifetime = options.Value.AccessTokenLifetime, // Set required property
-                RefreshTokenLifetime = options.Value.RefreshTokenLifetime // Set required property
+                RefreshToken = refreshTokenHandle,
+                AccessTokenLifetime = options.Value.AccessTokenLifetime,
+                RefreshTokenLifetime = options.Value.RefreshTokenLifetime
             };
 
             logger.LogInformation("User {Username} successfully logged in.", request.Email);
@@ -191,11 +208,12 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .WithSummary("Logs in a user.")
         .WithDescription("Authenticates a user with email and password, returning JWT tokens.");
 
-        // Endpoint: /token/refresh (Phase 1 - Basic Implementation)
+        // Endpoint: /token/refresh (Refactored for IRefreshTokenStore and Rotation)
         routeGroup.MapPost("token/refresh", async (
             [FromBody] RefreshTokenRequest request,
             IUserStore userStore,
             ITokenService tokenService,
+            IRefreshTokenStore refreshTokenStore,
             IOptions<CoreIdentOptions> options,
             ILoggerFactory loggerFactory,
             CancellationToken cancellationToken) =>
@@ -208,70 +226,124 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 return Results.BadRequest(new { Message = "Refresh token is required." });
             }
 
-            // Phase 1: Validate and consume token from static dictionary
-            if (!_refreshTokens.TryRemove(request.RefreshToken, out var userId) || string.IsNullOrEmpty(userId))
-            {
-                logger.LogWarning("Invalid or expired refresh token presented.");
-                return Results.Unauthorized(); // Token not found or already used
-            }
-
-            // Found token, now find user
-            CoreIdentUser? user;
+            // Validate the incoming refresh token handle using the store
+            CoreIdentRefreshToken? existingToken;
             try
             {
-                user = await userStore.FindUserByIdAsync(userId, cancellationToken);
+                existingToken = await refreshTokenStore.GetRefreshTokenAsync(request.RefreshToken, cancellationToken);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error finding user {UserId} during token refresh", userId);
-                // Restore the token if user lookup fails unexpectedly?
-                // For simplicity in Phase 1, we won't restore. The token is considered consumed.
+                logger.LogError(ex, "Error retrieving refresh token during refresh operation.");
+                return Results.Problem("An unexpected error occurred during token validation.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+
+            // Validation checks
+            if (existingToken == null)
+            {
+                logger.LogWarning("Refresh token handle not found: {RefreshTokenHandle}", request.RefreshToken);
+                return Results.Unauthorized(); // Token not found
+            }
+            if (existingToken.ConsumedTime.HasValue)
+            {
+                 logger.LogWarning("Attempted reuse of consumed refresh token: {RefreshTokenHandle}", request.RefreshToken);
+                 // TODO: Implement potential security measures here, like revoking all tokens for the user/client.
+                 return Results.Unauthorized(); // Token already used
+            }
+            if (existingToken.ExpirationTime < DateTime.UtcNow)
+            {
+                 logger.LogWarning("Expired refresh token presented: {RefreshTokenHandle}", request.RefreshToken);
+                 return Results.Unauthorized(); // Token expired
+            }
+
+            // Mark the old token as consumed *before* issuing new ones
+            try
+            {
+                await refreshTokenStore.RemoveRefreshTokenAsync(existingToken.Handle, cancellationToken);
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex, "Error consuming old refresh token {RefreshTokenHandle} during refresh.", existingToken.Handle);
+                // Fail the operation if we can't consume the old token to prevent potential replay
+                return Results.Problem("An unexpected error occurred during token refresh.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+
+            // Found valid token, now find user
+            CoreIdentUser? user;
+            try
+            {
+                user = await userStore.FindUserByIdAsync(existingToken.SubjectId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error finding user {UserId} during token refresh", existingToken.SubjectId);
+                // If user lookup fails, the old token is already consumed. Return error.
                 return Results.Problem("An unexpected error occurred during user lookup.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
             if (user == null)
             {
-                logger.LogError("User {UserId} associated with refresh token not found.", userId);
-                // Don't restore the token, it's potentially compromised or stale.
-                return Results.Unauthorized(); // User associated with token no longer exists
+                logger.LogError("User {UserId} associated with refresh token {RefreshTokenHandle} not found.", existingToken.SubjectId, existingToken.Handle);
+                // Old token consumed, user not found - return Unauthorized
+                return Results.Unauthorized();
             }
 
-            // Generate new tokens
+            // Generate NEW tokens
             string newAccessToken;
-            string newRefreshToken;
+            string newRefreshTokenHandle;
             try
             {
                 newAccessToken = await tokenService.GenerateAccessTokenAsync(user);
-                newRefreshToken = await tokenService.GenerateRefreshTokenAsync(user);
+                newRefreshTokenHandle = await tokenService.GenerateRefreshTokenAsync(user);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error generating new tokens for user {UserId} during refresh", userId);
+                logger.LogError(ex, "Error generating new tokens for user {UserId} during refresh", user.Id);
+                // Consider if we should try to rollback the consumption of the old token? Complex.
+                // For now, return error.
                 return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
-            // Phase 1: Store the new refresh token in the static dictionary
-            _refreshTokens.TryAdd(newRefreshToken, user.Id); // Store new token
+            // Store the NEW refresh token
+            try
+            {
+                var newRefreshTokenEntity = new CoreIdentRefreshToken
+                {
+                    Handle = newRefreshTokenHandle,
+                    SubjectId = user.Id,
+                    ClientId = existingToken.ClientId, // Re-use the ClientId from the original token
+                    CreationTime = DateTime.UtcNow,
+                    ExpirationTime = DateTime.UtcNow.Add(options.Value.RefreshTokenLifetime),
+                    ConsumedTime = null
+                };
+                await refreshTokenStore.StoreRefreshTokenAsync(newRefreshTokenEntity, cancellationToken);
+            }
+            catch(Exception ex)
+            {
+                 logger.LogError(ex, "Failed to store new refresh token for user {UserId} after successful refresh. Old token {OldRefreshTokenHandle} consumed.", user.Id, existingToken.Handle);
+                 // Critical error: Old token consumed, new token not stored. User needs to log in again.
+                 return Results.Problem("An unexpected error occurred completing the token refresh.", statusCode: StatusCodes.Status500InternalServerError);
+            }
 
             var response = new TokenResponse
             {
                 AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
-                AccessTokenLifetime = options.Value.AccessTokenLifetime, // Set required property
-                RefreshTokenLifetime = options.Value.RefreshTokenLifetime // Set required property
+                RefreshToken = newRefreshTokenHandle,
+                AccessTokenLifetime = options.Value.AccessTokenLifetime,
+                RefreshTokenLifetime = options.Value.RefreshTokenLifetime
             };
 
-            logger.LogInformation("Tokens refreshed successfully for user {UserId}", userId);
+            logger.LogInformation("Tokens refreshed successfully for user {UserId}", user.Id);
             return Results.Ok(response);
         })
         .WithName("RefreshToken")
         .WithTags("CoreIdent")
         .Produces<TokenResponse>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest) // Invalid request (e.g., missing token)
-        .Produces(StatusCodes.Status401Unauthorized) // Invalid/Expired token
+        .Produces(StatusCodes.Status401Unauthorized) // Invalid/Expired/Consumed token or User not found
         .Produces(StatusCodes.Status500InternalServerError)
         .WithSummary("Exchanges a refresh token for new tokens.")
-        .WithDescription("Provides a new access and refresh token if the provided refresh token is valid.");
+        .WithDescription("Provides a new access and refresh token if the provided refresh token is valid and unused.");
 
         return routeGroup;
     }
