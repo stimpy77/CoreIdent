@@ -283,7 +283,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 
 *   **Goal:** Expand training materials to cover persistence and extensibility.
 *   **Component:** Training Document
-    - [ ] Update Developer Training Guide with Phase 2 concepts (Storage interfaces - `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`; EF Core integration; Delegated storage patterns; Refresh token persistence and rotation strategies).
+    - [x] Update Developer Training Guide with Phase 2 concepts (Storage interfaces - `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`; EF Core integration; Delegated storage patterns; Refresh token persistence and rotation strategies).
 
 ---
 
