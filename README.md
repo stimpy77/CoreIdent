@@ -143,6 +143,68 @@ builder.Services.AddDbContext<CoreIdentDbContext>(options =>
 // This MUST be called AFTER AddCoreIdent() and AddDbContext()
 builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
 
+// Option 3: Delegated User Store
+// Use this if you have an existing user database/system and want CoreIdent to delegate
+// authentication and user lookup to it.
+// First, add the necessary package:
+// dotnet add package CoreIdent.Adapters.DelegatedUserStore
+
+// Configure the delegates in Program.cs
+// This replaces the IUserStore registration (either In-Memory or EF Core)
+/* // Uncomment to use Delegated Store
+builder.Services.AddCoreIdentDelegatedUserStore(options =>
+{
+    // REQUIRED: Provide a function to find a user by their unique ID
+    options.FindUserByIdAsync = async (userId, ct) => {
+        // Your logic to query your external user store/API by ID
+        var externalUser = await myExternalUserService.FindByIdAsync(userId);
+        if (externalUser == null) return null;
+        return new CoreIdentUser { 
+            Id = externalUser.Id,
+            UserName = externalUser.Email, // Map relevant properties
+            NormalizedUserName = externalUser.Email?.ToUpperInvariant()
+            // Do NOT map PasswordHash here
+        };
+    };
+
+    // REQUIRED: Provide a function to find a user by username/email
+    options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
+        // Your logic to query your external user store/API by username/email
+        // Ensure you handle normalization consistently
+        var externalUser = await myExternalUserService.FindByUsernameAsync(normalizedUsername);
+        if (externalUser == null) return null;
+        return new CoreIdentUser {
+            Id = externalUser.Id,
+            UserName = externalUser.Email, // Map relevant properties
+            NormalizedUserName = externalUser.Email?.ToUpperInvariant()
+            // Do NOT map PasswordHash here
+        };
+    };
+
+    // REQUIRED: Provide a function to validate credentials
+    // This function receives the username/email and the submitted password
+    options.ValidateCredentialsAsync = async (username, password, ct) => {
+        // Your logic to validate the password against your external user store/API
+        return await myExternalUserService.CheckPasswordAsync(username, password);
+    };
+
+    // OPTIONAL: Provide a function to get user claims
+    options.GetClaimsAsync = async (coreIdentUser, ct) => {
+        // Your logic to get claims for the user from your external system
+        var externalClaims = await myExternalUserService.GetUserClaimsAsync(coreIdentUser.Id);
+        var claims = externalClaims.Select(c => new System.Security.Claims.Claim(c.Type, c.Value)).ToList();
+        // Ensure NameIdentifier and Name claims are present if not already included
+        if (!claims.Any(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)){
+             claims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, coreIdentUser.Id!));
+        }
+        if (!claims.Any(c => c.Type == System.Security.Claims.ClaimTypes.Name)){
+             claims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, coreIdentUser.UserName!));
+        }
+        return claims;
+    };
+});
+*/
+
 // *** Important: After setting up EF Core, you need to create and apply migrations: ***
 // 1. Add migration: dotnet ef migrations add InitialCreate --context CoreIdentDbContext -p src/CoreIdent.Storage.EntityFrameworkCore -s <Your_Web_Project>
 // 2. Apply migration: dotnet ef database update --context CoreIdentDbContext -s <Your_Web_Project>
