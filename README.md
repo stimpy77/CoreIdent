@@ -27,7 +27,8 @@ In a world where authentication solutions are often complex or tied to specific 
 
 ## Future Vision
 
-CoreIdent is just getting started. Beyond Phase 1, we're building towards:
+CoreIdent has established its core authentication and storage capabilities. Beyond Phase 2, we're building towards:
+
 *   Full OAuth 2.0 / OIDC support for standard web and mobile app flows.
 *   Pluggable providers for social logins, MFA, and cutting-edge auth (Passkeys, Web3 wallets).
 *   User-friendly UI components and admin portals.
@@ -59,7 +60,7 @@ This guide covers the setup for the core functionality, including persistent sto
 
 ### 1. Installation
 
-CoreIdent is under active development. Once published to NuGet, you would install the core package and any desired storage adapters:
+Install the core package and any desired storage adapters via NuGet:
 
 ```bash
 dotnet add package CoreIdent.Core
@@ -67,7 +68,7 @@ dotnet add package CoreIdent.Storage.EntityFrameworkCore # For EF Core persisten
 dotnet add package CoreIdent.Adapters.DelegatedUserStore # For delegating to existing systems
 ```
 
-*(Note: For now, you'll need to add project references.)*
+*(Note: If working directly from the source repository, add project references instead.)*
 
 ### 2. Configuration
 

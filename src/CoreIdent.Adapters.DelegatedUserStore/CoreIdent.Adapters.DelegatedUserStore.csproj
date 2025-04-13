@@ -1,13 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\CoreIdent.Core\CoreIdent.Core.csproj" />
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>CoreIdent.Adapters.DelegatedUserStore</RootNamespace>
+    <AssemblyName>CoreIdent.Adapters.DelegatedUserStore</AssemblyName>
+
+    <!-- NuGet Package Properties -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>CoreIdent.Adapters.DelegatedUserStore</PackageId>
+    <Version>0.2.0</Version> <!-- Sync with Core -->
+    <Authors>Jon Davis, and other CoreIdent contributors</Authors>
+    <Description>CoreIdent adapter to delegate user storage and credential validation to an existing external system.</Description>
+    <PackageTags>identity;authentication;authorization;security;netcore;aspnetcore;adapter;delegate</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/stimpy77/CoreIdent</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/stimpy77/CoreIdent.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile> <!-- Include project README -->
+    <PackageReleaseNotesFile>RELEASE_NOTES.md</PackageReleaseNotesFile> <!-- Add Release Notes -->
+
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include README and Release Notes in package -->
+    <None Include="../../README.md" Pack="true" PackagePath="/"/>
+    <None Include="../../RELEASE_NOTES.md" Pack="true" PackagePath="/"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoreIdent.Core\CoreIdent.Core.csproj" />
+  </ItemGroup>
 
 </Project>

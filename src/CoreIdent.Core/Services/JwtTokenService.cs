@@ -91,7 +91,7 @@ public class JwtTokenService : ITokenService
         return accessToken;
     }
 
-    // Phase 1: Return only refresh token string
+     // Phase 1: Return only refresh token string
     public Task<string> GenerateRefreshTokenAsync(CoreIdentUser user)
     {
         // Generate a cryptographically secure random string for the refresh token handle

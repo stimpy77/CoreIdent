@@ -76,7 +76,7 @@ public class JwtTokenServiceTests
               .ParamName.ShouldBe("SigningKeySecret");
     }
 
-    [Fact]
+     [Fact]
     public void Constructor_WithShortSecret_ShouldThrowArgumentException()
     {
         // Arrange

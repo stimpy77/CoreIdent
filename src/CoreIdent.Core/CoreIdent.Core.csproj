@@ -4,18 +4,31 @@
     <TargetFramework>net9.0</TargetFramework> <!-- Targeting .NET 9 -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Package Properties -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>CoreIdent.Core</PackageId>
-    <Version>0.1.0-alpha</Version>
-    <Authors>CoreIdent Contributors</Authors> <!-- Placeholder -->
-    <Description>Core authentication and identity primitives for CoreIdent.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression> <!-- As per principles -->
-    <PackageProjectUrl>https://github.com/your-repo/CoreIdent</PackageProjectUrl> <!-- Placeholder -->
-    <RepositoryUrl>https://github.com/your-repo/CoreIdent.git</RepositoryUrl> <!-- Placeholder -->
+    <Version>0.2.0</Version> <!-- Updated for Phase 2 completion -->
+    <Authors>Jon Davis, and other CoreIdent contributors</Authors>
+    <Description>Core authentication and identity primitives for CoreIdent (Registration, Login, Token Generation, Core Interfaces, Configuration).</Description>
+    <PackageTags>identity;authentication;authorization;security;jwt;netcore;aspnetcore;oidc;oauth2</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/stimpy77/CoreIdent</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/stimpy77/CoreIdent.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile> <!-- Include project README -->
+    <PackageReleaseNotesFile>RELEASE_NOTES.md</PackageReleaseNotesFile> <!-- Add Release Notes -->
+
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Dependencies will be added as needed -->
+    <!-- Include README and Release Notes in package -->
+    <None Include="../../README.md" Pack="true" PackagePath="/"/>
+    <None Include="../../RELEASE_NOTES.md" Pack="true" PackagePath="/"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Dependencies -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
