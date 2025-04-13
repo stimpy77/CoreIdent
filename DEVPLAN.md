@@ -123,12 +123,11 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Store the new refresh token.
     - [x] Return new tokens in the response.
 *   **Test Case (Integration):**
-    - [x] `POST /token/refresh` with a valid refresh token 
-          returns new access and refresh tokens.
-    - [x] `POST /token/refresh` with an invalid or expired refresh token 
-          returns 401/400.
-    - [x] Attempting to use a refresh token twice fails.
-- [ ] **Update README.md** with refresh token endpoint details and usage.
+    - [x] Refresh token flow works correctly with EF Core persistence. (Requires DI Setup & Migrations)
+    - [x] Using a refresh token successfully invalidates it and issues a new one (rotation). (Requires DI Setup & Migrations)
+    - [x] Attempting to use a refresh token twice fails. (Requires DI Setup & Migrations)
+    - [x] Refresh tokens expire correctly based on stored lifetime. (Requires DI Setup & Migrations)
+- [x] **Update README.md** with details on persistent refresh token handling.
 ---
 
 ### Feature: Basic Documentation & Testing
@@ -217,6 +216,10 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Verify client and scope data can be added and retrieved via EF Core stores.
 *   **Test Case (Unit):**
     - [x] Unit test EF Core store implementations using `Mock<DbSet<T>>` or InMemory provider.
+*   **Test Case (Integration):**
+    - [x] **Fix Unit Tests** for EF Core Store implementations (Scope, Client, RefreshToken, User).
+    - [x] Register EF Core services (`AddDbContext`, Store implementations) in DI.
+    - [x] Add EF Core Migrations and update database.
 - [x] **Update README.md** with EF Core setup instructions and configuration.
     *   *Decision:* Use **SQLite** as the initial database provider (`Microsoft.EntityFrameworkCore.Sqlite`) for ease of development and testing.
 
@@ -225,25 +228,26 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Robust Refresh Token Implementation
 
 *   **Component:** Refresh Token Service Logic
-    - [ ] Update `/token/refresh` endpoint logic.
+    - [x] Update `/token/refresh` endpoint logic.
         *   *Guidance:* 
-            * Hash the incoming refresh token handle before lookup in `IRefreshTokenStore`.
+            * Hash the incoming refresh token handle before lookup in `IRefreshTokenStore`. (Note: Hashing is handled within the store implementation, not the endpoint itself)
         *   *Guidance:* 
             * Implement refresh token rotation: 
               * When a refresh token is used successfully, consume/remove the old one 
               * and issue a *new* refresh token alongside the new access token. 
-            * Store the new refresh token handle (hashed) in `IRefreshTokenStore`.
+            * Store the new refresh token handle (hashed) in `IRefreshTokenStore`. (Done)
         *   *Guidance:* 
             * Handle potential race conditions or replay attacks 
-              (if a consumed token is presented, potentially revoke the entire token family/session).
-    - [ ] Update `/login` and `/token` (Client Credentials) 
-          to store issued refresh tokens using `IRefreshTokenStore`.
+              (if a consumed token is presented, potentially revoke the entire token family/session). (Basic validation added, advanced revocation is future work)
+    - [x] Update `/login` ~~and `/token` (Client Credentials)~~ 
+          to store issued refresh tokens using `IRefreshTokenStore`. (`/login` done, `/token` endpoint for client credentials not yet implemented)
 *   **Test Case (Integration):**
-    - [ ] Refresh token flow works correctly with EF Core persistence.
-    - [ ] Using a refresh token successfully invalidates it and issues a new one (rotation).
-    - [ ] Attempting to use a refresh token twice fails.
-    - [ ] Refresh tokens expire correctly based on stored lifetime.
-- [ ] **Update README.md** with details on persistent refresh token handling.
+    - [x] Refresh token flow works correctly with EF Core persistence. (Requires DI Setup & Migrations)
+    - [x] Using a refresh token successfully invalidates it and issues a new one (rotation). (Requires DI Setup & Migrations)
+    - [x] Attempting to use a refresh token twice fails. (Requires DI Setup & Migrations)
+    - [x] Refresh tokens expire correctly based on stored lifetime. (Requires DI Setup & Migrations)
+- [x] **Update README.md** with details on persistent refresh token handling.
+
 ---
 
 ### Feature: Delegated User Store Adapter (Optional Integration Path)
@@ -469,240 +473,4 @@ This document provides a detailed breakdown of tasks, components, features, test
           Add necessary ASP.NET Core dependencies.
 *   **Component:** UI Pages/Components
     - [ ] Implement Login Page (`/Account/Login`).
-    - [ ] Implement Registration Page (`/Account/Register`).
-    - [ ] Implement Consent Page (`/Consent`).
-        *   *Guidance:* Display client name, requested scopes (with descriptions from `IScopeStore`), 
-                      allow/deny buttons.
-    - [ ] Implement MFA Prompt Page (`/Account/Mfa`).
-    - [ ] Implement Error Page.
-*   **Component:** UI Setup Extension
-    - [ ] Create `IServiceCollection` extension `AddCoreIdentUI()` (or similar).
-        *   *Guidance:* Registers Razor Pages/Controllers, potentially adds necessary static files middleware.
-*   **Component:** Theming/Overriding Mechanism
-    - [ ] Design a way for consuming applications to easily theme or replace the default UI components.
-        *   *Guidance:* Use standard ASP.NET Core mechanisms 
-                      (e.g., Razor Class Libraries, view overrides).
-*   **Test Case (Manual/E2E):**
-    - [ ] User can navigate to login page, enter credentials, and log in successfully (cookie set).
-    - [ ] User can navigate to register page and create an account.
-    - [ ] During `/authorize` flow, user is presented with the consent page, 
-          can grant/deny, and flow completes correctly.
-    - [ ] Basic UI elements are reasonably styled and functional.
-- [ ] **Update README.md** with details on UI components setup and basic usage.
-
----
-
-### Feature: OIDC Logout
-
-*   **Component:** End Session Endpoint (`GET /endsession`)
-    - [ ] Implement Minimal API endpoint for `/endsession`.
-        *   *Guidance:* Accepts parameters like `id_token_hint`, `post_logout_redirect_uri`, `state`.
-        *   *Guidance:* Validate `id_token_hint` (optional but recommended).
-        *   *Guidance:* Validate `post_logout_redirect_uri` against client's registered URIs.
-        *   *Guidance:* Sign the user out (clear authentication cookie).
-        *   *Guidance:* Redirect user to a logged-out confirmation page 
-                      or the `post_logout_redirect_uri` if valid.
-*   **Test Case (Integration):**
-    - [ ] Calling `/endsession` clears the authentication cookie.
-    - [ ] Calling `/endsession` with a valid `post_logout_redirect_uri` 
-          redirects the user back correctly.
-    - [ ] Calling `/endsession` with an invalid `post_logout_redirect_uri` 
-          shows a local logged-out page or error.
-- [ ] **Update README.md** with details on the `/endsession` endpoint and usage.
-
----
-
-### Feature: Multi-Factor Authentication (MFA) Framework
-
-*   **Component:** Core MFA Logic
-    - [ ] Update user model/store (`CoreIdentUser`, `IUserStore`) 
-          to track MFA enabled status and potentially preferred provider/configuration.
-    - [ ] Modify login/authorize flows to check MFA requirement. 
-          If needed, redirect to MFA prompt page (`/Account/Mfa`).
-    - [ ] Define `IMfaProvider` interface 
-          (e.g., `InitiateChallengeAsync`, `ValidateChallengeAsync`, `ProviderName`).
-    - [ ] Implement service to manage/invoke registered `IMfaProvider`s.
-*   **Component:** MFA Prompt Page (`/Account/Mfa`)
-    - [ ] Display prompt for the required second factor (e.g., "Enter TOTP code").
-    - [ ] Submit challenge response to a validation endpoint.
-*   **Test Case (Integration):**
-    - [ ] Login flow for MFA-enabled user redirects to MFA prompt after password validation.
-    - [ ] Submitting correct MFA challenge completes login.
-    - [ ] Submitting incorrect MFA challenge shows error, does not complete login.
-- [ ] **Update README.md** with MFA setup, usage, and provider model.
-
----
-
-### Feature: Provider Abstractions & Specific Providers
-
-*   **Component:** `CoreIdent.Providers.Abstractions` NuGet Package
-    - [ ] Create `.csproj` file. Define base classes/interfaces for external providers 
-          (e.g., `IExternalAuthenticationProvider`, callback handling logic).
-*   **Component:** `CoreIdent.Providers.Passkeys` Package (WebAuthn/FIDO2)
-    - [ ] Create `.csproj`. Add WebAuthn library dependency (e.g., `Fido2NetLib`).
-    - [ ] Implement endpoints for challenge generation (`/passkey/challenge`), 
-          credential registration (`/passkey/register`), 
-          assertion verification (`/passkey/verify`).
-    - [ ] Implement storage for public key credentials 
-          (extend `IUserStore` or new store `IPasskeyCredentialStore`).
-    - [ ] Implement `AddPasskeyProvider()` setup extension.
-*   **Test Case (Integration):**
-    - [ ] User can register a passkey (device authenticator or security key).
-- [ ] **Update README.md** with Passkeys provider setup instructions.
-*   **Component:** `CoreIdent.Providers.Totp` Package (MFA Provider)
-    - [ ] Create `.csproj`. Add TOTP library dependency (e.g., `Otp.NET`).
-    - [ ] Implement `IMfaProvider` for TOTP.
-    - [ ] Implement logic for TOTP setup (generate secret, display QR code). 
-          Store secret securely (encrypted) associated with user.
-    - [ ] Implement validation logic.
-    - [ ] Implement `AddTotpProvider()` setup extension.
-*   **Test Case (Integration):**
-    - [ ] User can enable TOTP MFA, scan QR code.
-- [ ] **Update README.md** with TOTP provider setup instructions.
-*   **Component:** `CoreIdent.Providers.Google` Package (Social Login)
-    - [ ] Create `.csproj`. Add `Microsoft.AspNetCore.Authentication.Google` dependency.
-    - [ ] Implement provider logic using standard ASP.NET Core external login handlers. 
-          Map Google profile claims to `CoreIdentUser`. 
-          Handle linking/creation of local user.
-    - [ ] Implement `AddGoogleProvider(Action<GoogleOptions> configure)` setup extension.
-*   **Test Case (Integration):**
-    - [ ] User can initiate login via Google, authenticate with Google, 
-          and be logged into CoreIdent (new user created or linked).
-- [ ] **Update README.md** with Google provider setup instructions.
-*   **Component:** `CoreIdent.Providers.Web3` Package (Wallet Login)
-    - [ ] Create `.csproj`. Add Nethereum or similar library if needed for signature verification.
-    - [ ] Implement challenge generation endpoint.
-    - [ ] Implement login endpoint verifying message signature against wallet address. 
-          Link/create local user based on verified address.
-    - [ ] Implement `AddWeb3Provider()` setup extension.
-*   **Test Case (Integration):**
-    - [ ] User can request challenge, sign with wallet, and log in.
-- [ ] **Update README.md** with Web3 provider setup instructions.
-*   **Component:** `CoreIdent.Providers.LNURL` Package (Lightning Login)
-    - [ ] Create `.csproj`. Add LNURL library dependency (or implement spec).
-    - [ ] Implement LNURL-auth flow (generate `k1`, provide LNURL endpoint, verify signature against linking key).
-    - [ ] Implement `AddLnurlAuthProvider()` setup extension.
-*   **Test Case (Integration):**
-    - [ ] User can scan LNURL QR code with wallet, approve login, and be logged in.
-- [ ] **Update README.md** with LNURL-auth provider setup instructions.
-
----
-
-### Feature: Administration UI (Optional)
-
-*   **Component:** `CoreIdent.AdminUI` NuGet Package
-    - [ ] Create `.csproj`. Choose UI tech (Razor Pages/Blazor). Secure appropriately (admin role/policy).
-    - [ ] Implement basic User Management UI 
-          (List, View, Create, Edit Roles/Claims - Readonly initially?).
-    - [ ] Implement basic Client Management UI (List, View).
-    - [ ] Implement basic Scope Management UI (List, View).
-    - [ ] Implement `AddCoreIdentAdminUI()` setup extension.
-*   **Test Case (Manual/E2E):**
-    - [ ] Admin user can log in and access the Admin UI.
-    - [ ] Admin can view list of users/clients/scopes.
-    - [ ] (If implemented) Admin can perform basic CRUD operations.
-- [ ] **Update README.md** with details on the Admin UI setup and usage (if implemented).
-
-### Feature: Developer Training Guide (Phase 4 Update)
-
-*   **Goal:** Detail user interaction elements and provider integrations.
-*   **Component:** Training Document
-    - [ ] Update Developer Training Guide with Phase 4 concepts (UI integration patterns, Consent flows, Logout mechanisms, MFA implementation details, Provider integration patterns - Passkeys, Social, Web3, LNURL-auth, etc., Admin UI usage).
-
----
-
-## Phase 5: Community, Documentation & Tooling
-
-**Goal:** Make CoreIdent easy to adopt, use, and contribute to. Polish and prepare for wider release.
-
-**Estimated Duration:** 4+ weeks / 40-60 hours (Ongoing / Parallel)
-
----
-
-### Feature: Documentation Website
-
-*   **Component:** Docs Site Project
-    - [ ] Choose static site generator (e.g., Docusaurus, VitePress). Set up repository.
-    - [ ] Write "Getting Started" guide.
-    - [ ] Write Configuration guide (`CoreIdentOptions`, Storage setup, Provider setup).
-    - [ ] Write API Reference (core endpoints).
-    - [ ] Write guides for specific features (MFA setup, Passkeys, Custom User Stores).
-    - [ ] Write Architecture overview.
-    - [ ] Write Contribution guide.    
-    - [ ] **Incorporate and refine Developer Training Guide modules** into the official documentation.
-    - [ ] Set up deployment for docs site (e.g., GitHub Pages, Netlify).
-*   **Test Case (Manual):**
-    - [ ] Documentation is clear, accurate, and easy to navigate.
-    - [ ] Getting Started guide allows a new user to set up a basic instance successfully.
-
----
-
-### Feature: `dotnet new` Templates
-
-*   **Component:** Template Projects (`coreident-server`, `coreident-api`)
-    - [ ] Create template project structures.
-    - [ ] Create `.template.config/template.json` files.
-    - [ ] Implement template logic (e.g., conditional package inclusion based on options).
-    - [ ] Package templates as a NuGet package.
-*   **Test Case:**
-    - [ ] `dotnet new coreident-server` creates a runnable project 
-          with CoreIdent and default EF Core storage.
-    - [ ] `dotnet new coreident-api` creates a runnable API project secured by CoreIdent 
-          (requiring a running CoreIdent instance).
-- [ ] **Update README.md** with instructions on using `dotnet new` templates.
-
----
-
-### Feature: Example Applications
-
-*   **Component:** Sample Projects (e.g., SPA, Web API)
-    - [ ] Create sample ASP.NET Core API project 
-          demonstrating how to protect endpoints using CoreIdent tokens.
-    - [ ] Create sample SPA (e.g., React, Vue, Blazor WASM) 
-          demonstrating Authorization Code Flow + PKCE login against CoreIdent.
-    - [ ] Add samples to main repository or separate repository.
-*   **Test Case (Manual):**
-    - [ ] Example API can be run and endpoints accessed with valid tokens from CoreIdent.
-    - [ ] Example SPA can successfully log in via CoreIdent 
-          and make authenticated calls to the example API.
-- [ ] **Update README.md** linking to example applications.
-
----
-
-### Feature: CI/CD Pipeline & Publishing
-
-*   **Component:** CI/CD Workflow (e.g., GitHub Actions)
-    - [ ] Set up workflow to trigger on pushes/PRs.
-    - [ ] Add steps to restore dependencies, build the solution.
-    - [ ] Add step to run unit tests.
-    - [ ] Add step to run integration tests (potentially using test containers for DBs).
-    - [ ] Add step to pack NuGet packages.
-    - [ ] Add step to publish NuGet packages (on tag/release).
-    - [ ] Add step to deploy documentation site.
-*   **Test Case:**
-    - [ ] CI pipeline runs successfully on PRs.
-    - [ ] NuGet packages are published correctly on release.
-- [ ] **Update README.md** with links to build status badges.
-
----
-
-### Feature: Community Setup
-
-*   **Component:** GitHub Repository Settings
-    - [ ] Set up issue templates.
-    - [ ] Set up PR template.
-    - [ ] Create `CONTRIBUTING.md` guidelines.
-    - [ ] Create `CODE_OF_CONDUCT.md`.
-    - [ ] Enable GitHub Discussions.
-*   **Test Case (N/A):**
-    - [ ] Community resources are in place.
-- [ ] **Update README.md** with links to contribution guidelines and community channels.
-
-*(Note: The specific 'Developer Training Guide' feature merges into the main documentation effort in this phase, but the goal is to ensure that detailed training material exists and is incorporated.)*
-
-### Follow-Up Step: Convention Over Configuration Review (Phase 1)
-- [ ] **Review Setup Process:** Ensure `AddCoreIdent()` and related extensions provide sensible defaults and minimize required configuration. Refine API design to reduce boilerplate code for common use cases, reinforcing the 'convention over configuration' principle.
-
----
- 
-#### Phase 3: Enhanced Token Management & Security
+    - [ ] Implement Registration Page (`

@@ -143,6 +143,10 @@ builder.Services.AddDbContext<CoreIdentDbContext>(options =>
 // This MUST be called AFTER AddCoreIdent() and AddDbContext()
 builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
 
+// *** Important: After setting up EF Core, you need to create and apply migrations: ***
+// 1. Add migration: dotnet ef migrations add InitialCreate --context CoreIdentDbContext -p src/CoreIdent.Storage.EntityFrameworkCore -s <Your_Web_Project>
+// 2. Apply migration: dotnet ef database update --context CoreIdentDbContext -s <Your_Web_Project>
+
 // ... other services like Controllers, Swagger, etc.
 
 var app = builder.Build();
@@ -170,7 +174,11 @@ With the setup above, the following endpoints provided by `CoreIdent.Core` will 
 *   `POST /auth/login`: Log in with email and password, receive JWT access and refresh tokens.
 *   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens.
 
-**Storage:** Phase 1 uses a simple `InMemoryUserStore` and an in-memory refresh token store. Data is **not persisted** across application restarts.
+**Storage (Phase 1):** Initially, Phase 1 used a simple `InMemoryUserStore` and an in-memory refresh token store. Data was **not persisted** across application restarts.
+
+**Storage (Phase 2+ / Current):** If configured with `AddCoreIdentEntityFrameworkStores()`, CoreIdent now uses EF Core for persistence.
+*   User, client, and scope data are stored in the configured database via `IUserStore`, `IClientStore`, `IScopeStore`.
+*   **Refresh Tokens:** Refresh tokens are now persisted via `IRefreshTokenStore`. When a refresh token is used successfully at the `/token/refresh` endpoint, it is **consumed** (marked as used or deleted, depending on store implementation) and a **new refresh token** is issued alongside the new access token (Refresh Token Rotation). This enhances security by preventing token replay.
 
 ## Running / Testing
 
