@@ -18,6 +18,7 @@
 *   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics (Authorization Code Flow + PKCE, Client Credentials, Discovery).
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
+*   **Phase 6:** Client Libraries for Mobile & Desktop Applications.
 
 ## Why CoreIdent?
 
@@ -56,6 +57,11 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
     *   **Decentralized:** Web3 Wallet Login (MetaMask), LNURL-auth.
 *   **UI Components:** Optional package (`CoreIdent.UI.Web`) providing basic, themeable UI (Razor Pages/Components) for login, registration, consent, etc.
 *   **Administration:** Optional Admin UI for managing users, clients, scopes.
+*   **Client Libraries:** 
+    *   Core client library (`CoreIdent.Client`) for mobile & desktop apps
+    *   Platform-specific implementations (.NET MAUI, WPF)
+    *   Secure token storage and management
+    *   Offline authentication support
 *   **Tooling:** `dotnet new` templates, comprehensive documentation.
 
 **Is this a replacement for IdentityServer?**

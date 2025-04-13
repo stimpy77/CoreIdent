@@ -31,6 +31,11 @@ CoreIdent aims to be the modern, open-source, developer-friendly identity and au
     *   Built-in infrastructure readiness for WebSocket communication.
     *   Standard OAuth 2.0 / OIDC Flows (Authorization Code + PKCE, Client Credentials).
     *   OIDC Discovery & JWKS endpoints.
+*   **Client Libraries:**
+    *   `CoreIdent.Client` - Core client library for mobile & desktop applications.
+    *   Platform-specific implementations (.NET MAUI, WPF, Xamarin, etc.).
+    *   Token management (secure storage, auto-refresh, validation).
+    *   Offline authentication support.
 *   **Pluggable Storage & User Management:**
     *   Core interfaces (`IUserStore`, `IRefreshTokenStore`, etc.) allow flexible backends.
     *   In-Memory Store (default for testing/development).
