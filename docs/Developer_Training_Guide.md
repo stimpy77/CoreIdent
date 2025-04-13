@@ -255,7 +255,7 @@ Access tokens are intentionally short-lived for security. When an access token e
 
 *   **Security:** Refresh tokens are powerful credentials and must be stored securely by the client (e.g., secure storage on mobile, `HttpOnly`, `Secure` cookies for web). They should generally only be sent to the dedicated refresh endpoint (`/token/refresh`).
 
-### 5. Password Hashing Fundamentals
+### 5. Password Hashing (`IPasswordHasher`)
 
 Storing user passwords securely is non-negotiable. CoreIdent leverages established best practices for password hashing to protect user credentials even if the underlying user data store is compromised.
 
@@ -297,7 +297,7 @@ CoreIdent abstracts the hashing mechanism behind the `IPasswordHasher` interface
 
 **Key Takeaway:** CoreIdent relies on a strong, standard password hashing implementation out-of-the-box, ensuring passwords are not stored in a recoverable format. The `IPasswordHasher` interface provides the necessary abstraction for this critical security component.
 
-### 6. In-Memory Stores (Phase 1 Default)
+### 6. Storage Abstraction (`IUserStore`, `IRefreshTokenStore`, etc.)
 
 To facilitate rapid development, testing, and provide a functional Minimum Viable Product (MVP) without external dependencies like databases, CoreIdent includes default in-memory storage implementations for Phase 1.
 
@@ -327,41 +327,228 @@ To facilitate rapid development, testing, and provide a functional Minimum Viabl
 
 **Key Takeaway:** The in-memory stores provide a convenient starting point but are **unsuitable for production environments** due to their volatility. They serve to demonstrate the core authentication flows and facilitate testing. Replacing the `InMemoryUserStore` with a persistent implementation (like the EF Core store in Phase 2) is a crucial step for real-world applications.
 
-### 7. Security Fundamentals (Phase 1 Context)
+CoreIdent defines several storage interfaces to abstract persistence concerns:
 
-While later phases will introduce more advanced security features (OAuth 2.0 flows, MFA, etc.), even the basic setup in Phase 1 requires attention to fundamental security practices.
+*   **`IUserStore`:** Handles CRUD operations for `CoreIdentUser` objects, including finding users by ID or username, managing claims, and password hash storage/retrieval.
+*   **`IRefreshTokenStore`:** Handles CRUD operations for `CoreIdentRefreshToken` objects. This becomes critical in Phase 2 for managing refresh token lifecycles, consumption, and rotation.
+*   **`IClientStore`:** (Introduced conceptually for Phase 3+) Handles CRUD operations for OAuth 2.0/OIDC client applications (`CoreIdentClient`). Clients are applications (web apps, mobile apps, SPAs, APIs) that request tokens from CoreIdent.
+*   **`IScopeStore`:** (Introduced conceptually for Phase 3+) Handles CRUD operations for OAuth 2.0/OIDC scopes (`CoreIdentScope`). Scopes represent permissions or resources that clients can request access to (e.g., `profile`, `email`, `api.read`).
 
-*   **HTTPS Enforcement:**
-    *   **CRITICAL:** All communication with CoreIdent endpoints (`/register`, `/login`, `/token/refresh`) **must** occur over HTTPS (TLS/SSL). This encrypts the traffic, protecting sensitive data like passwords and tokens from eavesdropping on the network.
-    *   **Implementation:** ASP.NET Core templates typically include HTTPS redirection middleware (`app.UseHttpsRedirection()`). Ensure this is enabled in your `Program.cs` for production environments. Use valid TLS certificates in production. During local development, ASP.NET Core's development certificates suffice.
+**Key Takeaway:** The store interfaces define the contract for how CoreIdent interacts with persisted data. Phase 1 provided a simple in-memory implementation primarily for `IUserStore`. Phase 2 introduces robust EF Core implementations for `IUserStore` and `IRefreshTokenStore`.
 
-*   **Input Validation:**
-    *   **Importance:** Always validate data received from clients *before* processing it. This helps prevent various attacks, including injection attacks and denial-of-service caused by malformed requests.
-    *   **CoreIdent Approach:** The Minimal API endpoints in CoreIdent should leverage built-in ASP.NET Core validation mechanisms (like Data Annotations on DTOs - `RegisterRequest`, `LoginRequest`) or libraries like FluentValidation. Failure to validate can lead to errors or unexpected behavior (e.g., attempting to hash an empty password). The `AddCoreIdent()` setup also includes validation for `CoreIdentOptions`.
+## Phase 2: Persistence & Extensibility
 
-*   **Secrets Management (`SigningKeySecret`):**
-    *   **Never Hardcode Secrets:** As mentioned in Section 1, the JWT `SigningKeySecret` is highly sensitive. Hardcoding it in `appsettings.json` and checking it into source control is a major security risk.
-    *   **Secure Alternatives:** Use tools appropriate for your environment:
-        *   **Development:** .NET User Secrets (`dotnet user-secrets set "CoreIdent:SigningKeySecret" "YourSecret"`).
-        *   **Production:** Environment Variables, Azure Key Vault, AWS Secrets Manager, HashiCorp Vault, or similar secure configuration providers.
-    *   **Key Strength:** Ensure the secret is long and random (at least 256 bits / 32 bytes for HS256).
+This section delves into the significant enhancements introduced in Phase 2, moving beyond volatile in-memory storage to persistent solutions and providing adaptable integration paths.
 
-*   **Secure Token Handling (Client-Side):**
-    *   **Responsibility:** While CoreIdent generates tokens, the client application is responsible for storing and handling them securely.
-    *   **Storage:**
-        *   **Access Tokens:** Often stored in memory in JavaScript variables. Avoid storing them in `localStorage` or `sessionStorage` due to XSS (Cross-Site Scripting) risks.
-        *   **Refresh Tokens:** Require more secure storage as they are longer-lived. For web applications, storing them in `HttpOnly`, `Secure`, `SameSite=Strict` cookies is a common and recommended approach. For mobile/native apps, use the platform's secure storage mechanisms (e.g., Keychain on iOS, Keystore on Android).
-    *   **Transmission:** Only send access tokens in the `Authorization: Bearer` header to trusted API endpoints (your own or those explicitly configured). Only send refresh tokens to the specific `/token/refresh` endpoint. Always use HTTPS.
+### 7. Persistence with Entity Framework Core
 
-*   **Preventing User Enumeration:**
-    *   **Risk:** Allowing attackers to determine if a user account exists based on different error messages (e.g., "User not found" vs. "Invalid password").
-    *   **Mitigation:** The `/login` endpoint should return the *same* generic error response (e.g., `401 Unauthorized`) whether the username doesn't exist or the password was incorrect. CoreIdent's default implementation aims for this behavior.
+While the in-memory stores are useful for getting started, real-world applications require data to persist across restarts and scale effectively. Phase 2 introduces first-class support for persistence using **Entity Framework Core (EF Core)**, Microsoft's recommended object-relational mapper (ORM) for .NET.
 
-*   **Rate Limiting & Throttling (Future Consideration):**
-    *   **Importance:** Protects against brute-force attacks on login endpoints and general denial-of-service attempts.
-    *   **Status:** CoreIdent Phase 1 does not include built-in rate limiting. This should be added at the application hosting level (e.g., using API Gateways, load balancer rules) or via ASP.NET Core middleware (`Microsoft.AspNetCore.RateLimiting`) configured in the consuming application. It's a crucial addition for production deployments.
+**Why EF Core?**
 
-**Key Takeaway:** Security is layered. Even with CoreIdent handling authentication logic, the consuming application must adhere to fundamental security practices regarding HTTPS, input validation, secret management, and secure token handling on the client side.
+*   **Database Agnostic:** EF Core supports various database providers (SQL Server, PostgreSQL, SQLite, MySQL, Cosmos DB, etc.), allowing you to choose the backend that best suits your needs.
+*   **Developer Productivity:** It simplifies data access by allowing developers to work with .NET objects instead of writing raw SQL, handling mapping, change tracking, and migrations.
+*   **Integration:** It integrates deeply with ASP.NET Core dependency injection and configuration.
+
+**Key Components (`CoreIdent.Storage.EntityFrameworkCore`):**
+
+To keep the core library lean, all EF Core-specific code resides in a separate NuGet package: `CoreIdent.Storage.EntityFrameworkCore`.
+
+1.  **`CoreIdentDbContext`:**
+    *   This is the heart of the EF Core integration. It inherits from `Microsoft.EntityFrameworkCore.DbContext`.
+    *   It defines `DbSet<>` properties for each CoreIdent entity that needs to be persisted (e.g., `public DbSet<CoreIdentUser> Users { get; set; }`, `public DbSet<CoreIdentRefreshToken> RefreshTokens { get; set; }`).
+    *   The `OnModelCreating(ModelBuilder modelBuilder)` method is overridden to configure the database schema using EF Core's Fluent API. This includes defining primary keys, relationships (e.g., one-to-many between `CoreIdentUser` and `CoreIdentUserClaim`), indexes, and constraints (e.g., unique usernames).
+    *   **Important:** Your application's main `DbContext` should either **inherit from `CoreIdentDbContext`** or **call its configuration logic** within its own `OnModelCreating` to ensure the CoreIdent tables are correctly set up.
+
+2.  **EF Core Store Implementations:**
+    *   This package provides concrete implementations of the store interfaces from `CoreIdent.Core`:
+        *   `EfUserStore`: Implements `IUserStore`. Uses the injected `CoreIdentDbContext` to perform LINQ queries (e.g., `_context.Users.FirstOrDefaultAsync(...)`) and save changes (`_context.SaveChangesAsync()`).
+        *   `EfRefreshTokenStore`: Implements `IRefreshTokenStore`. Similarly uses the `DbContext` to manage `CoreIdentRefreshToken` entities.
+        *   *(Implementations for `IClientStore` and `IScopeStore` using EF Core will reside here when needed for Phase 3+)*
+
+3.  **DI Registration Extension (`AddCoreIdentEntityFrameworkStores<TContext>`):**
+    *   To switch from the default in-memory stores to EF Core, you use the `AddCoreIdentEntityFrameworkStores<TContext>()` extension method provided in this package.
+    *   **Usage:**
+        ```csharp
+        var builder = WebApplication.CreateBuilder(args);
+
+        // 1. Register CoreIdent Core services (AFTER configuring options)
+        builder.Services.AddCoreIdent(options => /* ... configure options ... */);
+
+        // 2. Register YOUR application's DbContext (using your chosen provider)
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        builder.Services.AddDbContext<YourApplicationDbContext>(options =>
+            options.UseSqlite(connectionString)); // Or UseSqlServer, UseNpgsql, etc.
+
+        // 3. Register the CoreIdent EF Core stores, pointing to YOUR DbContext
+        //    (YourApplicationDbContext MUST incorporate CoreIdentDbContext's configuration)
+        builder.Services.AddCoreIdentEntityFrameworkStores<YourApplicationDbContext>();
+
+        var app = builder.Build();
+        // ... rest of Program.cs
+        ```
+    *   **How it works:** This extension method removes any existing registrations for `IUserStore`, `IRefreshTokenStore`, etc., and registers the EF Core implementations (`EfUserStore`, `EfRefreshTokenStore`) with a **Scoped** lifetime. It relies on the `TContext` (your `DbContext`) already being registered in the DI container.
+
+**Migrations:**
+
+Once you configure EF Core, you need to manage your database schema using **EF Core Migrations**.
+
+1.  **Install Tools:** Ensure you have the EF Core command-line tools installed (`dotnet tool install --global dotnet-ef`).
+2.  **Add Migration:** From your terminal, in the directory containing your *web application project* (`.csproj`), run:
+    ```bash
+    dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext -p ../path/to/src/CoreIdent.Storage.EntityFrameworkCore
+    ```
+    *   Replace `InitialCoreIdentSchema` with a descriptive name for the migration.
+    *   Replace `YourApplicationDbContext` with the name of *your* application's `DbContext` class.
+    *   The `-p` argument points to the project containing the `CoreIdentDbContext` configuration (our storage project).
+    *   The `-s` argument (optional if run from the web project directory) points to the startup project.
+    This command generates C# code files in a `Migrations` folder within the storage project, describing the schema changes needed.
+3.  **Apply Migration:** To apply the changes to your database, run:
+    ```bash
+    dotnet ef database update --context YourApplicationDbContext
+    ```
+    This connects to the database specified in your connection string and executes the necessary SQL to create/update tables.
+
+**Refresh Token Handling with Persistence:**
+
+The move to persistent storage significantly changes refresh token behavior:
+
+1.  **Storage:** When a user logs in, the generated `CoreIdentRefreshToken` (containing the handle, user ID, client ID, expiry, etc.) is saved to the database table via `IRefreshTokenStore.StoreRefreshTokenAsync`.
+2.  **Validation (`/token/refresh`):**
+    *   The endpoint receives a refresh token *handle*.
+    *   It calls `IRefreshTokenStore.GetRefreshTokenAsync(handle)` to retrieve the full token object from the database.
+    *   It checks if the token exists, if it has expired (`ExpirationTime`), and if it has already been used (`ConsumedTime`). If any check fails, it returns `401 Unauthorized`.
+3.  **Consumption:** If the token is valid, it **must** be consumed to prevent replay attacks. The store implementation might set the `ConsumedTime` or delete the record entirely. This happens via `IRefreshTokenStore.UpdateRefreshTokenAsync` or `RemoveRefreshTokenAsync`.
+4.  **Rotation:** A **new** `CoreIdentRefreshToken` is generated by the `ITokenService`.
+5.  **Store New Token:** The *new* refresh token is stored in the database via `StoreRefreshTokenAsync`.
+6.  **Response:** The new access token *and* the new refresh token handle are returned to the client.
+
+This **Refresh Token Rotation** strategy is crucial for security. Each refresh token can only be used once. If an attacker steals a refresh token but the legitimate user uses it first, the stolen token becomes invalid. If the attacker uses it first, the legitimate user's subsequent attempt will fail, potentially alerting them, and the rotation mechanism helps invalidate subsequent tokens linked to the compromised one (though advanced replay detection is a further enhancement).
+
+### 8. Delegated User Store: Integrating Existing Systems
+
+What if you already have an existing user database or identity system and don't want to migrate users into CoreIdent's storage?
+
+The `CoreIdent.Adapters.DelegatedUserStore` package provides a solution.
+
+**Concept:**
+
+Instead of implementing `IUserStore` to directly interact with a database, the `DelegatedUserStore` takes **functions (delegates)** as configuration. These functions contain *your* logic to interact with *your* existing user system.
+
+**How it Works:**
+
+1.  **Install:** `dotnet add package CoreIdent.Adapters.DelegatedUserStore`
+2.  **Configure:** Instead of calling `AddCoreIdentEntityFrameworkStores`, you call `AddCoreIdentDelegatedUserStore` after `AddCoreIdent`:
+
+    ```csharp
+    builder.Services.AddCoreIdentDelegatedUserStore(options =>
+    {
+        // REQUIRED: Provide a function to find a user by ID
+        options.FindUserByIdAsync = async (userId, ct) => {
+            // Your logic using your service/repository to find the user
+            var externalUser = await myExternalUserService.FindByIdAsync(userId);
+            if (externalUser == null) return null;
+            // Map YOUR user model to CoreIdentUser (excluding password hash)
+            return new CoreIdentUser { Id = externalUser.Id, UserName = externalUser.Email, ... };
+        };
+
+        // REQUIRED: Provide a function to find a user by username
+        options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
+            var externalUser = await myExternalUserService.FindByUsernameAsync(normalizedUsername);
+            if (externalUser == null) return null;
+            return new CoreIdentUser { Id = externalUser.Id, UserName = externalUser.Email, ... };
+        };
+
+        // REQUIRED: Provide a function to validate credentials
+        // !! IMPORTANT: This delegate receives the PLAIN TEXT password submitted by the user.
+        // !! Your external service MUST handle the secure validation against its stored credentials.
+        options.ValidateCredentialsAsync = async (username, password, ct) => {
+             // Your logic: Call your service to check the password
+             return await myExternalUserService.CheckPasswordAsync(username, password);
+        };
+
+        // OPTIONAL: Provide a function to get user claims
+        options.GetClaimsAsync = async (coreIdentUser, ct) => {
+            // Your logic: Get claims for the user ID from your system
+            var externalClaims = await myExternalUserService.GetUserClaimsAsync(coreIdentUser.Id);
+            // Map to System.Security.Claims.Claim
+            return externalClaims.Select(c => new Claim(c.Type, c.Value)).ToList();
+        };
+    });
+    ```
+3.  **CoreIdent Interaction:** When CoreIdent needs user information (e.g., during login), it calls the appropriate method on the registered `IUserStore`. Since `DelegatedUserStore` is registered, it executes the corresponding delegate function you provided, effectively bridging CoreIdent to your existing system.
+
+**Important Considerations:**
+
+*   **Password Validation:** The `ValidateCredentialsAsync` delegate is critical. It receives the plain-text password entered by the user. Your implementation *must* securely validate this against your existing system's credential store (which should be storing hashed passwords). **CoreIdent's `IPasswordHasher` is NOT used in this flow.**
+*   **Mapping:** You are responsible for mapping your external user model to the `CoreIdentUser` model within the `FindUser...` delegates. Only map necessary properties like `Id` and `UserName`. **Do not map password hashes.**
+*   **Write Operations:** The `DelegatedUserStore` intentionally does **not** implement user creation, update, or deletion methods (`CreateAsync`, `UpdateAsync`, `DeleteAsync`). These operations should be handled directly within your existing user management system.
+
+This adapter allows you to leverage CoreIdent's token generation and endpoint features while keeping your user source-of-truth separate.
+
+**Configuration Deep Dive (`AddCoreIdentDelegatedUserStore`):**
+
+Let's break down the configuration process further:
+
+```csharp
+    builder.Services.AddCoreIdentDelegatedUserStore(options =>
+    {
+        // REQUIRED Delegates:
+        options.FindUserByIdAsync = ... // Your logic here
+        options.FindUserByUsernameAsync = ... // Your logic here
+        options.ValidateCredentialsAsync = ... // Your logic here
+
+        // OPTIONAL Delegates:
+        options.GetClaimsAsync = ... // Optional: Your logic here
+        // Other IUserStore methods like GetUserIdAsync, GetUsernameAsync,
+        // GetNormalizedUserNameAsync have default implementations in DelegatedUserStore
+        // that work directly off the CoreIdentUser object returned by FindUser... methods.
+        // You generally don't need to override these unless you have specific needs.
+    });
+```
+*   **Registration:** This extension method registers `DelegatedUserStore` as the implementation for `IUserStore` with a **Scoped** lifetime, replacing any previously registered `IUserStore` (like `InMemoryUserStore` or `EfUserStore`).
+*   **Options Validation:** The options object includes validation (`IValidateOptions<DelegatedUserStoreOptions>`) that runs on startup. It checks if the *required* delegates (`FindUserByIdAsync`, `FindUserByUsernameAsync`, `ValidateCredentialsAsync`) have been provided. If any are missing, the application will fail to start, ensuring the adapter is configured correctly.
+*   **Delegate Execution:** When an endpoint (like `/login`) needs to interact with the `IUserStore`, the dependency injection system provides the registered `DelegatedUserStore` instance. When a method like `FindByUsernameAsync` is called on this instance, it internally invokes the specific `Func<>` delegate that you assigned to `options.FindUserByUsernameAsync` during configuration.
+
+**Mapping `CoreIdentUser`:**
+
+It's crucial to correctly map your external user object to `CoreIdentUser` within the `FindUserByIdAsync` and `FindUserByUsernameAsync` delegates. CoreIdent relies on properties of this object later in the pipeline (e.g., the `ITokenService` uses `user.Id` and `user.UserName` for default claims).
+
+```csharp
+options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
+    var externalUser = await myExternalUserService.FindByUsernameAsync(normalizedUsername);
+    if (externalUser == null) return null;
+
+    // Create and populate the CoreIdentUser
+    return new CoreIdentUser {
+        Id = externalUser.ExternalSystemId, // Map your unique ID
+        UserName = externalUser.PrimaryEmail, // Map the username/email used for login
+        NormalizedUserName = externalUser.PrimaryEmail?.ToUpperInvariant(), // Provide the normalized version if possible
+        // Other properties like LockoutEnabled, AccessFailedCount could be mapped if relevant
+        // --- DO NOT MAP A PASSWORD HASH --- CoreIdent relies on ValidateCredentialsAsync
+    };
+};
+```
+
+**Workflow Example (`/login`):**
+
+1.  User POSTs to `/login` with email and password.
+2.  CoreIdent endpoint receives the request.
+3.  It requests `IUserStore` from DI, receiving the `DelegatedUserStore` instance.
+4.  It calls `userStore.FindByUsernameAsync(normalizedEmail)`.
+5.  `DelegatedUserStore` executes *your* `options.FindUserByUsernameAsync` delegate.
+6.  Your delegate queries your external system and returns a mapped `CoreIdentUser` (or null).
+7.  If a user is found, the endpoint calls `userStore.ValidateCredentialsAsync(normalizedEmail, password)`.
+8.  `DelegatedUserStore` executes *your* `options.ValidateCredentialsAsync` delegate.
+9.  Your delegate validates the plain-text password against your external system and returns `true` or `false`.
+10. If `true`, the endpoint requests `ITokenService`.
+11. It calls `tokenService.GenerateAccessTokenAsync(coreIdentUser)`.
+12. `JwtTokenService` calls `userStore.GetClaimsAsync(coreIdentUser)`.
+13. `DelegatedUserStore` executes *your* optional `options.GetClaimsAsync` delegate (or uses default claims).
+14. `JwtTokenService` generates the token with claims.
+15. Tokens are returned to the user.
+
+This flow clearly shows how the adapter acts as a bridge, invoking your custom logic at the appropriate points.
 
 ---
  
