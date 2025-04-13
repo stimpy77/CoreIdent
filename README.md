@@ -4,6 +4,8 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+A simple, extensible core identity system for .NET apps, designed for flexibility, not vendor lock-in.
+
 **Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows) development is underway.
 
 **Development Phases:**
