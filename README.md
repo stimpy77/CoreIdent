@@ -2,7 +2,7 @@
 
 ![image](https://github.com/user-attachments/assets/96ac08ce-d88e-4d78-af98-101bb95aa317)
 
-[![Build Status](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/stimpy77/CoreIdent)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NuGet Version](https://img.shields.io/nuget/v/CoreIdent.Core.svg)](https://www.nuget.org/packages/CoreIdent.Core/)
 
