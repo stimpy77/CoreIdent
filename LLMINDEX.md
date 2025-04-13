@@ -1,4 +1,4 @@
-# CoreIdent Project Index for LLMs (Updated after EF Core Store Implementation)
+# CoreIdent Project Index for LLMs (Updated after Phase 2)
 
 ## 1. Purpose of this Document
 
@@ -16,21 +16,19 @@ This document serves as a comprehensive index and manifest for the CoreIdent pro
 
 ## 3. Current Status & Development Plan
 
-*   **Current Status:** Phase 2/3 (EF Core Storage Implementation) is complete. Phase 3 (Token Enhancements) development is starting/ongoing.
+*   **Current Status:** Phase 2 (EF Core Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows) development is starting.
 *   **Development Phases (Summary - see `DEVPLAN.md` for details):**
     *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
         *   Features: `/register`, `/login`, `/token/refresh` endpoints. Core services (`IPasswordHasher`, `ITokenService`), models (`CoreIdentUser`), configuration (`CoreIdentOptions`). Defined core store interfaces (`IUserStore`, `IClientStore`, `IScopeStore`, `IRefreshTokenStore`).
         *   Storage: `InMemoryUserStore` (initial implementation).
-        *   Authentication: JWT Access Tokens, basic Refresh Tokens.
-        *   Hashing: `IPasswordHasher` using ASP.NET Core Identity defaults (PBKDF2).
-    *   **Phase 2/3 (Completed):** Persistent Storage (EF Core) & Interface Refinement.
-        *   Features: Implemented EF Core-based stores (`EfUserStore`, `EfClientStore`, `EfScopeStore`, `EfRefreshTokenStore`).
-        *   Storage: Defined `CoreIdentDbContext` and EF Core entities (`CoreIdentUser`, `CoreIdentUserClaim`, `CoreIdentRefreshToken`, `CoreIdentClient`, `CoreIdentClientSecret`, `CoreIdentScope`, `CoreIdentScopeClaim`) within `CoreIdent.Storage.EntityFrameworkCore`.
-        *   Added `CoreIdent.Storage.EntityFrameworkCore` project.
-        *   Unit tests created/fixed for EF Core stores.
-    *   **Phase 3 (Current):** Enhanced Token Management & Security (Revocation, Sliding Expiration, DI Registration, Migrations).
-    *   **Phase 4:** UI/Admin Portal (Basic Management).
-    *   **Phase 5:** Pluggable Providers & Advanced Features (Social Logins, Passkeys, etc.).
+    *   **Phase 2 (Completed):** Persistent Storage (EF Core) & Interface Refinement, Delegated Storage.
+        *   Features: Implemented EF Core-based stores (`EfUserStore`, `EfClientStore`, `EfScopeStore`, `EfRefreshTokenStore`). Implemented `DelegatedUserStore` adapter. Refined DI registrations (Scoped lifetimes). Added Migrations.
+        *   Storage: Defined `CoreIdentDbContext` and EF Core entities in `CoreIdent.Storage.EntityFrameworkCore`. Added `CoreIdent.Adapters.DelegatedUserStore` project.
+        *   Refresh Tokens: Implemented Refresh Token Rotation.
+        *   Unit & Integration tests created/fixed for EF Core stores and Delegated adapter.
+    *   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics (Authorization Code Flow + PKCE, Client Credentials, Discovery).
+    *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
+    *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Reference:** `DEVPLAN.md`: Detailed breakdown of tasks for each phase.
 
 ## 4. Project Structure (Solution Level)
@@ -39,9 +37,10 @@ This document serves as a comprehensive index and manifest for the CoreIdent pro
 *   **Source Directory:** `c:\dev\prj\CoreIdent\src\`
     *   `CoreIdent.Core`: Core library containing interfaces, base models, core services, configuration, and endpoint logic.
     *   `CoreIdent.Storage.EntityFrameworkCore`: EF Core persistence layer (DbContext, entities configuration, store implementations).
+    *   `CoreIdent.Adapters.DelegatedUserStore`: Adapter for using external user stores.
 *   **Tests Directory:** `c:\dev\prj\CoreIdent\tests\`
     *   `CoreIdent.Core.Tests`: Unit tests for `CoreIdent.Core` and store implementations. Uses `Shouldly` for assertions.
-    *   `CoreIdent.Integration.Tests`: Integration tests (currently using TestServer).
+    *   `CoreIdent.Integration.Tests`: Integration tests using `TestServer`.
     *   `CoreIdent.TestHost`: Shared test hosting setup.
 *   **Docs Directory:** `c:\dev\prj\CoreIdent\docs\`
     *   Contains development documentation.
@@ -75,9 +74,7 @@ This is the central library containing the core logic, interfaces, and models.
         *   `DefaultPasswordHasher.cs`: Default `IPasswordHasher` implementation.
         *   `JwtTokenService.cs`: Default `ITokenService` implementation.
     *   `CoreIdent.Core.Extensions`: Provides service registration extensions.
-        *   `CoreIdentServiceCollectionExtensions.cs`: Contains `AddCoreIdent` extension method for easy DI setup (registers options, validators, core services). *Store registration will be added/updated.*
-    *   `CoreIdent.Core.Http`: Contains Minimal API endpoint definitions.
-        *   `CoreIdentEndpointRouteBuilderExtensions.cs`: Contains `MapCoreIdentEndpoints` extension method to register routes (`/register`, `/login`, `/token/refresh`). Implements the logic for each endpoint, coordinating calls to services and stores.
+        *   `CoreIdentServiceCollectionExtensions.cs`: Contains `AddCoreIdent` (registers core services like `ITokenService` (Scoped), `IPasswordHasher` (Singleton)) and default in-memory stores (Scoped).
 
 ## 6. EF Core Storage Project Details: `src\CoreIdent.Storage.EntityFrameworkCore`
 
@@ -89,19 +86,28 @@ This is the central library containing the core logic, interfaces, and models.
         *   `EfRefreshTokenStore.cs`
         *   `EfClientStore.cs`
         *   `EfScopeStore.cs`
-    *   `Extensions`: (Future) Will likely contain DI extensions like `AddCoreIdentEfCoreStores`.
+    *   `Extensions`:
+        *   `CoreIdentEntityFrameworkCoreExtensions.cs`: Contains `AddCoreIdentEntityFrameworkStores` extension to register EF Core stores (Scoped).
+
+## 6.5 Delegated User Store Adapter Project Details: `src\CoreIdent.Adapters.DelegatedUserStore`
+
+*   **Purpose:** Allows integration with existing external user databases/systems.
+*   **Key Components:**
+    *   `DelegatedUserStoreOptions.cs`: Defines `Func<>` delegates (`FindUserByIdAsync`, `FindUserByUsernameAsync`, `ValidateCredentialsAsync`, `GetClaimsAsync`) to be provided by the consumer.
+    *   `DelegatedUserStore.cs`: Implements `IUserStore` by calling the configured delegates. Write operations throw `NotImplementedException`.
+    *   `Extensions/CoreIdentDelegatedUserStoreExtensions.cs`: Contains `AddCoreIdentDelegatedUserStore` extension method (registers `DelegatedUserStore` as Scoped `IUserStore`, configures and validates options).
 
 ## 7. Test Project Details: `tests\CoreIdent.*`
 
 *   **`CoreIdent.Core.Tests`:** Contains unit tests primarily for `CoreIdent.Core` services, validators, and store *interfaces* (using mocks).
-*   **`CoreIdent.Integration.Tests`:** Contains higher-level integration tests using `TestServer` to interact with the configured endpoints. These tests verify the end-to-end flow involving services and stores (currently likely configured with In-Memory or mocked stores, needs updating for EF Core).
+*   **`CoreIdent.Integration.Tests`:** Contains higher-level integration tests. Includes tests for EF Core persistence and the Delegated User Store adapter (using a custom `WebApplicationFactory` with mock delegates).
 *   **`CoreIdent.TestHost`:** A helper project providing a shared `WebApplicationFactory` for integration tests.
 *   **Frameworks:** Uses `xUnit` as the test runner and `Shouldly` for assertions. Mocking is done using `Moq`.
 
 ## 8. Documentation & Root Files
 
-*   `docs\Developer_Training_Guide.md`: Detailed guide explaining Phase 1 architecture, setup, configuration, and features for developers using/integrating CoreIdent. *Needs updating for EF Core.*
-*   `README.md`: High-level overview, current status, phases summary, quick start guide. *Needs updating for EF Core.*
+*   `docs\Developer_Training_Guide.md`: Detailed guide explaining Phase 1 & 2 architecture, setup, configuration, EF Core persistence, and Delegated User Store adapter.
+*   `README.md`: High-level overview, current status, phases summary, quick start guide including EF Core and Delegated Store setup.
 *   `Project_Overview.md`: In-depth description of the project's vision, goals, and non-goals.
 *   `Technical_Plan.md`: Outlines the planned technical architecture, components, and phases at a high level.
 *   `DEVPLAN.md`: Granular task breakdown for each development phase, including user stories and test cases. Used for tracking progress.
@@ -112,17 +118,17 @@ This is the central library containing the core logic, interfaces, and models.
 ## 9. Component-to-Phase Mapping (Current State)
 
 *   **Phase 1 (Completed):**
-    *   Established `src/CoreIdent.Core` with core services, endpoint logic, and *definitions* of persistence interfaces (`IUserStore`, `IClientStore`, etc.).
-    *   Included a basic `InMemoryUserStore` (now removed/obsolete).
-*   **Phase 2/3 (Completed):**
-    *   Created the `src/CoreIdent.Storage.EntityFrameworkCore` project.
-    *   This project contains the `CoreIdentDbContext` and EF Core implementations (`EfUserStore`, `EfRefreshTokenStore`, `EfClientStore`, `EfScopeStore`).
-    *   Unit tests for store implementations were created/fixed, mocking the interfaces.
+    *   Established `src/CoreIdent.Core` with core services (Scoped/Singleton), endpoint logic, persistence interfaces.
+*   **Phase 2 (Completed):**
+    *   Created `src/CoreIdent.Storage.EntityFrameworkCore` with `DbContext` and EF Core store implementations (Scoped).
+    *   Created `src/CoreIdent.Adapters.DelegatedUserStore` with delegate-based `IUserStore` implementation (Scoped).
+    *   Added DI extensions (`AddCoreIdentEntityFrameworkStores`, `AddCoreIdentDelegatedUserStore`).
+    *   Added EF Core Migrations.
+    *   Implemented Refresh Token Rotation.
+    *   Added/updated unit and integration tests.
 *   **Phase 3 (Current):**
-    *   Focuses on registering the EF Core stores in DI, adding migrations, and enhancing token management/security.
-    *   Configuration extensions (`AddCoreIdentEfCoreStores`) need to be added to allow switching between different store implementations.
-    *   Integration tests need to be updated to use a test database (e.g., SQLite in-memory or file-based).
+    *   Focuses on implementing core OAuth 2.0 / OIDC server mechanics (Authorization Code Flow, Client Credentials Flow, Discovery endpoints).
 
 ## 10. Conclusion
 
-This index provides a snapshot of the CoreIdent project after the completion of the EF Core store implementation. Referencing this document should give an LLM a solid foundation for understanding the codebase, its current state, and the planned trajectory. Key documents like `DEVPLAN.md` and `Developer_Training_Guide.md` offer further details on specific aspects but require updates for the latest changes.
+This index provides a snapshot of the CoreIdent project after the completion of Phase 2. Referencing this document should give an LLM a solid foundation for understanding the codebase, its current state, and the planned trajectory. Key documents like `DEVPLAN.md` and `Developer_Training_Guide.md` offer further details on specific aspects but require updates for the latest changes.
