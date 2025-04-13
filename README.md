@@ -1,5 +1,7 @@
 # CoreIdent: Modern .NET Identity & Authentication
 
+![image](https://github.com/user-attachments/assets/96ac08ce-d88e-4d78-af98-101bb95aa317)
+
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Current Status:** Phase 1 (MVP - Core Registration/Login/Tokens with In-Memory Storage) is complete. Phase 2 (Persistent Storage) development is underway.
