@@ -2,9 +2,13 @@
 
 ![image](https://github.com/user-attachments/assets/96ac08ce-d88e-4d78-af98-101bb95aa317)
 
+[![Build Status](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml/badge.svg)](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NuGet Version](https://img.shields.io/nuget/v/CoreIdent.Core.svg)](https://www.nuget.org/packages/CoreIdent.Core/)
 
-A simple, extensible core identity system for .NET apps, designed for flexibility, not vendor lock-in.
+**CoreIdent is building the foundation for a modern, open-source, developer-centric identity and authentication solution for .NET.** It aims to replace complex, often vendor-locked systems with a flexible, convention-driven alternative that empowers developers.
+
+**Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
 **Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows) development is underway.
 
@@ -15,42 +19,48 @@ A simple, extensible core identity system for .NET apps, designed for flexibilit
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
 
-**CoreIdent** aims to be the modern, open-source, developer-friendly identity and authentication solution for the .NET ecosystem. It prioritizes convention over configuration, modularity, and ease of integration.
-
 ## Why CoreIdent?
 
-In a world where authentication solutions are often complex or tied to specific vendors, CoreIdent stands out by offering:
-*   **Developer Freedom:** Open-source (MIT) with no vendor lock-in. Build authentication your way.
-*   **Convention Over Configuration:** Spend less time on setup. Our streamlined `AddCoreIdent()` method and sensible defaults get you started quickly with minimal code.
-*   **Ease of Use:** Minimize boilerplate with sensible defaults and clear APIs. Get secure auth up and running fast.
-*   **Modularity:** Core is lean; add only the features you need via separate NuGet packages (e.g., EF Core storage, Delegated adapter).
-*   **Future-Proof:** Built on modern .NET (9+), supporting traditional logins, passwordless methods (Passkeys/WebAuthn), and even decentralized identity (Web3, LNURL).
-*   **Security First:** Best practices baked in for token handling (including rotation), password storage, and endpoint protection.
+Tired of wrestling with complex identity vendors or rolling your own auth from scratch? CoreIdent offers a different path:
 
-## Future Vision
+*   🚀 **Developer Freedom & Experience:** Open-source (MIT) with a focus on minimizing boilerplate and maximizing productivity through conventions and clear APIs. Get secure auth running *fast*.
+*   🧩 **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
+*   🔒 **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation), password storage, and endpoint protection.
+*   🔧 **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
+*   🌐 **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
+*   🚫 **No Vendor Lock-In:** Own your identity layer.
 
-CoreIdent has established its core authentication and storage capabilities. Beyond Phase 2, we're building towards:
+## Current State vs. Future Vision
 
-*   Full OAuth 2.0 / OIDC support for standard web and mobile app flows.
-*   Pluggable providers for social logins, MFA, and cutting-edge auth (Passkeys, Web3 wallets).
-*   User-friendly UI components and admin portals.
-*   Comprehensive docs and `dotnet new` templates for effortless integration.
+**What CoreIdent provides *today* (Phase 2 Complete):**
 
-Join us in shaping the future of .NET identity! Contributions and feedback are welcome.
+*   **Core Authentication API:** Secure `/register`, `/login`, and `/token/refresh` endpoints.
+*   **JWT Issuance:** Standard access tokens upon login.
+*   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), and rotation.
+*   **Password Hashing:** Secure password handling using ASP.NET Core Identity's hasher.
+*   **Pluggable Storage:**
+    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users and refresh tokens in your database (SQL Server, PostgreSQL, SQLite, etc.).
+    *   `CoreIdent.Adapters.DelegatedUserStore`: Integrate with your existing user database/authentication logic.
+*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore` interfaces for customization.
+*   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json`.
 
-## Vision
+**Where CoreIdent is heading (Future Phases):**
 
-Empower .NET developers to quickly implement secure authentication and authorization without vendor lock-in, embracing both traditional and emerging identity paradigms. Provide a clear path for extending functionality through a pluggable provider model.
+*   **Full OAuth 2.0 / OIDC Server:** Implementing standard flows (Authorization Code + PKCE, Client Credentials, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
+*   **OIDC Compliance:** Discovery (`/.well-known/openid-configuration`), JWKS (`/.well-known/jwks.json`), ID Tokens.
+*   **User Interaction:** Consent screens, standard logout endpoints.
+*   **Extensible Provider Model:**
+    *   **MFA:** Pluggable Multi-Factor Authentication (TOTP, SMS, Email).
+    *   **Passwordless:** Passkeys / WebAuthn / FIDO2.
+    *   **Social Logins:** Google, Microsoft, etc.
+    *   **Decentralized:** Web3 Wallet Login (MetaMask), LNURL-auth.
+*   **UI Components:** Optional package (`CoreIdent.UI.Web`) providing basic, themeable UI (Razor Pages/Components) for login, registration, consent, etc.
+*   **Administration:** Optional Admin UI for managing users, clients, scopes.
+*   **Tooling:** `dotnet new` templates, comprehensive documentation.
 
-## Core Principles
+**Is this a replacement for IdentityServer?**
 
-*   **Open Source (MIT):** Permissive and free to use.
-*   **Developer Experience:** Minimize boilerplate, maximize productivity.
-*   **Modular & Extensible:** Core is lean; features are add-ons.
-*   **.NET Native:** Built on modern .NET (9+).
-*   **Secure by Default:** Best practices for tokens, passwords, endpoints.
-*   **Protocol Support:** Designed for modern web communication (HTTP/1.1, HTTP/2, HTTP/3, WebSocket-ready).
-*   **Future-Ready Authentication:** Traditional credentials, Passkeys, Web3, LNURL.
+**Not yet, but that's the goal.** We are building the foundational pieces first, focusing on a solid core and flexible storage. Phase 3 is actively adding the core OAuth/OIDC mechanics.
 
 ## Developer Guide
 
@@ -58,7 +68,7 @@ For a detailed walkthrough of the architecture, setup, and features through Phas
 
 ## Getting Started
 
-This guide covers the setup for the core functionality, including persistent storage options.
+This guide covers the setup for the core functionality available after Phase 2.
 
 ### 1. Installation
 
@@ -68,6 +78,8 @@ Install the core package and any desired storage adapters via NuGet:
 dotnet add package CoreIdent.Core
 dotnet add package CoreIdent.Storage.EntityFrameworkCore # For EF Core persistence
 dotnet add package CoreIdent.Adapters.DelegatedUserStore # For delegating to existing systems
+# Ensure you also add your EF Core Database Provider, e.g.:
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite
 ```
 
 *(Note: If working directly from the source repository, add project references instead.)*
@@ -78,160 +90,247 @@ Configure the core options in your `appsettings.json` (or another configuration 
 
 ```json
 {
+  "ConnectionStrings": {
+     // Add your DB connection string if using EF Core
+    "DefaultConnection": "DataSource=coreident.db;Cache=Shared"
+  },
   "CoreIdent": {
-    "Issuer": "https://localhost:5001", // Replace with your actual issuer URI
-    "Audience": "myapi",             // Replace with your API audience identifier
-    "SigningKeySecret": "YOUR_SUPER_SECRET_KEY_REPLACE_THIS_LONGER_THAN_32_BYTES", // MUST be strong and kept secret!
+    "Issuer": "https://localhost:5001", // IMPORTANT: Replace with your actual issuer URI (HTTPS recommended)
+    "Audience": "myapi",             // IMPORTANT: Replace with your API audience identifier
+    "SigningKeySecret": "REPLACE_THIS_WITH_A_VERY_STRONG_AND_SECRET_KEY_32_BYTES_OR_LONGER", // MUST be strong, unique, >= 32 Bytes (256 bits) for HS256, and kept secret!
     "AccessTokenLifetime": "00:15:00",  // 15 minutes
-    "RefreshTokenLifetime": "7.00:00:00" // 7 days (relevant for later phases)
+    "RefreshTokenLifetime": "7.00:00:00" // 7 days
   }
 }
 ```
 
-**Important Security Note:** The `SigningKeySecret` MUST be a strong, unique secret, securely managed (e.g., environment variables, Azure Key Vault, AWS Secrets Manager), and **at least 32 bytes (256 bits)** long for HMAC-SHA256.
+**⚠️ Important Security Note:** The `SigningKeySecret` is critical. **Never** hardcode it in source control for production. Use secure management practices (Environment Variables, Azure Key Vault, AWS Secrets Manager, etc.). It **must** be cryptographically strong and meet the length requirements for the chosen algorithm (at least 32 bytes for the default HS256).
 
-### 3. Application Setup
-
-In your ASP.NET Core application's `Program.cs` (or `Startup.cs`):
+### 3. Application Setup (`Program.cs`)
 
 ```csharp
+using CoreIdent.Core.Configuration; // Contains CoreIdentOptions if needed directly
 using CoreIdent.Core.Extensions;
-// Add using statements for the storage adapters you choose:
-// using CoreIdent.Storage.EntityFrameworkCore.Extensions;
-// using CoreIdent.Adapters.DelegatedUserStore.Extensions;
+using CoreIdent.Core.Models; // Contains CoreIdentUser if using Delegated adapter delegates
+using CoreIdent.Storage.EntityFrameworkCore.Extensions; // For EF Core store
+using CoreIdent.Storage.EntityFrameworkCore.Stores; // For explicit store registration (Delegated scenario)
+using CoreIdent.Adapters.DelegatedUserStore.Extensions; // For Delegated adapter
+using Microsoft.AspNetCore.Authentication.JwtBearer; // For API token validation
+using Microsoft.EntityFrameworkCore; // If using EF Core
+using Microsoft.IdentityModel.Tokens; // For TokenValidationParameters
+using System.Security.Claims; // For Claims List example
+using System.Text; // For Encoding
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// ... other services
-
-// 1. Configure CoreIdent Core Options
+// *** 1. Configure CoreIdent Core Services ***
 builder.Services.AddCoreIdent(options =>
 {
-    // Bind options from configuration (e.g., appsettings.json)
+    // Bind options from configuration (e.g., appsettings.json section "CoreIdent")
     builder.Configuration.GetSection("CoreIdent").Bind(options);
+
+    // You can also set options directly here if needed
+    // options.Issuer = "https://my-issuer.com";
 });
 
-// 2. Configure Authentication/Authorization (for API token validation)
-// If your API needs to validate CoreIdent JWTs:
-builder.Services.AddAuthentication()
+// *** 2. Configure API Authentication (Optional - If your API validates CoreIdent JWTs) ***
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // Set default scheme
     .AddJwtBearer(options =>
     {
         // Configure validation parameters based on CoreIdentOptions
-        var coreIdentOptions = builder.Configuration.GetSection("CoreIdent").Get<CoreIdent.Core.Configuration.CoreIdentOptions>()!;
-        options.Authority = coreIdentOptions.Issuer; // Or configure manually
-        options.Audience = coreIdentOptions.Audience;
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        // It's often cleaner to bind options once and reuse
+        var coreIdentOptions = builder.Configuration.GetSection("CoreIdent").Get<CoreIdentOptions>()!;
+        if (coreIdentOptions == null || string.IsNullOrEmpty(coreIdentOptions.SigningKeySecret))
+        {
+            throw new InvalidOperationException("CoreIdent options (Issuer, Audience, SigningKeySecret) must be configured.");
+        }
+
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(coreIdentOptions.SigningKeySecret!)),
-            ValidateIssuer = true, // Default: true
-            ValidateAudience = true, // Default: true
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(coreIdentOptions.SigningKeySecret)),
+
+            ValidateIssuer = true,
+            ValidIssuer = coreIdentOptions.Issuer,
+
+            ValidateAudience = true,
+            ValidAudience = coreIdentOptions.Audience,
+
+            ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1) // Allow some clock skew
         };
-        // Additional validation parameters as needed...
+        // options.Authority = coreIdentOptions.Issuer; // Usually needed if keys fetched from /.well-known/openid-configuration
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(); // Needed for [Authorize] attributes
 
-// --- 3. Configure Storage --- 
-// Choose ONE of the following storage options:
 
-// Option A: Default In-Memory Store (NOT Recommended for Production)
-// If you don't configure anything else after AddCoreIdent(), it uses transient in-memory stores.
-// Suitable only for quick demos or certain testing scenarios.
+// *** 3. Configure Storage (Choose ONE strategy for IUserStore) ***
 
-// Option B: Entity Framework Core (Recommended for new databases)
-/* // Uncomment to use EF Core Store
+// --- Option A: Entity Framework Core (Recommended for new apps or full control) ---
 // Prerequisite: Add NuGet packages CoreIdent.Storage.EntityFrameworkCore and a DB provider (e.g., Microsoft.EntityFrameworkCore.Sqlite)
 
-// Register your application's DbContext (ensure it includes CoreIdent entity configurations)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "DataSource=coreident.db;Cache=Shared";
-builder.Services.AddDbContext<YourApplicationDbContext>(options => // Replace YourApplicationDbContext with your actual DbContext
-    options.UseSqlite(connectionString));
+// i. Register your DbContext (make sure it inherits from CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext or includes its entity configurations)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "DataSource=coreident_readme.db;Cache=Shared";
+// Replace YourAppDbContext with your actual DbContext class name if you have one
+// If you don't have one, you can use CoreIdentDbContext directly for CoreIdent data
+builder.Services.AddDbContext<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>(options =>
+    options.UseSqlite(connectionString)); // Use your desired provider (UseSqlServer, UseNpgsql, etc.)
 
-// Tell CoreIdent to use the EF Core stores with your DbContext
+// ii. Tell CoreIdent to use the EF Core stores mapped to your DbContext type
 // This MUST be called AFTER AddCoreIdent() and AddDbContext()
-builder.Services.AddCoreIdentEntityFrameworkStores<YourApplicationDbContext>(); // Replace YourApplicationDbContext
+// Replace YourAppDbContext if you used your own DbContext above
+builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>();
 
-// IMPORTANT: Remember to add and apply EF Core migrations:
-// 1. dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext -p path/to/CoreIdent.Storage.EntityFrameworkCore -s path/to/YourWebApp
-// 2. dotnet ef database update --context YourApplicationDbContext -s path/to/YourWebApp
-*/
+// iii. IMPORTANT: Remember to add and apply EF Core migrations:
+//    1. dotnet ef migrations add InitialCreate --context CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext -o Data/Migrations -p path/to/YourWebAppProject -s path/to/YourWebAppProject
+//    2. dotnet ef database update --context CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext -p path/to/YourWebAppProject -s path/to/YourWebAppProject
+//    Adjust context name and paths as needed. The -o specifies output dir for migrations.
 
-// Option C: Delegated User Store (For existing user systems)
+// --- Option B: Delegated User Store (For integrating with existing user systems) ---
 /* // Uncomment to use Delegated Store
 // Prerequisite: Add NuGet package CoreIdent.Adapters.DelegatedUserStore
 
-// This replaces the IUserStore registration (either In-Memory or EF Core)
+// This replaces the default IUserStore registration (In-Memory or EF Core)
 builder.Services.AddCoreIdentDelegatedUserStore(options =>
 {
-    // REQUIRED: Provide a function to find a user by their unique ID
-    options.FindUserByIdAsync = async (userId, ct) => { /* ... Your Logic ... */ return new CoreIdentUser { ... }; };
+    // Provide delegates that call your existing user management logic
+    // These are examples, implement your actual logic. Return null if user not found.
 
-    // REQUIRED: Provide a function to find a user by username/email
-    options.FindUserByUsernameAsync = async (normalizedUsername, ct) => { /* ... Your Logic ... */ return new CoreIdentUser { ... }; };
+    // REQUIRED: Find user by their unique ID (adjust types as needed)
+    options.FindUserByIdAsync = async (userId, ct) => {
+        Console.WriteLine($"Delegate: Finding user by ID: {userId}");
+        // Your logic to find user by ID in your system...
+        // Example: var user = await myUserService.FindByIdAsync(userId);
+        // Return a CoreIdentUser representation or null
+        if (userId == "user1_id") return new CoreIdentUser { Id = "user1_id", UserName = "existing_user@example.com", NormalizedUserName = "EXISTING_USER@EXAMPLE.COM" };
+        return null;
+    };
 
-    // REQUIRED: Provide a function to validate credentials
-    options.ValidateCredentialsAsync = async (username, password, ct) => { /* ... Your Logic ... */ return true; };
+    // REQUIRED: Find user by username/email (use normalized form for lookups)
+    options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
+        Console.WriteLine($"Delegate: Finding user by Normalized Username: {normalizedUsername}");
+        // Your logic to find user by username/email in your system...
+        // Example: var user = await myUserService.FindByEmailAsync(username); // Assuming username is email
+        // Return a CoreIdentUser representation or null
+         if (normalizedUsername == "EXISTING_USER@EXAMPLE.COM") return new CoreIdentUser { Id = "user1_id", UserName = "existing_user@example.com", NormalizedUserName = "EXISTING_USER@EXAMPLE.COM" };
+        return null;
+    };
 
-    // OPTIONAL: Provide a function to get user claims
-    options.GetClaimsAsync = async (coreIdentUser, ct) => { /* ... Your Logic ... */ return new List<System.Security.Claims.Claim>(); };
+    // REQUIRED: Validate user credentials
+    options.ValidateCredentialsAsync = async (user, password, ct) => {
+        Console.WriteLine($"Delegate: Validating credentials for: {user.UserName}");
+        // Your logic to validate the password against your system...
+        // Example: bool isValid = await myAuthService.CheckPasswordAsync(user.UserName, password);
+        // Return true if valid, false otherwise
+        return (user.UserName == "existing_user@example.com" && password == "password123"); // Example check
+    };
+
+    // OPTIONAL: Get user claims
+    options.GetClaimsAsync = async (user, ct) => {
+         Console.WriteLine($"Delegate: Getting claims for: {user.UserName}");
+        // Your logic to get claims for the user...
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Name, user.UserName),
+            // Add other claims from your system
+            new Claim("custom_claim", "custom_value")
+        };
+        return await Task.FromResult(claims);
+    };
+
+     // OPTIONAL: Create user (if you want /register to work with your system)
+     options.CreateUserAsync = async (user, password, ct) => {
+         Console.WriteLine($"Delegate: Creating user: {user.UserName}");
+         // Your logic to create the user and hash/store the password in your system...
+         // Example: var userId = await myUserService.CreateAsync(user.UserName, password);
+         // Populate the user object with the ID generated by your system
+         user.Id = Guid.NewGuid().ToString(); // Example ID generation
+         // Return StoreResult.Success or StoreResult.Failure/Conflict
+         return await Task.FromResult(CoreIdent.Core.Stores.StoreResult.Success);
+     };
 });
 
-// NOTE: You still need a persistent store for Refresh Tokens if using the Delegated adapter.
+// NOTE: Delegated IUserStore only handles users. You STILL need persistent storage for Refresh Tokens.
 // Register the EF Core Refresh Token Store separately in this case:
-// builder.Services.AddScoped<CoreIdent.Core.Stores.IRefreshTokenStore, CoreIdent.Storage.EntityFrameworkCore.Stores.EfRefreshTokenStore>();
-// Ensure your DbContext is registered and migrations are applied as per Option B.
+// i. Register DbContext (as shown in Option A)
+// ii. Register ONLY the refresh token store
+builder.Services.AddScoped<CoreIdent.Core.Stores.IRefreshTokenStore, EfRefreshTokenStore>();
+// Ensure migrations for Refresh Tokens table are applied (as shown in Option A).
 */
 
-// ... other services like Controllers, Swagger, etc.
+
+// Add other services like Controllers, Razor Pages, Swagger, etc.
+builder.Services.AddEndpointsApiExplorer(); // For Swagger
+builder.Services.AddSwaggerGen();       // For Swagger
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// ... other middleware like HTTPS redirection, Swagger UI
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    // Seed database or perform other dev-time actions
+    // Example: Seed data if using EF Core
+    /* // Uncomment to seed data
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>(); // Use your DbContext type
+        // Ensure DB is created
+        // dbContext.Database.EnsureCreated(); // Alternatively use migrations
+        // Add seeding logic here (e.g., add default clients/scopes for Phase 3+)
+    }
+    */
+}
 
-app.UseAuthentication();
+app.UseHttpsRedirection();
+
+app.UseAuthentication(); // Must be called before UseAuthorization
 app.UseAuthorization();
 
-// Map CoreIdent endpoints (e.g., under /auth/)
-app.MapCoreIdentEndpoints(basePath: "/auth");
+// Map CoreIdent endpoints (default prefix is /auth)
+app.MapCoreIdentEndpoints(); // Use basePath parameter to change, e.g., app.MapCoreIdentEndpoints(basePath: "/identity");
 
-// Map your application's controllers/endpoints
-// app.MapControllers();
+// Map your application's endpoints/controllers
+app.MapGet("/", () => "Hello World!");
+// Example protected endpoint
+app.MapGet("/protected", (ClaimsPrincipal user) => $"Hello {user.Identity?.Name}! You are authenticated.")
+   .RequireAuthorization();
+
 
 app.Run();
+
 ```
 
-### 4. Core Functionality (Through Phase 2)
+### 4. Core Functionality Available Now (Phase 2)
 
-With the setup above, the following endpoints provided by `CoreIdent.Core` will be available (assuming `basePath: "/auth"`):
+With the setup above, the following CoreIdent endpoints are available (default prefix `/auth`):
 
-*   `POST /auth/register`: Register a new user with email and password (requires a non-delegated `IUserStore`).
-*   `POST /auth/login`: Log in with email and password, receive JWT access and refresh tokens.
-*   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens (uses `IRefreshTokenStore`).
+*   `POST /auth/register`: Register a new user (requires non-delegated `IUserStore`, e.g., EF Core, or `CreateUserAsync` delegate). Request body: `{ "email": "user@example.com", "password": "YourPassword123!" }`
+*   `POST /auth/login`: Log in with email/password. Returns JWT access and refresh tokens. Request body: `{ "email": "user@example.com", "password": "YourPassword123!" }` Response body: `{ "accessToken": "...", "refreshToken": "...", "expiresIn": 900 }`
+*   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens (uses `IRefreshTokenStore`). Request body: `{ "refreshToken": "..." }` Response body: (Same as login)
 
 **Storage:**
-*   CoreIdent now requires configuration of a persistent storage mechanism for production use.
-*   **EF Core:** Provides full persistence for users, refresh tokens, clients, and scopes (when implemented) via `CoreIdent.Storage.EntityFrameworkCore`.
-*   **Delegated:** Allows using an existing user system via `CoreIdent.Adapters.DelegatedUserStore`, but requires a separate persistent store (like EF Core) for refresh tokens.
-*   **Refresh Tokens:** Refresh tokens are now persisted (typically via EF Core) and rotated upon successful use for enhanced security.
+*   **EF Core:** Provides persistence for users and refresh tokens. (Client/Scope storage coming in Phase 3). Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations.
+*   **Delegated:** Adapts user operations (`IUserStore`) to your existing system via `CoreIdent.Adapters.DelegatedUserStore`. **Requires** a separate persistent store (like EF Core's `EfRefreshTokenStore`) for refresh tokens.
+*   **Refresh Tokens:** Persisted (usually via EF Core) and rotated upon use for security.
 
 ## Running / Testing
 
 1.  Ensure you have the .NET SDK (9+) installed.
-2.  Clone the repository.
-3.  Run the associated example API project (if available) or execute the tests:
-    ```bash
-    cd path/to/CoreIdent
-    dotnet test
-    ```
+2.  Clone the repository: `git clone https://github.com/stimpy77/CoreIdent.git`
+3.  Navigate to the test directory: `cd CoreIdent/tests`
+4.  Run tests: `dotnet test`
+    *   *(Note: Integration tests might require database setup/migrations depending on the test configuration).*
 
 ## License
 
-CoreIdent is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+CoreIdent is licensed under the [MIT License](LICENSE).
 
 ## Contributing
 
-Contributions are welcome! Please refer to the (upcoming) contribution guidelines.
+⭐ **Star this repo if you believe in the mission!** ⭐
+
+Contributions, feedback, and ideas are highly welcome! Please refer to the (upcoming) contribution guidelines or open an issue to discuss. Let's build the future of .NET identity together.
