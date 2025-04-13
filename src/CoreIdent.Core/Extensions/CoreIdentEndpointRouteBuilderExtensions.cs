@@ -112,7 +112,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             }
 
             // Find user by normalized username
-            var normalizedUsername = request.Email!.ToUpperInvariant(); // Request validation ensures Email is not null
+            var normalizedUsername = request.Email!.ToUpperInvariant();
             CoreIdentUser? user;
             try
             {
@@ -124,13 +124,13 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                  return Results.Problem("An unexpected error occurred during login.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
-
             if (user == null || user.PasswordHash == null)
             {
-                return Results.Unauthorized(); // User not found or has no password hash
+                logger.LogWarning("Login attempt failed: User {Username} not found or has no password.", request.Email);
+                return Results.Unauthorized();
             }
 
-            // Verify password
+            // --- Restore old password verification logic ---           
             var passwordVerificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password!);
 
             if (passwordVerificationResult == PasswordVerificationResult.Failed)
@@ -139,15 +139,13 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 return Results.Unauthorized(); // Incorrect password
             }
 
-            // Password verification successful (or needs rehashing - handle later if needed)
+            // Password verification successful (or needs rehashing)
             if (passwordVerificationResult == PasswordVerificationResult.SuccessRehashNeeded)
             {
                 // Optionally rehash and update the password hash in the store
-                // var newHash = passwordHasher.HashPassword(user, request.Password!);
-                // user.PasswordHash = newHash;
-                // await userStore.UpdateUserAsync(user, cancellationToken); // Add UpdateUserAsync if not present
                 logger.LogInformation("Password requires rehashing for user {Username}", request.Email);
             }
+            // ----------------------------------------------------
 
             // Generate tokens
             string accessToken;

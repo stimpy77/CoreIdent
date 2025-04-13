@@ -31,12 +31,15 @@ public static class CoreIdentServiceCollectionExtensions
         services.AddOptions<CoreIdentOptions>().ValidateOnStart();
 
         // Register default core services
-        // Use TryAddSingleton to allow consumers to easily override implementations if needed
+        // Use TryAdd to allow consumers to easily override implementations if needed
         services.TryAddSingleton<IPasswordHasher, DefaultPasswordHasher>();
-        services.TryAddSingleton<ITokenService, JwtTokenService>();
+        services.TryAddScoped<ITokenService, JwtTokenService>();
 
-        // Register default store for Phase 1 (In-Memory)
-        services.TryAddSingleton<IUserStore, InMemoryUserStore>();
+        // Register default store for Phase 1 (In-Memory) - Should also be Scoped if interacting with Scoped services
+        services.TryAddScoped<IUserStore, InMemoryUserStore>();
+
+        // Register default Refresh Token store (In-Memory) - Should also be Scoped
+        services.TryAddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>();
 
         // Add other necessary framework services if any.
         // For now, the core services themselves don't have many external dependencies beyond options.

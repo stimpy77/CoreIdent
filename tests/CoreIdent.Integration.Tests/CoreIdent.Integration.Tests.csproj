@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\src\CoreIdent.Core\CoreIdent.Core.csproj" />
     <ProjectReference Include="..\CoreIdent.TestHost\CoreIdent.TestHost.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Storage.EntityFrameworkCore\CoreIdent.Storage.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.Adapters.DelegatedUserStore\CoreIdent.Adapters.DelegatedUserStore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

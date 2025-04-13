@@ -1,10 +1,12 @@
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Stores;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens; // Required for SecurityKey, SigningCredentials
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt; // Required for JwtSecurityTokenHandler
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography; // Required for RandomNumberGenerator
 using System.Text; // Required for Encoding
@@ -19,11 +21,13 @@ public class JwtTokenService : ITokenService
 {
     private readonly CoreIdentOptions _options;
     private readonly SymmetricSecurityKey _signingKey; // Store the key for reuse
+    private readonly IUserStore _userStore;
     private const int MinSigningKeyLengthBytes = 32; // HS256 minimum key size
 
-    public JwtTokenService(IOptions<CoreIdentOptions> options)
+    public JwtTokenService(IOptions<CoreIdentOptions> options, IUserStore userStore)
     {
         _options = options.Value ?? throw new ArgumentNullException(nameof(options), "CoreIdentOptions cannot be null.");
+        _userStore = userStore ?? throw new ArgumentNullException(nameof(userStore));
 
         // Validate options critical for the service to function
         if (string.IsNullOrWhiteSpace(_options.SigningKeySecret))
@@ -42,41 +46,52 @@ public class JwtTokenService : ITokenService
         _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret));
     }
 
-    // Phase 1: Return only access token string
-    public Task<string> GenerateAccessTokenAsync(CoreIdentUser user)
+    public async Task<string> GenerateAccessTokenAsync(CoreIdentUser user)
     {
-        ArgumentNullException.ThrowIfNull(user); // Check user first
+        ArgumentNullException.ThrowIfNull(user);
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var now = DateTime.UtcNow;
         var expires = now.Add(_options.AccessTokenLifetime);
 
-        var claims = new List<Claim>
+        // Get claims from the store
+        var userClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
+
+        // Combine standard JWT claims with user claims
+        var allClaims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id), // Standard claim for unique user ID
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique Token ID
-            new Claim(JwtRegisteredClaimNames.Iat, new DateTimeOffset(now).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64), // Issued At
-            // Add standard name claim
-            new Claim(ClaimTypes.Name, user.UserName ?? string.Empty)
-             // Add roles later if needed: claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            new Claim(JwtRegisteredClaimNames.Iat, new DateTimeOffset(now).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64) // Issued At
         };
+
+        // Add user claims, ensuring essential ones like NameIdentifier (sub) are present
+        if (!userClaims.Any(c => c.Type == ClaimTypes.NameIdentifier) && user.Id != null)
+        {
+            allClaims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id));
+        }
+        if (!userClaims.Any(c => c.Type == ClaimTypes.Name) && user.UserName != null)
+        {
+            allClaims.Add(new Claim(ClaimTypes.Name, user.UserName));
+        }
+        
+        allClaims.AddRange(userClaims.Where(uc => uc.Type != ClaimTypes.NameIdentifier && uc.Type != ClaimTypes.Name)); // Add others, avoiding duplicates of basic ones
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(claims),
+            Subject = new ClaimsIdentity(allClaims),
             Issuer = _options.Issuer,
             Audience = _options.Audience,
             Expires = expires,
-            SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256Signature) // Using HS256 as implied by symmetric key
+            SigningCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256Signature)
         };
 
         var securityToken = tokenHandler.CreateToken(tokenDescriptor);
         var accessToken = tokenHandler.WriteToken(securityToken);
 
-        return Task.FromResult(accessToken);
+        return accessToken;
     }
 
-     // Phase 1: Return only refresh token string
+    // Phase 1: Return only refresh token string
     public Task<string> GenerateRefreshTokenAsync(CoreIdentUser user)
     {
         // Generate a cryptographically secure random string for the refresh token handle

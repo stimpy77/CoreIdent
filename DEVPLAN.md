@@ -166,31 +166,31 @@ This document provides a detailed breakdown of tasks, components, features, test
 
 *   **Component:** `IUserStore` Interface
     - [x] Review and refine `IUserStore`.
-        *   *Guidance:*
-            * Add methods needed for
-              * password management (`SetPasswordHashAsync`, `GetPasswordHashAsync`),
-              * claim management (`GetClaimsAsync`, `AddClaimsAsync`, `ReplaceClaimAsync`, `RemoveClaimsAsync`),
-              * potentially lockout (`GetLockoutEndDateAsync`, `IncrementAccessFailedCountAsync`, `ResetAccessFailedCountAsync`).
-            * Ensure methods are suitable for both integrated (EF Core) and delegated implementations.
+        *   *Guidance:* 
+            * Add methods needed for 
+              * password management (`SetPasswordHashAsync`, `GetPasswordHashAsync`), 
+              * claim management (`GetClaimsAsync`, `AddClaimsAsync`, `ReplaceClaimAsync`, `RemoveClaimsAsync`), 
+              * potentially lockout (`GetLockoutEndDateAsync`, `IncrementAccessFailedCountAsync`, `ResetAccessFailedCountAsync`). 
+            * Ensure methods are suitable for both integrated (EF Core) and delegated implementations. 
             * Update `CoreIdentUser` model if needed (e.g., add `Claims` collection, lockout properties).
 *   **Component:** `IRefreshTokenStore` Interface
     - [x] Define `IRefreshTokenStore` interface.
-        *   *Guidance:*
-            * Methods: `StoreRefreshTokenAsync(CoreIdentRefreshToken token)`, `GetRefreshTokenAsync(string tokenHandle)`, `RemoveRefreshTokenAsync(string tokenHandle)`.
-            * Define `CoreIdentRefreshToken` model
+        *   *Guidance:* 
+            * Methods: `StoreRefreshTokenAsync(CoreIdentRefreshToken token)`, `GetRefreshTokenAsync(string tokenHandle)`, `RemoveRefreshTokenAsync(string tokenHandle)`. 
+            * Define `CoreIdentRefreshToken` model 
               (e.g., Handle (hashed), SubjectId, ClientId, CreationTime, ExpirationTime, ConsumedTime?).
 *   **Component:** `IClientStore` Interface
     - [x] Define `IClientStore` interface.
-        *   *Guidance:*
-            * Methods: `FindClientByIdAsync(string clientId)`.
-            * Define `CoreIdentClient` model
+        *   *Guidance:* 
+            * Methods: `FindClientByIdAsync(string clientId)`. 
+            * Define `CoreIdentClient` model 
               (e.g., ClientId, ClientSecrets (hashed), AllowedGrantTypes, RedirectUris, AllowedScopes, RequirePkce, AllowOfflineAccess).
 *   **Component:** `IScopeStore` Interface
     - [x] Define `IScopeStore` interface.
-        *   *Guidance:*
-            * Methods: `FindScopesByNameAsync(IEnumerable<string> scopeNames)`, `GetAllScopesAsync()`.
-            * Define `CoreIdentScope` model
-              (e.g., Name, DisplayName, Description, Required, Emphasize, UserClaims).
+        *   *Guidance:* 
+            * Methods: `FindScopesByNameAsync(IEnumerable<string> scopeNames)`, `GetAllScopesAsync()`. 
+            * Define `CoreIdentScope` model 
+              (e.g., Name, DisplayName, Description, Required, Emphasize, UserClaims). 
             * Include standard OIDC scopes (`openid`, `profile`, `email`, `offline_access`).
 
 ---
@@ -253,9 +253,9 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Delegated User Store Adapter (Optional Integration Path)
 
 *   **Component:** `CoreIdent.Adapters.DelegatedUserStore` NuGet Package
-    - [ ] Create `.csproj` file.
+    - [x] Create `.csproj` file.
 *   **Component:** `DelegatedUserStore` Implementation
-    - [ ] Implement `DelegatedUserStore` : `IUserStore`.
+    - [x] Implement `DelegatedUserStore` : `IUserStore`.
         *   *Guidance:* 
             * Constructor accepts configuration (`DelegatedUserStoreOptions`) containing delegates 
               (e.g., `Func<string, Task<CoreIdentUser>> findUserByIdDelegate`, 
@@ -264,20 +264,20 @@ This document provides a detailed breakdown of tasks, components, features, test
             * Implementation calls the provided delegates to interact with the external user system. 
             * Handles cases where delegates are not provided.
 *   **Component:** Configuration (`DelegatedUserStoreOptions`)
-    - [ ] Define `DelegatedUserStoreOptions` class 
+    - [x] Define `DelegatedUserStoreOptions` class 
           to hold delegates for finding users, validating credentials, getting claims, etc.
 *   **Component:** Setup Extension
-    - [ ] Create `IServiceCollection` extension: 
+    - [x] Create `IServiceCollection` extension: 
           `AddCoreIdentDelegatedUserStore(Action<DelegatedUserStoreOptions> configure)`.
         *   *Guidance:* 
             * Registers `DelegatedUserStore` as the `IUserStore`. 
             * Requires essential delegates (like finding user) to be configured.
 *   **Test Case (Integration):**
-    - [ ] Configure CoreIdent with `DelegatedUserStore` and mock delegates. 
+    - [x] Configure CoreIdent with `DelegatedUserStore` and mock delegates. 
           Verify login flow calls the `validateCredentialsDelegate`.
-    - [ ] Verify token issuance uses user data returned by the 
+    - [x] Verify token issuance uses user data returned by the 
           `findUserByIdDelegate` or `findUserByUsernameDelegate`.
-- [ ] **Update README.md** with Delegated User Store setup instructions and configuration.
+- [x] **Update README.md** with Delegated User Store setup instructions and configuration.
 
 ### Feature: Developer Training Guide (Phase 2 Update)
 
