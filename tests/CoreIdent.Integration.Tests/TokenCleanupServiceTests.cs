@@ -1,10 +1,12 @@
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore.Services;
-using CoreIdent.TestHost;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
@@ -13,7 +15,7 @@ using Xunit;
 
 namespace CoreIdent.Integration.Tests;
 
-public class TokenCleanupServiceTests : IntegrationTestBase
+public class TokenCleanupServiceTests
 {
     [Fact]
     public void AddCoreIdentEntityFrameworkStores_ShouldRegisterCleanupService_ByDefault()

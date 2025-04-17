@@ -16,9 +16,10 @@ This section covers the fundamentals implemented in the initial Minimum Viable P
 *   **Dependency Injection:**
     *   Using `AddCoreIdent()` in `Program.cs` or `Startup.cs`.
     *   What services are registered by default.
+    *   *(Note: For persistent storage, the order matters: call `AddCoreIdent()` first, then `AddDbContext()`, then `AddCoreIdentEntityFrameworkStores()`)*
 *   **Endpoint Mapping:**
-    *   Using `MapCoreIdentEndpoints()`.
-    *   Default endpoints exposed (`/register`, `/login`, `/token/refresh`).
+    *   Using `MapCoreIdentEndpoints()`. Accepts an optional `basePath` parameter (defaults to `/`, but the test host uses `/auth`).
+    *   Default endpoints exposed (relative to base path): `/register`, `/login`, `/token/refresh`.
 The foundation of CoreIdent lies within the `CoreIdent.Core` NuGet package. This package contains the essential interfaces, services, and extension methods needed to integrate CoreIdent's authentication and authorization features into your ASP.NET Core application.
 
 **Core Package Overview:**
@@ -66,14 +67,17 @@ CoreIdent integrates seamlessly with ASP.NET Core's dependency injection system.
         .ValidateDataAnnotations() // Basic validation
         .ValidateOnStart();       // Run validation on startup
 
-    // Add CoreIdent services
+    // Add CoreIdent services (Register this FIRST)
     builder.Services.AddCoreIdent(); // Options are automatically picked up
 
     // Add standard ASP.NET Core AuthN/AuthZ if needed for token validation
     builder.Services.AddAuthentication().AddJwtBearer(); // Example for JWT validation
     builder.Services.AddAuthorization();
 
-    // ... other services
+    // ... other services (e.g., AddDbContext comes AFTER AddCoreIdent)
+
+    // ... Register EF Core Stores AFTER AddDbContext
+    // builder.Services.AddCoreIdentEntityFrameworkStores<YourDbContext>();
 
     var app = builder.Build();
     ```
@@ -83,12 +87,16 @@ CoreIdent integrates seamlessly with ASP.NET Core's dependency injection system.
     *   `IPasswordHasher` -> `DefaultPasswordHasher`
     *   `IUserStore` -> `InMemoryUserStore` (Phase 1 default)
     *   Validation services for `CoreIdentOptions`.
+*   **Registration Order:** When using persistent storage (like EF Core), ensure the registration order is correct:
+    1.  `builder.Services.AddCoreIdent(...);`
+    2.  `builder.Services.AddDbContext<YourDbContext>(...);`
+    3.  `builder.Services.AddCoreIdentEntityFrameworkStores<YourDbContext>();`
 
 **Endpoint Mapping (`MapCoreIdentEndpoints`):**
 
 To expose the built-in authentication endpoints, CoreIdent provides an extension method for `IEndpointRouteBuilder`.
 
-*   **Usage:** In `Program.cs` (after `app.Build()`), call `MapCoreIdentEndpoints()`.
+*   **Usage:** In `Program.cs` (after `app.Build()`), call `MapCoreIdentEndpoints()`. You can optionally provide a `basePath` argument.
     ```csharp
     // Example in Program.cs
     var app = builder.Build();
@@ -98,26 +106,29 @@ To expose the built-in authentication endpoints, CoreIdent provides an extension
     app.UseAuthentication(); // Important: Before UseAuthorization and MapCoreIdentEndpoints
     app.UseAuthorization();
 
-    // Map CoreIdent's built-in endpoints
-    app.MapCoreIdentEndpoints();
+    // Map CoreIdent's built-in endpoints under the /auth prefix
+    // Use the basePath parameter to change the prefix if needed.
+    app.MapCoreIdentEndpoints("/auth");
 
     // Map your other application endpoints
     app.MapGet("/", () => "Hello World!");
 
     app.Run();
     ```
-*   **Default Endpoints Exposed:** This maps the following HTTP endpoints by default:
-    *   `POST /register`: Handles new user registration.
-    *   `POST /login`: Handles user login and issues tokens.
-    *   `POST /token/refresh`: Handles refreshing access tokens using a refresh token.
+*   **Default Endpoints Exposed:** Assuming the base path is `/auth`, this maps:
+    *   `POST /auth/register`: Handles new user registration.
+    *   `POST /auth/login`: Handles user login and issues tokens.
+    *   `POST /auth/token/refresh`: Handles refreshing access tokens using a refresh token.
+    *   (Phase 3) `GET /auth/authorize`: Initiates authorization code flow.
+    *   (Phase 3) `POST /auth/token`: Handles token exchange (e.g., for authorization code).
 
-### 2. User Registration (`/register`)
+### 2. User Registration (`/auth/register`)
 
-The `POST /register` endpoint is the entry point for new users to create an account within your application using CoreIdent.
+The `POST /auth/register` endpoint is the entry point for new users to create an account within your application using CoreIdent.
 
 **Registration Flow:**
 
-1.  **Client Request:** A client application (web frontend, mobile app, etc.) sends an HTTP POST request to the `/register` endpoint. The request body must contain the necessary user information, typically email and password, formatted as JSON.
+1.  **Client Request:** A client application (web frontend, mobile app, etc.) sends an HTTP POST request to the `/auth/register` endpoint. The request body must contain the necessary user information, typically email and password, formatted as JSON.
 2.  **Input Validation:** CoreIdent first validates the incoming request data (DTO - Data Transfer Object). It checks for required fields (e.g., email, password) and potentially applies validation rules (e.g., valid email format, minimum password complexity - though basic complexity is handled by hashing). If validation fails, a `400 Bad Request` response is returned with details about the validation errors.
 3.  **Check for Existing User:** The endpoint uses the injected `IUserStore` service to check if a user with the provided email (or username) already exists. If a user is found, a `409 Conflict` response is returned to indicate that the email is already taken.
 4.  **Password Hashing:** If the user does not exist, the endpoint uses the injected `IPasswordHasher` service to securely hash the provided plain-text password. This generates a strong, salted hash suitable for storage.
@@ -127,7 +138,7 @@ The `POST /register` endpoint is the entry point for new users to create an acco
 
 **Request/Response:**
 
-*   **Request (`POST /register`):**
+*   **Request (`POST /auth/register`):**
     *   Method: `POST`
     *   Content-Type: `application/json`
     *   Body (Example DTO - `RegisterRequest`):
@@ -150,25 +161,25 @@ The `POST /register` endpoint is the entry point for new users to create an acco
 *   **`IPasswordHasher`:** This service is responsible **only** for hashing the password securely before storage and verifying a provided password against a stored hash during login. It ensures that plain-text passwords are never stored. See Section 5 for more details.
 *   **`IUserStore`:** This service acts as an abstraction layer for user persistence. The `/register` endpoint uses it to check for existing users (`FindByUsernameAsync` or similar) and to save the new user (`CreateAsync`). In Phase 1, the default `InMemoryUserStore` provides this functionality without needing a database. See Section 6 for more details.
 
-### 3. User Login (`/login`)
+### 3. User Login (`/auth/login`)
 
-The `POST /login` endpoint allows registered users to authenticate themselves and receive access and refresh tokens, enabling them to access protected resources.
+The `POST /auth/login` endpoint allows registered users to authenticate themselves and receive access and refresh tokens, enabling them to access protected resources.
 
 **Login Flow:**
 
-1.  **Client Request:** The client sends an HTTP POST request to the `/login` endpoint with the user's credentials (typically email and password) in the JSON request body.
+1.  **Client Request:** The client sends an HTTP POST request to the `/auth/login` endpoint with the user's credentials (typically email and password) in the JSON request body.
 2.  **Input Validation:** The incoming `LoginRequest` DTO is validated. Checks ensure required fields (email, password) are present. If validation fails, a `400 Bad Request` is returned.
 3.  **Find User:** The endpoint uses the injected `IUserStore` service, calling a method like `FindByUsernameAsync` (using the provided email), to retrieve the corresponding user account. If no user is found with that email, a `401 Unauthorized` response is returned. It's crucial *not* to indicate whether the username was wrong or the password was wrong to prevent user enumeration attacks.
 4.  **Verify Password:** If a user *is* found, the endpoint retrieves the stored password hash for that user via the `IUserStore`. It then uses the injected `IPasswordHasher` service's `VerifyHashedPassword` method, passing the stored hash and the plain-text password provided in the request. This method securely compares the provided password against the stored hash.
 5.  **Handle Incorrect Password:** If `VerifyHashedPassword` indicates the password does not match, a `401 Unauthorized` response is returned. Again, the specific reason (user not found vs. wrong password) should not be distinguishable by the client response. *(Optional: Implementations might increment an access failed count here for lockout policies, planned for Phase 2 interface refinements)*.
-6.  **Generate Tokens:** If the password verification is successful, the user is authenticated. The endpoint now calls the injected `ITokenService` (specifically, the `GenerateAccessTokenAsync` and `GenerateRefreshTokenAsync` methods), passing the authenticated `CoreIdentUser` object.
-7.  **Token Service Logic:** The `JwtTokenService` (default in Phase 1) generates a signed JWT access token containing standard claims (`iss`, `aud`, `sub`, `exp`, etc.) and potentially user-specific claims fetched from the user object. It also generates a refresh token (a simple secure random string in Phase 1).
-8.  **Store Refresh Token (Phase 1 - Basic):** *Important Note:* In the basic Phase 1 `InMemoryUserStore`, the refresh token isn't explicitly stored or linked to the user in a persistent way. It's simply generated and returned. The `/token/refresh` endpoint relies on an in-memory lookup (if implemented simply). Robust refresh token storage is a key feature of Phase 2.
-9.  **Success Response:** A `200 OK` response is returned to the client. The response body contains the generated `AccessToken`, `RefreshToken`, and the `ExpiresIn` value (lifetime of the access token in seconds) for the client's convenience.
+6.  **Generate Tokens:** If the password verification is successful, the user is authenticated. The endpoint now calls the injected `ITokenService` (specifically, the `GenerateAccessTokenAsync` and `GenerateAndStoreRefreshTokenAsync` methods), passing the authenticated `CoreIdentUser` object.
+7.  **Token Service Logic:** The `JwtTokenService` (default) generates a signed JWT access token containing standard claims (`iss`, `aud`, `sub`, `exp`, etc.) and potentially user-specific claims fetched from the user object. It also generates a refresh token handle.
+8.  **Store Refresh Token:** The `JwtTokenService` calls the injected `IRefreshTokenStore`'s `StoreRefreshTokenAsync` method to persist the refresh token details (including its *hashed* handle). See Section 7 and 8 for details on persistence.
+9.  **Success Response:** A `200 OK` response is returned to the client. The response body contains the generated `AccessToken`, the **raw** `RefreshToken` handle, and the `ExpiresIn` value (lifetime of the access token in seconds) for the client's convenience.
 
 **Request/Response:**
 
-*   **Request (`POST /login`):**
+*   **Request (`POST /auth/login`):**
     *   Method: `POST`
     *   Content-Type: `application/json`
     *   Body (Example DTO - `LoginRequest`):
@@ -182,21 +193,23 @@ The `POST /login` endpoint allows registered users to authenticate themselves an
     *   `200 OK`: Login successful. Body contains tokens.
         ```json
         {
-          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          "refreshToken": "aBcDeFgHiJkLmNoPqRsTuVwXyZ123456...",
-          "expiresIn": 900 // Access token lifetime in seconds (e.g., 15 minutes)
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "refresh_token": "aBcDeFgHiJkLmNoPqRsTuVwXyZ123456...", // Raw Handle
+          "expires_in": 900, // Access token lifetime in seconds (e.g., 15 minutes)
+          "token_type": "Bearer"
         }
         ```
-        *(Note: The exact structure depends on the `LoginResponse` DTO defined.)*
+        *(Note: The exact structure depends on the `TokenResponse` DTO defined.)*
     *   `400 Bad Request`: Invalid input (missing fields).
     *   `401 Unauthorized`: Authentication failed (user not found OR password incorrect). Body should ideally be empty or contain a generic error message.
-    *   `500 Internal Server Error`: An unexpected error occurred during processing.
+    *   `500 Internal Server Error`: An unexpected error occurred during processing (e.g., failure storing refresh token).
 
 **Key Components:**
 
 *   **`IUserStore`:** Used to find the user by their identifier (email/username) and retrieve their details, including the stored password hash.
 *   **`IPasswordHasher`:** Crucial for securely verifying the user-provided password against the stored hash without ever exposing the hash or the original password.
-*   **`ITokenService`:** Responsible for generating the access (JWT) and refresh tokens once the user has been successfully authenticated. It encapsulates the logic for claims, signing, and lifetimes based on `CoreIdentOptions`.
+*   **`ITokenService`:** Responsible for generating the access (JWT) and refresh tokens once the user has been successfully authenticated. It encapsulates the logic for claims, signing, and lifetimes based on `CoreIdentOptions`. It also coordinates storing the refresh token details via `IRefreshTokenStore`.
+*   **`IRefreshTokenStore`:** Responsible for persisting refresh token data securely.
 
 ### 4. Token Basics (JWTs & Refresh Tokens)
 
@@ -237,23 +250,25 @@ An Access Token is a credential that proves the user has successfully authentica
     ```
     ASP.NET Core middleware (like `AddJwtBearer()`) can then automatically validate this token (check signature, expiry, issuer, audience) and populate the `User` principal for the request.
 
-**Refresh Tokens (Phase 1 - Simple Implementation):**
+**Refresh Tokens:**
 
 Access tokens are intentionally short-lived for security. When an access token expires, the user would need to log in again, which is inconvenient. Refresh tokens solve this problem.
 
 *   **Purpose:** A refresh token is a special, longer-lived credential that clients can use to obtain a *new* access token (and potentially a new refresh token) without requiring the user to re-enter their password.
-*   **Generation (Phase 1):** In Phase 1, the `JwtTokenService` generates a refresh token simply as a cryptographically secure random string. It doesn't contain claims or have a complex structure like a JWT.
-*   **Storage (Phase 1 Limitation):** Crucially, in the Phase 1 default `InMemoryUserStore`, these refresh tokens are **not robustly stored or tracked**. A very basic implementation might just keep a temporary mapping in memory, but this is fragile and lost on restart. Proper, persistent storage and validation (e.g., associating tokens with users/clients, tracking usage, revocation) is introduced in Phase 2 with the `IRefreshTokenStore`.
-*   **The `/token/refresh` Endpoint:**
-    1.  **Client Request:** When an access token expires, the client sends a POST request to `/token/refresh` with the *refresh token* in the request body.
+*   **Generation:** The `JwtTokenService` generates a refresh token handle (a cryptographically secure random string).
+*   **Storage:** The *details* of the refresh token (including a **hashed version** of the handle, user ID, client ID, expiry, etc.) are persisted using the `IRefreshTokenStore`. The **raw handle** is returned to the client.
+*   **The `/auth/token/refresh` Endpoint:**
+    1.  **Client Request:** When an access token expires, the client sends a POST request to `/auth/token/refresh` with the *raw refresh token handle* it previously received.
         ```json
         { "refreshToken": "aBcDeFgHiJkLmNoPqRsTuVwXyZ123456..." }
         ```
-    2.  **Validation (Phase 1 - Basic):** The endpoint needs a way to validate the refresh token. In the simplest Phase 1 in-memory setup, this might involve checking if the token exists in a temporary list associated with a user session (which is not ideal). A slightly better basic approach might involve embedding *minimal* information in the refresh token itself or looking it up in a simple in-memory dictionary, but without persistence, it's limited. **The Phase 1 implementation is primarily a placeholder for the flow.** It typically *cannot* securely verify the token against a user or check for expiry/revocation without proper storage.
-    3.  **Issue New Tokens:** If the basic validation passes, the endpoint uses the `ITokenService` to generate a *new* access token and potentially a *new* refresh token (token rotation).
-    4.  **Response:** A `200 OK` response is sent with the new tokens, similar to the `/login` response. If validation fails (token not found, expired in a more advanced setup, etc.), a `401 Unauthorized` or `400 Bad Request` is returned.
-
-*   **Security:** Refresh tokens are powerful credentials and must be stored securely by the client (e.g., secure storage on mobile, `HttpOnly`, `Secure` cookies for web). They should generally only be sent to the dedicated refresh endpoint (`/token/refresh`).
+    2.  **Validation:** The endpoint calls `IRefreshTokenStore.GetRefreshTokenAsync(rawHandle)` to retrieve the token details by its **raw handle** (looking it up via the `Handle` primary key column).
+    3.  The store checks if the token exists, if it has expired (`ExpirationTime`), and if it has already been used (`ConsumedTime`). If any check fails, it returns `401 Unauthorized`.
+    4.  **Consumption:** If the token is valid and not consumed, it **must** be marked as consumed to prevent replay attacks. The store implementation sets the `ConsumedTime` via `IRefreshTokenStore.RemoveRefreshTokenAsync(rawHandle)`.
+    5.  **Rotation:** A **new** `CoreIdentRefreshToken` is generated by the `ITokenService` (including generating a new raw handle and hashing it). If token family tracking is enabled (default), the new token is linked to the previous token's family.
+    6.  **Store New Token:** The *new* refresh token (with its raw handle in `Handle` and hash in `HashedHandle`) is stored in the database via `StoreRefreshTokenAsync`.
+    7.  **Response:** The new access token *and* the new *raw* refresh token handle are returned to the client.
+*   **Security:** Refresh tokens are powerful credentials and must be stored securely by the client. They are rotated on each use (the old one is consumed, a new one is issued) to mitigate risks if a token is compromised. The **token theft detection** features (Phase 3) provide further security by monitoring for reuse of consumed tokens. See Section 7 for details on refresh token storage and handling.
 
 ### 5. Password Hashing (`IPasswordHasher`)
 
@@ -357,7 +372,7 @@ To keep the core library lean, all EF Core-specific code resides in a separate N
 1.  **`CoreIdentDbContext`:**
     *   This is the heart of the EF Core integration. It inherits from `Microsoft.EntityFrameworkCore.DbContext`.
     *   It defines `DbSet<>` properties for each CoreIdent entity that needs to be persisted (e.g., `public DbSet<CoreIdentUser> Users { get; set; }`, `public DbSet<CoreIdentRefreshToken> RefreshTokens { get; set; }`).
-    *   The `OnModelCreating(ModelBuilder modelBuilder)` method is overridden to configure the database schema using EF Core's Fluent API. This includes defining primary keys, relationships (e.g., one-to-many between `CoreIdentUser` and `CoreIdentUserClaim`), indexes, and constraints (e.g., unique usernames).
+    *   The `OnModelCreating(ModelBuilder modelBuilder)` method is overridden to configure the database schema using EF Core's Fluent API. This includes defining primary keys (e.g., `refreshToken.HasKey(rt => rt.Handle)`), relationships, indexes, and constraints.
     *   **Important:** Your application's main `DbContext` should either **inherit from `CoreIdentDbContext`** or **call its configuration logic** within its own `OnModelCreating` to ensure the CoreIdent tables are correctly set up.
 
 2.  **EF Core Store Implementations:**
@@ -411,20 +426,18 @@ Once you configure EF Core, you need to manage your database schema using **EF C
 
 **Refresh Token Handling with Persistence:**
 
-1.  **Handle Hashing (New):** Before storing, the raw refresh token handle is securely hashed using a salted SHA-256 algorithm (`TokenHasher`). The salt incorporates the user ID and client ID to prevent precomputation attacks. This ensures the raw token handle is never stored directly.
-2.  **Storage:** When a user logs in, the generated `CoreIdentRefreshToken` (containing the *hashed* handle, user ID, client ID, expiry, family ID, etc.) is saved to the database table via `IRefreshTokenStore.StoreRefreshTokenAsync`.
-3.  **Validation (`/token/refresh`):**
-    *   The endpoint receives a *raw* refresh token handle from the client.
-    *   The store implementation (`EfRefreshTokenStore`) hashes the received raw handle using the same salt (user ID and client ID, which need to be retrieved or inferred). *Correction: The current `GetRefreshTokenAsync` implementation expects the *hashed* handle to be passed in. The endpoint logic needs adjustment to perform hashing before calling the store.* 
-    *   It calls `IRefreshTokenStore.GetRefreshTokenAsync(hashedHandle)` to retrieve the full token object from the database using the hash.
-    *   It checks if the token exists, if it has expired (`ExpirationTime`), and if it has already been used (`ConsumedTime`). If any check fails, it returns `401 Unauthorized`.
-    *   **Token Theft Detection (Enabled by Default):** By default (`EnableTokenFamilyTracking = true`), if a *consumed* token is presented, the system triggers a security response (e.g., `RevokeFamily` to invalidate all related tokens) based on the configured `TokenTheftDetectionMode`. This behavior can be disabled by setting `EnableTokenFamilyTracking = false` in the configuration.
-4.  **Consumption:** If the token is valid, it **must** be marked as consumed to prevent replay attacks. The store implementation sets the `ConsumedTime` via `IRefreshTokenStore.RemoveRefreshTokenAsync(hashedHandle)`.
-5.  **Rotation:** A **new** `CoreIdentRefreshToken` is generated by the `ITokenService` (including generating and hashing a new handle). If token family tracking is enabled (default), the new token is linked to the previous token's family.
-6.  **Store New Token:** The *new* refresh token (with its hashed handle) is stored in the database via `StoreRefreshTokenAsync`.
-7.  **Response:** The new access token *and* the new *raw* refresh token handle are returned to the client.
+1.  **Handle Hashing & Storage:** When a user logs in, the `JwtTokenService` generates a raw, random handle. It hashes this handle (using `TokenHasher` with user ID and client ID as salt) and creates a `CoreIdentRefreshToken` entity. The **raw handle** is stored in the `Handle` property (used as the primary key) and the **hashed handle** is stored in the `HashedHandle` property. This entity is saved via `IRefreshTokenStore.StoreRefreshTokenAsync`. The **raw handle** is returned to the client.
+2.  **Validation (`/auth/token/refresh`):**
+    *   The endpoint receives the **raw** refresh token handle from the client.
+    *   It calls `IRefreshTokenStore.GetRefreshTokenAsync(rawHandle)` to retrieve the token details by its **raw handle** (looking it up via the `Handle` primary key column).
+    *   The store checks if the token exists, if it has expired (`ExpirationTime`), and if it has already been used (`ConsumedTime`). If any check fails, it returns `401 Unauthorized`.
+    *   **Token Theft Detection (Enabled by Default):** By default (`EnableTokenFamilyTracking = true`), if a *consumed* token is presented (`ConsumedTime != null`), the system triggers a security response (e.g., `RevokeFamily` to invalidate all related tokens) based on the configured `TokenTheftDetectionMode`. This behavior can be disabled by setting `EnableTokenFamilyTracking = false` in the configuration. Note that because the `RevokeFamily` strategy revokes all *active* tokens in the family upon detection, attempting to use a new token immediately after deliberately reusing an old one (as done in some tests) will result in an Unauthorized response for the new token as well.
+3.  **Consumption:** If the token is valid and not consumed, it **must** be marked as consumed to prevent replay attacks. The store implementation sets the `ConsumedTime` via `IRefreshTokenStore.RemoveRefreshTokenAsync(rawHandle)`.
+4.  **Rotation:** A **new** `CoreIdentRefreshToken` is generated by the `ITokenService` (including generating a new raw handle and hashing it). If token family tracking is enabled (default), the new token is linked to the previous token's family.
+5.  **Store New Token:** The *new* refresh token (with its raw handle in `Handle` and hash in `HashedHandle`) is stored in the database via `StoreRefreshTokenAsync`.
+6.  **Response:** The new access token *and* the new *raw* refresh token handle are returned to the client.
 
-This **Refresh Token Rotation** strategy is crucial for security. Each refresh token can only be used once. The default enabled **token family tracking** provides additional protection by invalidating an entire chain of tokens if one is compromised and reused. If this enhanced security is not desired, it can be disabled via configuration.
+This **Refresh Token Rotation** strategy is crucial for security. Each refresh token can only be used once. The default enabled **token family tracking** provides additional protection by invalidating an entire chain of tokens if one is compromised and reused.
 
 ### 8. Delegated User Store: Integrating Existing Systems
 
@@ -531,9 +544,9 @@ options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
 };
 ```
 
-**Workflow Example (`/login`):**
+**Workflow Example (`/auth/login`):**
 
-1.  User POSTs to `/login` with email and password.
+1.  User POSTs to `/auth/login` with email and password.
 2.  CoreIdent endpoint receives the request.
 3.  It requests `IUserStore` from DI, receiving the `DelegatedUserStore` instance.
 4.  It calls `userStore.FindByUsernameAsync(normalizedEmail)`.
@@ -550,6 +563,8 @@ options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
 15. Tokens are returned to the user.
 
 This flow clearly shows how the adapter acts as a bridge, invoking your custom logic at the appropriate points.
+
+**Testing Setup Note:** When writing integration tests involving database interactions (like testing refresh token storage or EF Core stores), it's crucial to ensure the database is correctly configured and migrations are applied *before* the test logic runs. A common pattern using `WebApplicationFactory` is to configure the `DbContext` (often with an in-memory provider like SQLite with `cache=shared`) and run `dbContext.Database.Migrate()` within the `ConfigureServices` block of a custom `WebApplicationFactory` or using `WithWebHostBuilder` within the test class itself. This ensures the database schema is ready for the test execution.
 
 ---
  

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Shouldly; // For assertions
 using Xunit;
 using System.Threading.Tasks;
+using CoreIdent.TestHost;
 
 namespace CoreIdent.Integration.Tests;
 

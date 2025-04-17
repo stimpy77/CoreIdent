@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using CoreIdent.TestHost;
 
 namespace CoreIdent.Integration.Tests;
 
@@ -77,7 +78,8 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
 
         // Assert: Check response
         response.EnsureSuccessStatusCode();
-        var tokens = await response.Content.ReadFromJsonAsync<TokenResponse>();
+        // Use the correct TokenResponse from Core
+        var tokens = await response.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
         tokens.ShouldNotBeNull();
         tokens.AccessToken.ShouldNotBeNullOrWhiteSpace();
         tokens.RefreshToken.ShouldNotBeNullOrWhiteSpace();
@@ -108,7 +110,8 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
         var loginRequest = new { Email = DelegatedUserStoreWebApplicationFactory.TestUser.UserName, Password = "password" };
         var loginResponse = await _client.PostAsJsonAsync("/auth/login", loginRequest);
         loginResponse.EnsureSuccessStatusCode();
-        var initialTokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+        // Use the correct TokenResponse from Core
+        var initialTokens = await loginResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
         initialTokens.ShouldNotBeNull();
 
         // Reset flags after login setup
@@ -126,7 +129,8 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
 
         // Assert: Check response contains new tokens
         refreshResponse.EnsureSuccessStatusCode();
-        var newTokens = await refreshResponse.Content.ReadFromJsonAsync<TokenResponse>();
+        // Use the correct TokenResponse from Core
+        var newTokens = await refreshResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
         newTokens.ShouldNotBeNull();
         newTokens.AccessToken.ShouldNotBeNullOrWhiteSpace();
         newTokens.RefreshToken.ShouldNotBeNullOrWhiteSpace();
@@ -390,7 +394,8 @@ public class TestEndpointMiddleware : IMiddleware
                 
                 _logger.LogInformation("Login successful for {Email}. Creating mock tokens.", normalizedEmail);
                 // Create mock tokens for testing
-                var response = new TokenResponse // Use the existing TokenResponse DTO
+                // Use the correct TokenResponse from Core
+                var response = new CoreIdent.Core.Models.Responses.TokenResponse 
                 {
                     AccessToken = "test_access_token_" + Guid.NewGuid().ToString(),
                     RefreshToken = "test_refresh_token_" + Guid.NewGuid().ToString(),
@@ -452,7 +457,8 @@ public class TestEndpointMiddleware : IMiddleware
                 
                  _logger.LogInformation("Refresh token processing successful for user {UserId}. Creating mock tokens.", user.Id);
                 // Create mock tokens for testing
-                var response = new TokenResponse // Use the existing TokenResponse DTO
+                // Use the correct TokenResponse from Core
+                var response = new CoreIdent.Core.Models.Responses.TokenResponse 
                 {
                     AccessToken = "test_access_token_" + Guid.NewGuid().ToString(),
                     RefreshToken = "test_refresh_token_" + Guid.NewGuid().ToString(),
@@ -483,13 +489,4 @@ public class TestEndpointMiddleware : IMiddleware
         // For all other paths, continue with the regular pipeline
         await next(context);
     }
-}
-
-// Simple DTO for deserializing token responses
-public class TokenResponse
-{
-    public string? AccessToken { get; set; }
-    public string? RefreshToken { get; set; }
-    public int ExpiresIn { get; set; }
-    public string? TokenType { get; set; }
 } 

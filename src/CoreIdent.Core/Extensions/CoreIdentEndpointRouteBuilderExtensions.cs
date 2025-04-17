@@ -24,6 +24,7 @@ using System.Security.Cryptography; // For PKCE random generation
 using System.Text; // For Encoding
 using Microsoft.Extensions.Primitives; // For StringValues
 using System.Net.Http.Headers; // For Basic Authentication
+using System.Text.Json; // For JsonSerializer
 
 namespace CoreIdent.Core.Extensions;
 
@@ -208,38 +209,56 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             // Generate tokens
             var accessToken = await tokenService.GenerateAccessTokenAsync(user, new[] { "openid", "profile", "email" }); // Example scopes
             string? refreshTokenHandle = null;
-            // Remove the incorrect check for user.AllowRefreshToken
-            // Always attempt to generate refresh token for password grant if client allows
-            const string clientIdForPasswordFlow = "__password_flow__"; // Client ID associated with password grant
-            try
+
+            // Check if the implicit client for password flow allows offline access
+            const string clientIdForPasswordFlow = "__password_flow__";
+            var clientStore = httpContext.RequestServices.GetRequiredService<IClientStore>(); // Need client store
+            var passwordClient = await clientStore.FindClientByIdAsync(clientIdForPasswordFlow, cancellationToken);
+
+            // Only generate refresh token if the password client is configured to allow it
+            if (passwordClient?.AllowOfflineAccess == true)
             {
-                logger.LogDebug("Attempting to generate and store refresh token for user {UserId} and client {ClientId}", user.Id, clientIdForPasswordFlow);
-                refreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, clientIdForPasswordFlow);
-                logger.LogInformation("Generated refresh token handle for user {UserId}: {RefreshTokenHandle}", user.Id, refreshTokenHandle ?? "<null>"); // Log handle after generation
+                try
+                {
+                    logger.LogDebug("LOGIN_ENDPOINT: Trying refresh token generation...");
+                    refreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, clientIdForPasswordFlow);
+                    logger.LogInformation("LOGIN_ENDPOINT: GenerateAndStoreRefreshTokenAsync returned: {RefreshTokenHandle}", refreshTokenHandle ?? "<null>");
+                    
+                    // Add extra log point before end of try block
+                    logger.LogInformation("LOGIN_ENDPOINT: Reached end of try block after refresh token generation.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "LOGIN_ENDPOINT: FAILED in try block for refresh token generation/storage.");
+                    refreshTokenHandle = null;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                logger.LogError(ex, "Failed to generate or store refresh token for user {UserId}", user.Id);
-                // Decide if login should fail here? For now, continue without refresh token.
-                refreshTokenHandle = null;
+                logger.LogWarning("Refresh token not generated for user {UserId}: Client {ClientId} does not allow offline access or was not found.", user.Id, clientIdForPasswordFlow);
             }
 
-            logger.LogInformation("User {UserName} successfully logged in.", request.Email);
-
-            // Prepare response
+            logger.LogInformation("LOGIN_ENDPOINT: Preparing final TokenResponse.");
             var tokenResponse = new TokenResponse
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshTokenHandle, // Assign handle
-                ExpiresIn = 3600, // TODO: Get actual lifetime from config or token itself
+                RefreshToken = refreshTokenHandle, 
+                ExpiresIn = 3600, 
                 TokenType = "Bearer"
             };
+            
+            // Log the actual object being returned
+            try 
+            {
+                var responseJson = JsonSerializer.Serialize(tokenResponse);
+                logger.LogInformation("LOGIN_ENDPOINT: Serialized TokenResponse being returned: {JsonResponse}", responseJson);
+            }
+            catch (Exception jsonEx)
+            {
+                logger.LogError(jsonEx, "LOGIN_ENDPOINT: Failed to serialize TokenResponse before returning.");
+            }
 
-            // Log the response object *before* returning
-            logger.LogDebug("Returning TokenResponse: AccessTokenPresent={AccessTokenPresent}, RefreshTokenPresent={RefreshTokenPresent}", 
-                            !string.IsNullOrEmpty(tokenResponse.AccessToken), 
-                            !string.IsNullOrEmpty(tokenResponse.RefreshToken));
-
+            logger.LogDebug("LOGIN_ENDPOINT: Returning OK response.");
             return Results.Ok(tokenResponse);
         })
         .WithName("LoginUser")

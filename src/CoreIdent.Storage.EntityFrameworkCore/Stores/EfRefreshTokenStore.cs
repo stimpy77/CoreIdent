@@ -15,6 +15,7 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 /// </summary>
 public class EfRefreshTokenStore : IRefreshTokenStore
 {
+    // Revert to injecting DbContext directly
     protected readonly CoreIdentDbContext Context;
     protected readonly ILogger<EfRefreshTokenStore> Logger;
 
@@ -39,10 +40,26 @@ public class EfRefreshTokenStore : IRefreshTokenStore
             token.HashedHandle = token.Handle; // Set HashedHandle for consistency if not already set
         }
 
-        Context.RefreshTokens.Add(token);
-        await Context.SaveChangesAsync(cancellationToken);
+        Logger.LogDebug("Attempting to add RefreshToken to context. Handle: {Handle}, HashedHandle: {HashedHandle}, SubjectId: {SubjectId}, ClientId: {ClientId}, FamilyId: {FamilyId}",
+            token.Handle, token.HashedHandle, token.SubjectId, token.ClientId, token.FamilyId);
 
-        Logger.LogDebug("Stored refresh token. Handle hash: {HashPrefix}", 
+        Context.RefreshTokens.Add(token);
+        
+        try
+        {
+            Logger.LogInformation("Calling SaveChangesAsync for RefreshToken Handle: {Handle}", token.Handle);
+            var changes = await Context.SaveChangesAsync(cancellationToken); 
+            Logger.LogInformation("SaveChangesAsync SUCCESS for RefreshToken Handle: {Handle}. Changes saved: {Changes}", token.Handle, changes);
+        }
+        catch(Exception ex)
+        {
+            Logger.LogError(ex, "SaveChangesAsync FAILED for RefreshToken Handle: {Handle}. Entity State: {State}", 
+                token.Handle, Context.Entry(token).State);
+            // Re-throw the exception so the service layer knows storage failed.
+            throw; 
+        }
+
+        Logger.LogDebug("Successfully stored refresh token. Handle: {HandlePrefix}", 
             token.Handle.Substring(0, Math.Min(6, token.Handle.Length)));
     }
 
@@ -51,14 +68,15 @@ public class EfRefreshTokenStore : IRefreshTokenStore
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(tokenHandle);
 
-        // Try to find by Handle (which is now expected to contain the hash) or HashedHandle
+        // Use injected context
         var token = await Context.RefreshTokens.FirstOrDefaultAsync(
-            rt => rt.Handle == tokenHandle || rt.HashedHandle == tokenHandle, 
+            rt => rt.Handle == tokenHandle, 
             cancellationToken);
         
         if (token == null)
         {
-            Logger.LogDebug("Refresh token not found with hash: {HashPrefix}", 
+            // Log using raw handle prefix for consistency
+            Logger.LogDebug("Refresh token not found with handle: {HandlePrefix}", 
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         }
         
@@ -70,25 +88,27 @@ public class EfRefreshTokenStore : IRefreshTokenStore
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(tokenHandle);
 
-        // Try to find by Handle or HashedHandle
+        // Use injected context
         var token = await Context.RefreshTokens.FirstOrDefaultAsync(
-            rt => rt.Handle == tokenHandle || rt.HashedHandle == tokenHandle, 
+            rt => rt.Handle == tokenHandle, 
             cancellationToken);
             
         if (token != null)
         {
-            // Mark as consumed (useful for replay detection with rotation)
+            // Mark as consumed 
             token.ConsumedTime = DateTime.UtcNow;
             Context.RefreshTokens.Update(token);
 
             await Context.SaveChangesAsync(cancellationToken);
             
-            Logger.LogDebug("Marked refresh token as consumed. Hash: {HashPrefix}",
+            // Log using raw handle prefix
+            Logger.LogDebug("Marked refresh token as consumed. Handle: {HandlePrefix}",
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         }
         else
         {
-            Logger.LogDebug("No token found to consume with hash: {HashPrefix}",
+             // Log using raw handle prefix
+            Logger.LogDebug("No token found to consume with handle: {HandlePrefix}",
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         }
         // If token not found, do nothing (idempotent) 
@@ -99,7 +119,7 @@ public class EfRefreshTokenStore : IRefreshTokenStore
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
 
-        // Find all active (non-consumed) tokens in the family
+        // Use injected context
         var tokensToRevoke = await Context.RefreshTokens
             .Where(t => t.FamilyId == familyId && !t.ConsumedTime.HasValue)
             .ToListAsync(cancellationToken);
@@ -124,6 +144,7 @@ public class EfRefreshTokenStore : IRefreshTokenStore
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
 
+        // Use injected context
         return await Context.RefreshTokens
             .Where(t => t.SubjectId == subjectId)
             .ToListAsync(cancellationToken);
