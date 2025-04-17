@@ -1,4 +1,5 @@
 using CoreIdent.Core.Models;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,7 +35,23 @@ public interface IRefreshTokenStore
     /// <returns>A task that represents the asynchronous operation.</returns>
     Task RemoveRefreshTokenAsync(string tokenHandle, CancellationToken cancellationToken);
 
-    // Optional: Add methods to find tokens by SubjectId or ClientId if needed for revocation scenarios.
-    // Task<IEnumerable<CoreIdentRefreshToken>> FindTokensBySubjectIdAsync(string subjectId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Revokes all tokens belonging to a specific family, used for token theft detection.
+    /// This marks all tokens in the family as consumed.
+    /// </summary>
+    /// <param name="familyId">The family identifier to revoke.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task RevokeTokenFamilyAsync(string familyId, CancellationToken cancellationToken);
+    
+    /// <summary>
+    /// Find tokens associated with a specific user.
+    /// </summary>
+    /// <param name="subjectId">The subject ID (user ID) to find tokens for.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the collection of refresh tokens.</returns>
+    Task<IEnumerable<CoreIdentRefreshToken>> FindTokensBySubjectIdAsync(string subjectId, CancellationToken cancellationToken);
+    
+    // Optional: Add method to remove tokens for a user if needed
     // Task RemoveTokensBySubjectIdAsync(string subjectId, CancellationToken cancellationToken);
 } 

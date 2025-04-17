@@ -3,6 +3,7 @@ using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Shouldly; 
 using System;
@@ -35,6 +36,8 @@ public class CoreIdentServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        // Add logging services required by the in-memory stores
+        services.AddLogging();
         var configureAction = CreateValidConfigurationAction();
 
         // Act

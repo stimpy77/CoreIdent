@@ -3,6 +3,7 @@ using System;
 using CoreIdent.Storage.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoreIdent.Storage.EntityFrameworkCore.Migrations
 {
     [DbContext(typeof(CoreIdentDbContext))]
-    partial class CoreIdentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417054103_AddTokenFamilyFields")]
+    partial class AddTokenFamilyFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -144,11 +147,6 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Migrations
 
                     b.Property<string>("FamilyId")
                         .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("HashedHandle")
-                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PreviousTokenId")
@@ -164,10 +162,6 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Migrations
                     b.HasIndex("ClientId");
 
                     b.HasIndex("ExpirationTime");
-
-                    b.HasIndex("FamilyId");
-
-                    b.HasIndex("HashedHandle");
 
                     b.HasIndex("SubjectId");
 

@@ -1,4 +1,5 @@
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -250,5 +251,18 @@ public class InMemoryUserStore : IUserStore
         ArgumentNullException.ThrowIfNull(user);
         user.LockoutEnabled = enabled; // Basic implementation ok for InMemory
         return Task.CompletedTask;
+    }
+
+    // Update signature and implementation
+    public Task<PasswordVerificationResult> ValidateCredentialsAsync(string normalizedUserName, string password, CancellationToken cancellationToken)
+    {
+        // Basic InMemory store doesn't handle credential validation beyond finding the user.
+        // A real implementation might compare hashes, but this store lacks a hasher.
+        // It relies on the higher-level service (like UserManager) to do the hashing/verification.
+        // For now, just return Failed as this store cannot validate passwords itself.
+
+        // No need to check user existence here as higher layer (UserManager) usually does Find first.
+        // If this store were used directly and needed validation, you'd add FindUserByUsernameAsync check.
+        return Task.FromResult(PasswordVerificationResult.Failed);
     }
 }

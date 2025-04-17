@@ -8,7 +8,7 @@
     <!-- NuGet Package Properties -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>CoreIdent.Core</PackageId>
-    <Version>0.2.0</Version> <!-- Updated for Phase 2 completion -->
+    <Version>0.3.1</Version> <!-- Updated for Phase 3 feature 1 completion -->
     <Authors>Jon Davis, and other CoreIdent contributors</Authors>
     <Description>Core authentication and identity primitives for CoreIdent (Registration, Login, Token Generation, Core Interfaces, Configuration).</Description>
     <PackageTags>identity;authentication;authorization;security;jwt;netcore;aspnetcore;oidc;oauth2</PackageTags>

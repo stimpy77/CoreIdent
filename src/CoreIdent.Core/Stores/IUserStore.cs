@@ -1,4 +1,5 @@
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -197,6 +198,9 @@ public interface IUserStore
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     Task SetLockoutEnabledAsync(CoreIdentUser user, bool enabled, CancellationToken cancellationToken);
+
+    // Add a method to validate credentials, allowing the store to implement the logic
+    Task<PasswordVerificationResult> ValidateCredentialsAsync(string normalizedUserName, string password, CancellationToken cancellationToken);
 }
 
 // Simple result enum for store operations initially. Can be expanded later.

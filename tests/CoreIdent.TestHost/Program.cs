@@ -3,6 +3,7 @@ using CoreIdent.Core.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,22 +23,26 @@ builder.Services.AddCoreIdent(options =>
     options.RefreshTokenLifetime = TimeSpan.FromSeconds(30); // Short lifetime for testing expiration
 });
 
-// --- Storage Configuration for Integration Tests ---
-// Use SQLite In-Memory for isolated test runs, or a file for persistence checking
-// Ensure the connection string matches what tests might expect if accessing directly.
-// Option 1: In-Memory (Unique per test run usually)
+// --- REMOVE Storage Configuration specific to TestHost Program.cs ---
+// // Revert to unique DB per factory run
 // builder.Services.AddDbContext<CoreIdentDbContext>(options =>
-//    options.UseSqlite($"DataSource=file:memdb{Guid.NewGuid()}?mode=memory&cache=shared")); // Ensure unique name or shared cache
+//     options.UseSqlite($"DataSource=file:memdb-{Guid.NewGuid()}?mode=memory&cache=shared"),
+//     ServiceLifetime.Scoped); // Explicitly Scoped
+// 
+// // Configure CoreIdent to use the EF Core stores
+// builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
+// --- End REMOVAL ---
 
-// Option 2: File-based (Matches design-time migration target)
-var connectionString = "DataSource=coreident_integration_test.db;Cache=Shared";
-builder.Services.AddDbContext<CoreIdentDbContext>(options =>
-    options.UseSqlite(connectionString));
-
-// Configure CoreIdent to use the EF Core stores
-builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
+// Let the WebApplicationFactory configure the DbContext and stores for tests.
 
 var app = builder.Build();
+
+// --- REMOVE Post-Build Migration Logic ---
+// using (var scope = app.Services.CreateScope())
+// {
+    // ... migration logic ...
+// }
+// --- End REMOVAL ---
 
 // Configure a simple exception handler for the test environment
 // app.UseExceptionHandler(exceptionHandlerApp =>
@@ -48,16 +53,6 @@ var app = builder.Build();
 //         await context.Response.WriteAsync("An unexpected error occurred.");
 //     });
 // });
-
-// Ensure database is created for tests
-// This is crucial when using WebApplicationFactory as migrations aren't automatically run
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
-    // Use EnsureCreated for simple cases or Database.Migrate for migrations
-    // dbContext.Database.Migrate(); // Apply migrations to the test database
-    dbContext.Database.EnsureCreated(); // Ensure schema exists, doesn't use migrations
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -70,13 +70,20 @@ public class CoreIdentDbContext : DbContext
             // The actual token value presented by the client is not stored directly.
             refreshToken.HasKey(rt => rt.Handle);
             refreshToken.Property(rt => rt.Handle).HasMaxLength(128); // Adjust length as needed for hash
+            
+            // HashedHandle is the new preferred property for storing the hashed token value
+            // In a future version, Handle will be phased out and HashedHandle will become the primary key
+            refreshToken.Property(rt => rt.HashedHandle).HasMaxLength(128);
+            refreshToken.HasIndex(rt => rt.HashedHandle); // Additional index for lookups
 
             refreshToken.HasIndex(rt => rt.SubjectId);
             refreshToken.HasIndex(rt => rt.ClientId);
             refreshToken.HasIndex(rt => rt.ExpirationTime); // Index for cleanup tasks
+            refreshToken.HasIndex(rt => rt.FamilyId); // Index for token family operations
 
             refreshToken.Property(rt => rt.SubjectId).IsRequired().HasMaxLength(256);
             refreshToken.Property(rt => rt.ClientId).IsRequired().HasMaxLength(256);
+            refreshToken.Property(rt => rt.FamilyId).IsRequired().HasMaxLength(128);
 
             refreshToken.ToTable("RefreshTokens");
         });

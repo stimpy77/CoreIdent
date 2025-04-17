@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Configuration;
@@ -45,6 +47,27 @@ public class CoreIdentOptionsValidator : IValidateOptions<CoreIdentOptions>
         if (options.RefreshTokenLifetime <= TimeSpan.Zero)
         {
             errors.Add($"{nameof(options.RefreshTokenLifetime)} must be a positive duration.");
+        }
+
+        // Validate token security options
+        if (options.TokenSecurity == null)
+        {
+            errors.Add($"{nameof(options.TokenSecurity)} cannot be null.");
+        }
+        else
+        {
+            // Validate token theft detection mode is a valid enum value
+            if (!Enum.IsDefined(typeof(TokenTheftDetectionMode), options.TokenSecurity.TokenTheftDetectionMode))
+            {
+                errors.Add($"{nameof(options.TokenSecurity.TokenTheftDetectionMode)} must be a valid {nameof(TokenTheftDetectionMode)} value.");
+            }
+            
+            // Ensure token family tracking is enabled when RevokeFamily mode is set
+            if (options.TokenSecurity.TokenTheftDetectionMode == TokenTheftDetectionMode.RevokeFamily && 
+                !options.TokenSecurity.EnableTokenFamilyTracking)
+            {
+                errors.Add($"{nameof(options.TokenSecurity.EnableTokenFamilyTracking)} must be true when {nameof(options.TokenSecurity.TokenTheftDetectionMode)} is set to {nameof(TokenTheftDetectionMode.RevokeFamily)}.");
+            }
         }
 
         if (errors.Any())

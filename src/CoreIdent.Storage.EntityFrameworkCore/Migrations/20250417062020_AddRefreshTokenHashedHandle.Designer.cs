@@ -3,6 +3,7 @@ using System;
 using CoreIdent.Storage.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CoreIdent.Storage.EntityFrameworkCore.Migrations
 {
     [DbContext(typeof(CoreIdentDbContext))]
-    partial class CoreIdentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417062020_AddRefreshTokenHashedHandle")]
+    partial class AddRefreshTokenHashedHandle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");

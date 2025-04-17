@@ -10,7 +10,7 @@
     <!-- NuGet Package Properties -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>CoreIdent.Adapters.DelegatedUserStore</PackageId>
-    <Version>0.2.0</Version> <!-- Sync with Core -->
+    <Version>0.3.1</Version> <!-- Sync with Core -->
     <Authors>Jon Davis, and other CoreIdent contributors</Authors>
     <Description>CoreIdent adapter to delegate user storage and credential validation to an existing external system.</Description>
     <PackageTags>identity;authentication;authorization;security;netcore;aspnetcore;adapter;delegate</PackageTags>

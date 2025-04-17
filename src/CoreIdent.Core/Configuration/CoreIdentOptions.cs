@@ -33,4 +33,62 @@ public class CoreIdentOptions
     /// Gets or sets the lifetime duration for refresh tokens. Required and must be positive.
     /// </summary>
     public TimeSpan RefreshTokenLifetime { get; set; } = TimeSpan.FromDays(7); // Default
+
+    /// <summary>
+    /// Gets or sets the retention period for consumed refresh tokens before they are permanently removed.
+    /// This helps with detecting token replay attempts while managing database growth.
+    /// Set to null to keep consumed tokens indefinitely (not recommended for production).
+    /// </summary>
+    public TimeSpan? ConsumedTokenRetentionPeriod { get; set; } = TimeSpan.FromDays(30); // Default 30 days
+
+    /// <summary>
+    /// Options for token security behavior.
+    /// </summary>
+    public TokenSecurityOptions TokenSecurity { get; set; } = new TokenSecurityOptions();
+}
+
+/// <summary>
+/// Defines options for token security behavior, especially for token theft detection.
+/// </summary>
+public class TokenSecurityOptions
+{
+    /// <summary>
+    /// Specifies how to respond when a consumed token is presented again, which could indicate token theft.
+    /// Default: RevokeFamily - Revoke all tokens in the family.
+    /// </summary>
+    public TokenTheftDetectionMode TokenTheftDetectionMode { get; set; } = TokenTheftDetectionMode.RevokeFamily;
+
+    /// <summary>
+    /// Whether to automatically revoke all refresh tokens for a user when they change their password.
+    /// Default: true
+    /// </summary>
+    public bool RevokeTokensOnPasswordChange { get; set; } = true;
+
+    /// <summary>
+    /// Whether to enable token family tracking for theft detection and automatic family revocation.
+    /// When disabled, refresh tokens are still rotated, but consumed tokens do not trigger family revocation.
+    /// Default: true (Recommended for enhanced security)
+    /// </summary>
+    public bool EnableTokenFamilyTracking { get; set; } = true;
+}
+
+/// <summary>
+/// Defines how to respond to a potential token theft scenario.
+/// </summary>
+public enum TokenTheftDetectionMode
+{
+    /// <summary>
+    /// Do nothing special, just reject the token.
+    /// </summary>
+    Silent = 0,
+
+    /// <summary>
+    /// Revoke all tokens in the same family (chain of rotated tokens).
+    /// </summary>
+    RevokeFamily = 1,
+
+    /// <summary>
+    /// Revoke all tokens for the user across all clients.
+    /// </summary>
+    RevokeAllUserTokens = 2
 }

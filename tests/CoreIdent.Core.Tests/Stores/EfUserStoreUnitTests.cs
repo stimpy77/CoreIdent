@@ -13,6 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using CoreIdent.Core.Tests.Utils; // Added
+using CoreIdent.Core.Services; // <-- Add this line explicitly
+using Microsoft.Extensions.Logging; // <-- Make sure this is present
 
 namespace CoreIdent.Core.Tests.Stores;
 
@@ -24,6 +26,8 @@ public class EfUserStoreUnitTests
     private readonly Mock<CoreIdentDbContext> _mockContext;
     private readonly Mock<DbSet<CoreIdentUser>> _mockUserSet;
     private readonly Mock<DbSet<CoreIdentUserClaim>> _mockUserClaimSet;
+    private readonly Mock<IPasswordHasher> _mockPasswordHasher;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory; // <-- Add this
     private readonly EfUserStore _userStore;
     private readonly List<CoreIdentUser> _userSource; // In-memory source for mocking DbSet
     private readonly List<CoreIdentUserClaim> _userClaimSource;
@@ -57,8 +61,16 @@ public class EfUserStoreUnitTests
 
         _mockContext = mockContextObject;
 
-        // Instantiate the store with the mocked context
-        _userStore = new EfUserStore(_mockContext.Object);
+        // Mock IPasswordHasher
+        _mockPasswordHasher = new Mock<IPasswordHasher>();
+
+        // Mock ILoggerFactory <-- Add this
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
+                          .Returns(new Mock<ILogger>().Object); // Return a dummy logger
+
+        // Instantiate the store with the mocked context, hasher, and logger factory <-- Update this line
+        _userStore = new EfUserStore(_mockContext.Object, _mockPasswordHasher.Object, _mockLoggerFactory.Object);
     }
 
     // Removed CreateMockDbSet and GetKeyValue

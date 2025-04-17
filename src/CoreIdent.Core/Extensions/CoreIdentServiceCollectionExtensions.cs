@@ -2,7 +2,7 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions; // For TryAddSingleton
+using Microsoft.Extensions.DependencyInjection.Extensions; // For TryAdd*
 using Microsoft.Extensions.Options;
 using System;
 
@@ -35,16 +35,18 @@ public static class CoreIdentServiceCollectionExtensions
         services.TryAddSingleton<IPasswordHasher, DefaultPasswordHasher>();
         services.TryAddScoped<ITokenService, JwtTokenService>();
 
-        // Register default store for Phase 1 (In-Memory) - Should also be Scoped if interacting with Scoped services
+        // Register default IN-MEMORY stores. Consumers can replace these by registering
+        // other implementations (like EF Core stores) AFTER calling AddCoreIdent.
         services.TryAddScoped<IUserStore, InMemoryUserStore>();
-
-        // Register default Refresh Token store (In-Memory) - Should also be Scoped
-        services.TryAddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+        services.TryAddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>(); // Add default
+        services.TryAddScoped<IClientStore, InMemoryClientStore>();         // Add default
+        services.TryAddScoped<IScopeStore, InMemoryScopeStore>();           // Add default
+        services.TryAddSingleton<IAuthorizationCodeStore, InMemoryAuthorizationCodeStore>(); // Use Singleton for in-memory store
 
         // Add other necessary framework services if any.
         // For now, the core services themselves don't have many external dependencies beyond options.
         // HttpContextAccessor might be needed later for endpoint logic.
-        // services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddHttpContextAccessor();
 
         return services;
     }
