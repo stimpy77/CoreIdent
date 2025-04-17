@@ -228,8 +228,8 @@ public class JwtTokenService : ITokenService
 
         var refreshTokenEntity = new CoreIdentRefreshToken
         {
-            Handle = hashedHandle, // Store the hashed handle for lookups
-            HashedHandle = hashedHandle, // Also set the HashedHandle property for future compatibility
+            Handle = refreshTokenHandle, // Store the RAW handle (PK)
+            HashedHandle = hashedHandle, // Store the HASHED handle
             SubjectId = user.Id,
             ClientId = clientId,
             CreationTime = DateTime.UtcNow,
@@ -280,15 +280,15 @@ public class JwtTokenService : ITokenService
 
         var refreshTokenEntity = new CoreIdentRefreshToken
         {
-            Handle = hashedHandle, // Store the hashed handle for lookups
-            HashedHandle = hashedHandle, // Also set the HashedHandle property for future compatibility
+            Handle = refreshTokenHandle, // Store the RAW handle (PK)
+            HashedHandle = hashedHandle, // Store the HASHED handle
             SubjectId = user.Id,
             ClientId = clientId,
             CreationTime = DateTime.UtcNow,
             ExpirationTime = DateTime.UtcNow.Add(_options.RefreshTokenLifetime),
             ConsumedTime = null,
-            FamilyId = previousToken.FamilyId, // Keep the same family ID to maintain lineage
-            PreviousTokenId = previousToken.Handle // Store the parent token ID for tracking
+            FamilyId = previousToken.FamilyId, // Keep the same family ID
+            PreviousTokenId = previousToken.Handle // Store the parent token's RAW handle
         };
 
         try

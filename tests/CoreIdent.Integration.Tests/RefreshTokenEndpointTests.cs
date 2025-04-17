@@ -20,6 +20,10 @@ using Xunit;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Collections.Generic;
+using CoreIdent.TestHost;
+using CoreIdent.Core.Stores;
+using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Services;
 
 namespace CoreIdent.Integration.Tests;
 
@@ -127,32 +131,41 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
 
     private async Task<(string AccessToken, string RefreshToken)> RegisterAndLoginUser(string email, string password)
     {
-        // Register
-        var registerRequest = new RegisterRequest { Email = email, Password = password };
-        var registerResponse = await _client.PostAsJsonAsync("/auth/register", registerRequest);
-        registerResponse.StatusCode.ShouldBeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict); // Allow conflict if user exists from previous run within same factory
-        if (registerResponse.StatusCode == HttpStatusCode.Conflict)
+        // Register user directly via service provider 
+        // (assuming AddDbContext and AddCoreIdentEntityFrameworkStores are called in factory setup)
+        using (var scope = _factory.Services.CreateScope())
         {
-             // If conflict, just try logging in directly
-            // (Could happen if test runner reuses factory instance unexpectedly)
-        } else {
-             registerResponse.EnsureSuccessStatusCode(); // Ensure 201 Created otherwise
+            var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<RefreshTokenEndpointTests>>();
+            
+            var existingUser = await userStore.FindUserByUsernameAsync(email.ToUpperInvariant(), default);
+            if (existingUser == null)
+            {
+                var user = new CoreIdentUser
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = email,
+                    NormalizedUserName = email.ToUpperInvariant(),
+                    PasswordHash = passwordHasher.HashPassword(null, password)
+                };
+                var result = await userStore.CreateUserAsync(user, default);
+                if (result != StoreResult.Success)
+                {
+                    logger.LogError("Failed to create user {Email} in helper. Result: {Result}", email, result);
+                    throw new InvalidOperationException($"Test setup failed: Could not create user {email}. Result: {result}");
+                }
+                logger.LogDebug("User {Email} created in helper.", email);
+            }
+            else
+            {
+                 logger.LogDebug("User {Email} already existed in helper.", email);
+            }
         }
-        
 
-        // Login
-        var loginRequest = new LoginRequest { Email = email, Password = password };
-        var loginResponse = await _client.PostAsJsonAsync("/auth/login", loginRequest);
-        
-        // *** Add detailed logging if login fails ***
-        if (!loginResponse.IsSuccessStatusCode)
-        {
-            var errorContent = await loginResponse.Content.ReadAsStringAsync();
-            _factory.Services.GetRequiredService<ILogger<RefreshTokenEndpointTests>>().LogError(
-                "Login failed in RegisterAndLoginUser. Status: {StatusCode}, Reason: {ReasonPhrase}, Content: {ErrorContent}",
-                loginResponse.StatusCode, loginResponse.ReasonPhrase, errorContent);
-        }
-        loginResponse.EnsureSuccessStatusCode(); // Let this throw if login fails
+        // Login user
+        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new LoginRequest { Email = email, Password = password });
+        loginResponse.EnsureSuccessStatusCode();
 
         // Explicitly qualify the type used for deserialization
         var tokenResponse = await loginResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
@@ -173,7 +186,7 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
 
         var refreshRequest = new RefreshTokenRequest { RefreshToken = initialRefreshToken };
 
-        // Act: Refresh the token
+        // Act: Refresh the token (First time)
         var refreshResponse1 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
 
         // *** Log Raw JSON Response ***
@@ -182,57 +195,66 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
 
         // Assert: First refresh is successful
         refreshResponse1.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var refreshedTokens = JsonSerializer.Deserialize<CoreIdent.Core.Models.Responses.TokenResponse>(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); // Deserialize manually
-        refreshedTokens.ShouldNotBeNull();
-        refreshedTokens.RefreshToken.ShouldNotBeNullOrEmpty();
-        refreshedTokens.AccessToken.ShouldNotBeNullOrEmpty();
-        refreshedTokens.RefreshToken.ShouldNotBe(initialRefreshToken, "A new refresh token should be issued.");
+        var refreshedTokens1 = JsonSerializer.Deserialize<CoreIdent.Core.Models.Responses.TokenResponse>(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); // Deserialize manually
+        refreshedTokens1.ShouldNotBeNull();
+        refreshedTokens1.RefreshToken.ShouldNotBeNullOrEmpty();
+        refreshedTokens1.AccessToken.ShouldNotBeNullOrEmpty();
+        refreshedTokens1.RefreshToken.ShouldNotBe(initialRefreshToken, "A new refresh token should be issued.");
 
-        // Act: Attempt to use the *original* refresh token again
-        var refreshResponse2 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest); // Use initial token again
+        // Act: Try to use the FIRST token again (Should fail due to consumption)
+        var reuseAttemptResponse = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
+        reuseAttemptResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Reusing the original token should fail.");
 
-        // Assert: Second refresh attempt with the original token fails
-        refreshResponse2.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "The original refresh token should be invalidated after use.");
+        // Act: Try to use the SECOND, newly issued token 
+        var refreshRequest2 = new RefreshTokenRequest { RefreshToken = refreshedTokens1.RefreshToken };
+        var refreshResponse2 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest2);
 
-        // Act: Attempt to use the *new* refresh token
-        var newRefreshRequest = new RefreshTokenRequest { RefreshToken = refreshedTokens.RefreshToken };
-        var refreshResponse3 = await _client.PostAsJsonAsync("/auth/token/refresh", newRefreshRequest); // Use the token from the first refresh
+        // Assert: Second refresh SHOULD NOW FAIL if RevokeFamily is enabled (default)
+        // Because the reuse attempt above triggered family revocation.
+        // If theft detection was Silent, this would be OK.
+        refreshResponse2.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Using the second token after the first was reused should fail due to family revocation."); 
 
-         // Assert: Refresh with the new token succeeds
-        refreshResponse3.StatusCode.ShouldBe(HttpStatusCode.OK, "The newly issued refresh token should be valid.");
-        var finalTokens = await refreshResponse3.Content.ReadFromJsonAsync<TokenResponse>();
-        finalTokens.ShouldNotBeNull();
-        finalTokens.RefreshToken.ShouldNotBe(refreshedTokens.RefreshToken);
+        // We cannot proceed to test a third refresh as the family is already revoked.
+        // // Assert: Third refresh (using token from refreshResponse2) is also successful
+        // var refreshedTokens2 = JsonSerializer.Deserialize<CoreIdent.Core.Models.Responses.TokenResponse>(await refreshResponse2.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); 
+        // refreshedTokens2.ShouldNotBeNull("Second refresh should return tokens");
+        // refreshedTokens2.RefreshToken.ShouldNotBeNullOrEmpty("Second refresh should return a new refresh token");
+        // var refreshRequest3 = new RefreshTokenRequest { RefreshToken = refreshedTokens2.RefreshToken };
+        // var refreshResponse3 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest3);
+        // refreshResponse3.StatusCode.ShouldBe(HttpStatusCode.OK, "The newly issued refresh token should be valid.");
     }
 
     [Fact]
     public async Task RefreshToken_WithExpiredToken_ReturnsUnauthorized()
     {
-        // Arrange: Register and Login to get initial tokens
+        // Arrange: Register and Login
         var userEmail = $"expired_user_{Guid.NewGuid()}@test.com";
         var userPassword = "ValidPassword123!";
         var (_, initialRefreshToken) = await RegisterAndLoginUser(userEmail, userPassword);
 
-        // Arrange: Directly manipulate the database to expire the token
+        // Arrange: Make the token expired in the database (requires access to the store)
         using (var scope = _factory.Services.CreateScope())
         {
+            var refreshTokenStore = scope.ServiceProvider.GetRequiredService<IRefreshTokenStore>();
+            var tokenEntity = await refreshTokenStore.GetRefreshTokenAsync(initialRefreshToken, default);
+            tokenEntity.ShouldNotBeNull("The refresh token should exist in the database after login."); // Fails if token not found
+            tokenEntity.ExpirationTime = DateTime.UtcNow.AddSeconds(-1); // Set expiration to the past
+            // Need to update the stored token - IRefreshTokenStore lacks an Update method!
+            // We might need to Remove and re-Store, or add an Update method.
+            // For now, let's assume the store implementation (e.g., EF) tracks changes or we add Update.
+            // If using EF store directly:
             var dbContext = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
-            var tokenEntity = await dbContext.RefreshTokens
-                                             .FirstOrDefaultAsync(rt => rt.Handle == initialRefreshToken);
-            
-            tokenEntity.ShouldNotBeNull("The refresh token should exist in the database after login.");
-
-            tokenEntity.ExpirationTime = DateTime.UtcNow.AddMinutes(-5); // Set expiration to the past
+            dbContext.Update(tokenEntity); 
             await dbContext.SaveChangesAsync();
         }
 
         var refreshRequest = new RefreshTokenRequest { RefreshToken = initialRefreshToken };
 
-        // Act: Attempt to refresh with the now-expired token
+        // Act
         var response = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
 
-        // Assert: Request fails with Unauthorized
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Expired refresh tokens should be rejected.");
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     // TODO: Add test for expired refresh token

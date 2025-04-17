@@ -33,6 +33,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using CoreIdent.Core.Configuration;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CoreIdent.TestHost;
 
 namespace CoreIdent.Integration.Tests
 {

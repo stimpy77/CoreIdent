@@ -23,26 +23,24 @@ builder.Services.AddCoreIdent(options =>
     options.RefreshTokenLifetime = TimeSpan.FromSeconds(30); // Short lifetime for testing expiration
 });
 
-// --- REMOVE Storage Configuration specific to TestHost Program.cs ---
-// // Revert to unique DB per factory run
+// --- Keep Storage Configuration Commented Out in TestHost Program.cs ---
 // builder.Services.AddDbContext<CoreIdentDbContext>(options =>
-//     options.UseSqlite($"DataSource=file:memdb-{Guid.NewGuid()}?mode=memory&cache=shared"),
-//     ServiceLifetime.Scoped); // Explicitly Scoped
-// 
-// // Configure CoreIdent to use the EF Core stores
+//     options.UseSqlite($"DataSource=file:memdb-{Guid.NewGuid()}?mode=memory&cache=shared"), 
+//     ServiceLifetime.Scoped);
 // builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
-// --- End REMOVAL ---
+// --- End Comment Out ---
 
 // Let the WebApplicationFactory configure the DbContext and stores for tests.
 
 var app = builder.Build();
 
-// --- REMOVE Post-Build Migration Logic ---
+// --- Keep migration logic Commented Out in TestHost Program.cs ---
 // using (var scope = app.Services.CreateScope())
 // {
-    // ... migration logic ...
+//     var dbContext = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
+//     dbContext.Database.Migrate(); 
 // }
-// --- End REMOVAL ---
+// --- End Comment Out ---
 
 // Configure a simple exception handler for the test environment
 // app.UseExceptionHandler(exceptionHandlerApp =>
@@ -69,4 +67,7 @@ app.MapCoreIdentEndpoints("/auth"); // Specify base path
 app.Run();
 
 // Make Program accessible for WebApplicationFactory
-public partial class Program { }
+namespace CoreIdent.TestHost
+{
+    public partial class Program { }
+}

@@ -4,7 +4,6 @@ using CoreIdent.Core.Models.Requests;
 using CoreIdent.Core.Models.Responses;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
-using CoreIdent.TestHost;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -18,25 +17,61 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using CoreIdent.TestHost;
+using CoreIdent.Storage.EntityFrameworkCore;
+using CoreIdent.Storage.EntityFrameworkCore.Extensions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace CoreIdent.Integration.Tests;
 
-public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Program>>
+// Restore IDisposable
+public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
-    private readonly CoreIdentUser _testUser;
+    // Restore initialization inside ConfigureServices
+    private CoreIdentUser _testUser = default!;
     private readonly string _testPassword = "Password123!";
-    private readonly string _testClient = "test-client";
+    // Restore keepAliveConnection
+    private SqliteConnection? _keepAliveConnection; 
 
     public TokenTheftDetectionTests(WebApplicationFactory<Program> factory)
     {
-        // Configure the factory to use specific options for this test
+        // Restore WithWebHostBuilder customization
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
-                // Override the options to enable token security features
+                // Restore DB setup logic from previous successful attempt
+                
+                // 1. Remove existing DbContext registration if any (important!)
+                var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<CoreIdentDbContext>));
+                if (dbContextDescriptor != null)
+                {
+                    services.Remove(dbContextDescriptor);
+                }
+                var dbConnectionDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(System.Data.Common.DbConnection));
+                 if (dbConnectionDescriptor != null)
+                {
+                    services.Remove(dbConnectionDescriptor);
+                }
+
+                // 2. Configure unique In-Memory SQLite DB for this test run
+                 var connectionString = $"DataSource=file:memdb-tokentheft-{Guid.NewGuid()}?mode=memory&cache=shared";
+                _keepAliveConnection = new SqliteConnection(connectionString);
+                _keepAliveConnection.Open(); // Keep the connection open
+
+                 services.AddDbContext<CoreIdentDbContext>(options =>
+                {
+                    options.UseSqlite(_keepAliveConnection);
+                });
+
+                // 3. Register EF Core stores AFTER DbContext registration
+                services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
+
+                // 4. Override CoreIdent options for token security
                 services.Configure<CoreIdentOptions>(options =>
                 {
                     options.TokenSecurity = new TokenSecurityOptions
@@ -45,53 +80,113 @@ public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Prog
                         EnableTokenFamilyTracking = true
                     };
                 });
+
+                // 5. Build SP once to perform setup tasks (Migration, Seed, User Creation)
+                var sp = services.BuildServiceProvider();
+                using (var scope = sp.CreateScope())
+                {
+                    var scopedServices = scope.ServiceProvider;
+                    var db = scopedServices.GetRequiredService<CoreIdentDbContext>();
+                    var logger = scopedServices.GetRequiredService<ILogger<TokenTheftDetectionTests>>(); 
+                    var userStore = scopedServices.GetRequiredService<IUserStore>();
+                    var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher>();
+                    var clientStore = scopedServices.GetRequiredService<IClientStore>();
+
+                    try
+                    {
+                        // Migrate DB
+                         db.Database.Migrate(); 
+                         logger.LogInformation("Migrations applied successfully for TokenTheftDetectionTests.");
+
+                         // Seed Client
+                         var passwordClient = clientStore.FindClientByIdAsync("__password_flow__", CancellationToken.None).GetAwaiter().GetResult(); 
+                         if (passwordClient == null)
+                         {
+                            logger.LogInformation("Seeding __password_flow__ client for TokenTheftDetectionTests..."); 
+                            db.Clients.Add(new CoreIdentClient
+                            { /* ... client config ... */ 
+                                ClientId = "__password_flow__", 
+                                ClientName = "Password Flow Client (Test)",
+                                AllowedGrantTypes = new List<string> { "password" }, 
+                                AllowOfflineAccess = true, 
+                                AccessTokenLifetime = 3600,
+                                AbsoluteRefreshTokenLifetime = 2592000,
+                                SlidingRefreshTokenLifetime = 1296000,
+                                RefreshTokenUsage = (int)TokenUsage.ReUse,
+                                RefreshTokenExpiration = (int)TokenExpiration.Absolute,
+                                Enabled = true,
+                                AllowedScopes = { "openid", "profile", "email", "offline_access" } 
+                            });
+                             db.SaveChanges();
+                            logger.LogInformation("__password_flow__ client seeded successfully.");
+                         }
+                         else
+                         {
+                            logger.LogInformation("__password_flow__ client already exists."); 
+                         }
+
+                        // Create and Assign Test User Directly
+                         var testUserName = $"test-user-{Guid.NewGuid().ToString("N").Substring(0, 8)}@example.com";
+                         _testUser = new CoreIdentUser 
+                         {
+                             Id = Guid.NewGuid().ToString(),
+                             UserName = testUserName,
+                             NormalizedUserName = testUserName.ToUpperInvariant(),
+                             PasswordHash = passwordHasher.HashPassword(null, _testPassword)
+                         };
+                         logger.LogInformation("Creating test user: {UserName} ({UserId})", _testUser.UserName, _testUser.Id);
+                         var createUserResult = userStore.CreateUserAsync(_testUser, default).GetAwaiter().GetResult();
+                         if (createUserResult != StoreResult.Success)
+                         {
+                             logger.LogError("Failed to create test user {UserName} ({UserId}). StoreResult: {Result}", 
+                                             _testUser.UserName, _testUser.Id, createUserResult);
+                             throw new InvalidOperationException($"Failed to create test user in ConfigureServices. Result: {createUserResult}");
+                         }
+                         logger.LogInformation("Test user created successfully.");
+
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Setup (Migration/Seed/User Creation) failed for TokenTheftDetectionTests");
+                        throw;
+                    }
+                }
             });
         });
 
         _client = _factory.CreateClient();
+        // Remove user creation from here again
+    }
 
-        // Set up our test user, register if needed
-        _testUser = new CoreIdentUser
-        {
-            Id = Guid.NewGuid().ToString(),
-            UserName = $"test-user-{Guid.NewGuid().ToString("N").Substring(0, 8)}@example.com"
-        };
-
-        // Register the user using the service provider
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
-            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-            var user = new CoreIdentUser
-            {
-                Id = _testUser.Id,
-                UserName = _testUser.UserName
-            };
-            
-            userStore.CreateUserAsync(user, passwordHasher.HashPassword(_testPassword), default).GetAwaiter().GetResult();
-        }
+    // Restore Dispose method
+    public void Dispose()
+    {
+        _keepAliveConnection?.Close();
+        _keepAliveConnection?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
     public async Task TokenTheft_Detection_Should_RevokeFamilyTokens()
     {
         // Arrange - first, login to get a token
-        var loginResponse = await _client.PostAsJsonAsync("/login", new LoginRequest
+        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new LoginRequest
         {
-            Username = _testUser.UserName,
+            Email = _testUser.UserName,
             Password = _testPassword
         });
 
-        loginResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-        
-        var loginTokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+        // Assertion should fail here if refresh token is null
+        loginResponse.StatusCode.ShouldBe(HttpStatusCode.OK);        
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true }; 
+        var loginTokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>(jsonOptions);
         loginTokens.ShouldNotBeNull();
-        loginTokens.RefreshToken.ShouldNotBeNullOrEmpty();
+        loginTokens.RefreshToken.ShouldNotBeNullOrEmpty(); // This was failing
         
         var originalRefreshToken = loginTokens.RefreshToken;
 
         // Act 1 - Use the refresh token to get a new token (legitimate refresh)
-        var firstRefreshResponse = await _client.PostAsJsonAsync("/token/refresh", new RefreshTokenRequest 
+        var firstRefreshResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
         { 
             RefreshToken = originalRefreshToken 
         });
@@ -107,7 +202,7 @@ public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Prog
         var secondRefreshToken = firstRefreshedTokens.RefreshToken;
 
         // Act 2 - Try to use the original refresh token again (simulating theft)
-        var theftAttemptResponse = await _client.PostAsJsonAsync("/token/refresh", new RefreshTokenRequest 
+        var theftAttemptResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
         { 
             RefreshToken = originalRefreshToken 
         });
@@ -117,7 +212,7 @@ public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Prog
 
         // Act 3 - Now try to use the second (legitimate) token - it should be revoked 
         // due to family-wide revocation
-        var postTheftLegitimateRefreshResponse = await _client.PostAsJsonAsync("/token/refresh", new RefreshTokenRequest 
+        var postTheftLegitimateRefreshResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
         { 
             RefreshToken = secondRefreshToken 
         });
