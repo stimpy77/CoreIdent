@@ -10,17 +10,28 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using System.Threading; // Added for CancellationToken
+using CoreIdent.Storage.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using CoreIdent.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace CoreIdent.Core.Tests.Stores;
 
-public class EfUserStoreTests : SqliteInMemoryTestBase // Inherit from the base class
+public class EfUserStoreTests : SqliteInMemoryTestBase
 {
     private readonly EfUserStore _userStore;
+    private readonly Mock<IPasswordHasher> _mockPasswordHasher;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
 
     public EfUserStoreTests()
     {
-        // DbContext is initialized by the base class constructor
-        _userStore = new EfUserStore(DbContext);
+        _mockPasswordHasher = new Mock<IPasswordHasher>();
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
+                          .Returns(new Mock<ILogger>().Object);
+        _userStore = new EfUserStore(DbContext, _mockPasswordHasher.Object, _mockLoggerFactory.Object);
     }
 
     // --- CreateUserAsync Tests ---
@@ -301,5 +312,4 @@ public class EfUserStoreTests : SqliteInMemoryTestBase // Inherit from the base 
         persistedUser.LockoutEnd.ShouldBe(lockoutEnd);
         persistedUser.LockoutEnabled.ShouldBeTrue();
     }
-
 } 

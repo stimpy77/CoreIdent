@@ -75,7 +75,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /register` with valid data creates a user and returns 201.
     - [x] `POST /register` with an existing email returns 409.
     - [x] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
-- [ ] **Update README.md** with registration endpoint details and usage examples.
+- [x] **Update README.md** with registration endpoint details and usage examples.
 ---
 
 ### Feature: User Login & Token Issuance
@@ -108,7 +108,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /login` with invalid username returns 401.
     - [x] `POST /login` with valid username but invalid password returns 401.
     - [x] Access token can be validated using standard JWT middleware (`AddJwtBearer`).
-- [ ] **Update README.md** with login endpoint details, token structure, and configuration notes.
+- [x] **Update README.md** with login endpoint details, token structure, and configuration notes.
 ---
 
 ### Feature: Basic Refresh Token Flow (Optional in MVP)
@@ -127,6 +127,9 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Using a refresh token successfully invalidates it and issues a new one (rotation). (Requires DI Setup & Migrations)
     - [x] Attempting to use a refresh token twice fails. (Requires DI Setup & Migrations)
     - [x] Refresh tokens expire correctly based on stored lifetime. (Requires DI Setup & Migrations)
+    - [x] Verify token family revocation works correctly when a security incident is detected.
+    - [x] Verify automatic cleanup successfully removes expired tokens.
+    - [ ] Verify hashed token storage protects token values while maintaining functionality.
 - [x] **Update README.md** with details on persistent refresh token handling.
 ---
 
@@ -144,13 +147,14 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Set up integration test project using `Microsoft.AspNetCore.Mvc.Testing`.
     - [x] Write integration tests covering API endpoints 
           (`/register`, `/login`, `/token/refresh`).
-- [ ] Review and finalize README.md for Phase 1 completeness.
+- [x] Review and finalize README.md for Phase 1 completeness.
+- [x] Perform code-level verification against Phase 1 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
 
 ### Feature: Developer Training Guide (Phase 1)
 
 *   **Goal:** Provide foundational learning material for developers using CoreIdent.
 *   **Component:** Training Document
-    - [ ] Create initial Developer Training Guide covering Phase 1 concepts (Core setup, Registration, Login, Token basics - JWTs, Hashing, In-Memory stores, Security fundamentals).
+    - [x] Create initial Developer Training Guide covering Phase 1 concepts (Core setup, Registration, Login, Token basics - JWTs, Hashing, In-Memory stores, Security fundamentals).
 
 ---
 
@@ -241,11 +245,34 @@ This document provides a detailed breakdown of tasks, components, features, test
               (if a consumed token is presented, potentially revoke the entire token family/session). (Basic validation added, advanced revocation is future work)
     - [x] Update `/login` ~~and `/token` (Client Credentials)~~ 
           to store issued refresh tokens using `IRefreshTokenStore`. (`/login` done, `/token` endpoint for client credentials not yet implemented)
+    - [x] Implement automated cleanup of expired tokens in the EF Core implementation of `IRefreshTokenStore`.
+        *   *Guidance:* 
+            * Create a background service or scheduled task to remove or archive expired tokens.
+            * Consider using database-specific features for efficient cleanup (e.g., SQL Server Agent, scheduled triggers).
+            * Implement configurable retention policy for consumed tokens.
+    - [x] Complete token theft detection security measures.
+        *   *Guidance:* 
+            * Implement comprehensive security response when a consumed token is presented again (potential token theft).
+            * Track token families (parent-child relationships) to enable revocation of all descendant tokens.
+            * Add configuration options for token security behavior.
+    - [x] Ensure proper hashing of refresh token handles in persistent storage.
+        *   *Guidance:* 
+            * Implement secure one-way hashing of token handles to prevent exposure in database breaches.
+            * Update store implementations to handle hash comparison correctly.
+            * Document the security enhancement in developer guides.
+    - [x] Implement token family tracking for enhanced security.
+        *   *Guidance:* 
+            * Add a family identifier to the `CoreIdentRefreshToken` model.
+            * Update token issuance logic to maintain family relationships.
+            * Implement cascade revocation for security incidents.
 *   **Test Case (Integration):**
     - [x] Refresh token flow works correctly with EF Core persistence. (Requires DI Setup & Migrations)
     - [x] Using a refresh token successfully invalidates it and issues a new one (rotation). (Requires DI Setup & Migrations)
     - [x] Attempting to use a refresh token twice fails. (Requires DI Setup & Migrations)
     - [x] Refresh tokens expire correctly based on stored lifetime. (Requires DI Setup & Migrations)
+    - [x] Verify token family revocation works correctly when a security incident is detected.
+    - [x] Verify automatic cleanup successfully removes expired tokens.
+    - [ ] Verify hashed token storage protects token values while maintaining functionality.
 - [x] **Update README.md** with details on persistent refresh token handling.
 
 ---
@@ -284,6 +311,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Goal:** Expand training materials to cover persistence and extensibility.
 *   **Component:** Training Document
     - [x] Update Developer Training Guide with Phase 2 concepts (Storage interfaces - `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`; EF Core integration; Delegated storage patterns; Refresh token persistence and rotation strategies).
+    - [x] Perform code-level verification against Phase 2 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
 
 ---
 
@@ -298,7 +326,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Authorization Code Flow (+ PKCE) Backend
 
 *   **Component:** Authorize Endpoint (`GET /authorize`)
-    - [ ] Implement Minimal API endpoint for `/authorize`.
+    - [x] Implement Minimal API endpoint for `/authorize`. 
         *   *Guidance:* 
             * Parses OIDC request parameters 
               (`client_id`, `redirect_uri`, `response_type=code`, `scope`, `state`, `nonce`, `code_challenge`, `code_challenge_method`).
@@ -315,7 +343,7 @@ This document provides a detailed breakdown of tasks, components, features, test
         *   *Guidance:* 
             * Redirect user back to the client's `redirect_uri` with `code` and `state`.
 *   **Component:** Token Endpoint (Grant Type: `authorization_code`)
-    - [ ] Extend `POST /token` endpoint to handle `grant_type=authorization_code`.
+    - [x] Extend `POST /token` endpoint to handle `grant_type=authorization_code`.
         *   *Guidance:* 
             * Accepts parameters: `grant_type`, `code`, `redirect_uri`, `client_id`, 
                               `client_secret` (for confidential clients), `code_verifier`.
@@ -335,14 +363,27 @@ This document provides a detailed breakdown of tasks, components, features, test
         *   *Guidance:* 
             * Return tokens in the response.
 *   **Test Case (Integration):**
-    - [ ] Simulate `/authorize` request, verify redirect with code and state.
-    - [ ] Use the code, client credentials, and correct PKCE verifier 
+    - [x] Simulate `/authorize` request, verify redirect with code and state.
+    - [x] Use the code, client credentials, and correct PKCE verifier 
           at `/token` endpoint, verify tokens are issued.
-    - [ ] `/token` request fails if code is invalid, expired, or already used.
-    - [ ] `/token` request fails if PKCE verification fails.
-    - [ ] `/token` request fails if client secret is incorrect (for confidential clients).
-    - [ ] `/token` request fails if `redirect_uri` does not match the initial request.
-- [ ] **Update README.md** with details on `/authorize` endpoint, PKCE, and related configuration.
+    - [x] `/token` request fails if code is invalid, expired, or already used.
+    - [x] `/token` request fails if PKCE verification fails.
+    - [x] `/token` request fails if client secret is incorrect (for confidential clients).
+    - [x] `/token` request fails if `redirect_uri` does not match the initial request.
+- [x] **Update README.md** with details on `/authorize` endpoint, PKCE, and related configuration.
+- [ ] **Review Feedback Tasks (Post Phase 3 Auth Code Flow):**
+    - [ ] Update `README.md` to fully detail Phase 3 progress (Authorization Code Flow specifics, PKCE, ID Tokens).
+    - [ ] Enhance Developer Training Guide (`docs/Developer_Training_Guide.md`) with sections covering OAuth 2.0/OIDC concepts (Auth Code Flow, PKCE, ID Tokens).
+    - [ ] Implement comprehensive negative-path and edge-case integration tests for existing flows (e.g., invalid/expired tokens/codes, PKCE failures, mismatched redirect_uri, client auth errors, malformed requests, concurrency issues).
+    - [ ] Update `LLMINDEX.md` to include references to Phase 3 components and completed features (Authorization Code Flow, related models/stores).
+    - [ ] Improve setup guidance and examples, clarifying DI registration order (`AddCoreIdent`, `AddDbContext`, `AddCoreIdentEntityFrameworkStores`) and EF Core migration process.
+    - [ ] Add explicit documentation and examples emphasizing the security responsibilities when using `DelegatedUserStore` (especially `ValidateCredentialsAsync`).
+    - [ ] Provide clear documentation and code examples for integrating CoreIdent entity configurations into an existing `DbContext` (both inheritance and `ApplyConfigurationsFromAssembly` methods).
+    - [ ] Implement persistent `IAuthorizationCodeStore` using EF Core, including automatic cleanup/expiry.
+    - [ ] Ensure robust concurrency handling in the `IAuthorizationCodeStore` implementation (preventing race conditions).
+    - [ ] Define and document supported client authentication methods for the `/token` endpoint (e.g., Basic Auth header, request body parameters) and ensure secure handling/verification of client secrets.
+    - [ ] Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
+    - [ ] Improve documentation (`README`, Training Guide, examples) to consistently emphasize secure management of `SigningKeySecret` and `ClientSecrets`.
 
 ---
 
@@ -424,6 +465,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Goal:** Explain core OAuth/OIDC concepts as implemented in CoreIdent.
 *   **Component:** Training Document
     - [ ] Update Developer Training Guide with Phase 3 concepts (OAuth 2.0 flows - Auth Code+PKCE, Client Credentials; OIDC concepts - ID Tokens, Discovery, JWKS; Client/Scope management basics).
+    - [ ] Perform code-level verification against Phase 3 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
 
 ---
 
@@ -474,6 +516,21 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Component:** UI Pages/Components
     - [ ] Implement Login Page (`/Account/Login`).
     - [ ] Implement Registration Page (`
+
+- [ ] **Phase 4 Final Check:** Perform code-level verification against Phase 4 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+
+## Phase 5: Community, Documentation & Tooling (Ongoing / Estimated: 4+ weeks after Phase 3 starts)
+
+*   **Goal:** Make CoreIdent easy to adopt, use, and contribute to.
+*   **Deliverables:**
+    *   Dedicated documentation website (e.g., `docs.coreident.net`).
+    *   Comprehensive guides (Getting Started, Configuration, API Reference, Providers, MFA Setup).
+    *   `dotnet new` project templates (`coreident-server`, `coreident-api`).
+    *   Example applications showcasing integration.
+    *   CI/CD pipeline for automated builds, testing, and NuGet publishing.
+    *   Contribution guidelines and community setup (e.g., GitHub Discussions).
+    - [ ] Perform ongoing code-level verification against documentation throughout Phase 5 activities.
+*   **Focus:** User adoption, developer support, community building, polish.
 
 ## Phase 6: Client Libraries for Mobile & Desktop Applications
 
@@ -563,3 +620,75 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Component:** Training Document
     - [ ] Create Client Libraries section in Developer Training Guide covering
           client setup, authentication flows, token management, and platform-specific considerations.
+    - [ ] Perform code-level verification against Phase 6 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+
+---
+
+## Phase 7: Advanced Security Enhancements
+
+**Goal:** Enhance token security and interoperability by implementing asymmetric signing and evaluating modern token binding techniques.
+
+**Estimated Duration:** 4-6 weeks / 40-60 hours (Can be run in parallel with other phases if resources allow)
+
+---
+
+### Feature: Asymmetric Token Signing (RS256)
+
+*   **Component:** Configuration Options
+    - [ ] Extend `CoreIdentOptions` to support asymmetric key configuration.
+        *   *Guidance:* Add properties for key material (e.g., path to key file, key store identifier), key ID (`kid`), and signing algorithm (e.g., `RS256`).
+        *   *Guidance:* Allow configuration of multiple keys for rotation.
+    - [ ] Update `CoreIdentOptionsValidator` to validate asymmetric key configuration.
+*   **Component:** Key Management Service
+    - [ ] Define `ISigningKeyManager` interface.
+        *   *Guidance:* Methods for retrieving current signing credentials (`SigningCredentials`) and validation keys (`IEnumerable<SecurityKey>`).
+    - [ ] Implement `DefaultSigningKeyManager`.
+        *   *Guidance:* Load key material based on configuration (e.g., from files, certificate store).
+        *   *Guidance:* Handle key rotation logic if multiple keys are configured.
+        *   *Guidance:* Register as a Singleton service.
+*   **Component:** Token Service Enhancement (`JwtTokenService`)
+    - [ ] Modify `JwtTokenService` to use `ISigningKeyManager`.
+        *   *Guidance:* Retrieve signing credentials from the manager instead of using the symmetric secret directly.
+        *   *Guidance:* Set the `alg` and `kid` headers in the JWT based on the key used.
+*   **Component:** JWKS Endpoint Enhancement (`/.well-known/jwks.json`)
+    - [ ] Update JWKS endpoint to retrieve public keys from `ISigningKeyManager`.
+        *   *Guidance:* Generate JWK format based on the public key material.
+        *   *Guidance:* Include `kid`, `use=sig`, and `alg` parameters in the JWK.
+*   **Test Case (Unit):**
+    - [ ] `DefaultSigningKeyManager` correctly loads and provides asymmetric keys.
+    - [ ] `JwtTokenService` generates tokens signed with RS256 and correct headers.
+*   **Test Case (Integration):**
+    - [ ] JWKS endpoint exposes the correct public keys in JWK format.
+    - [ ] Tokens issued can be validated using the public keys exposed via the JWKS endpoint.
+    - [ ] Configuration allows switching between symmetric and asymmetric signing.
+- [ ] **Update README.md** and Developer Training Guide with details on configuring and using asymmetric signing (RS256) and key management.
+
+---
+
+### Feature: Enhanced Token Security (Evaluation & Potential Implementation)
+
+*   **Component:** Research & Evaluation
+    - [ ] Research current standards and best practices for sender-constrained tokens.
+        *   *Guidance:* Focus on Demonstrating Proof-of-Possession (DPoP) - RFC 9449.
+        *   *Guidance:* Evaluate Mutual TLS (mTLS) client authentication for token binding.
+        *   *Guidance:* Assess complexity, client/server support, and suitability for CoreIdent's target use cases.
+    - [ ] Document findings and recommend an approach (e.g., implement DPoP, provide guidance for mTLS).
+*   **Component:** (Conditional) DPoP Implementation
+    - [ ] Define DPoP proof validation logic.
+        *   *Guidance:* Implement validation according to RFC 9449 (checking `htm`, `htu`, `iat`, `jti`, signature).
+    - [ ] Modify Token Endpoint (`/token`) to accept and validate DPoP proofs.
+        *   *Guidance:* Require DPoP header if client indicates support.
+    - [ ] Modify Token Service (`ITokenService`) to bind tokens to the DPoP key.
+        *   *Guidance:* Include `cnf` (confirmation) claim with `jkt` (JWK thumbprint) in issued access tokens.
+    - [ ] Modify Resource Server validation logic (conceptual - CoreIdent itself might not be the resource server).
+        *   *Guidance:* Document how resource servers protected by CoreIdent should validate incoming DPoP proofs alongside the access token and its `cnf` claim.
+*   **Component:** (Conditional) Configuration & Setup
+    - [ ] Add configuration options to enable/require DPoP.
+    - [ ] Update DI extensions if necessary.
+*   **Test Case (Integration - Conditional):**
+    - [ ] `/token` endpoint successfully issues DPoP-bound tokens when a valid DPoP proof is provided.
+    - [ ] `/token` endpoint rejects requests with invalid or missing DPoP proofs if required.
+    - [ ] Issued access tokens contain the correct `cnf` claim with the DPoP public key thumbprint.
+    - [ ] (Conceptual) Test validation logic demonstrating how a resource server would verify the token and proof.
+- [ ] **Update README.md** and Developer Training Guide with details on the chosen approach (e.g., DPoP configuration and usage, guidance on mTLS setup).
+- [ ] **Phase 7 Final Check:** Perform code-level verification against Phase 7 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.

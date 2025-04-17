@@ -2,33 +2,126 @@ using CoreIdent.Core.Models;
 using CoreIdent.Core.Models.Requests;
 using CoreIdent.Core.Models.Responses;
 using CoreIdent.Storage.EntityFrameworkCore;
-using Microsoft.AspNetCore.Mvc.Testing; // Added for WebApplicationFactory
+using CoreIdent.Storage.EntityFrameworkCore.Extensions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Shouldly;
 using System;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Json; // For PostAsJsonAsync
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Xunit;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Collections.Generic;
 
 namespace CoreIdent.Integration.Tests;
 
+// Custom factory for Refresh Token tests
+public class RefreshTokenTestWebApplicationFactory : WebApplicationFactory<Program>, IDisposable
+{
+    private readonly SqliteConnection _connection;
+    private readonly string _connectionString = $"DataSource=file:RefreshTests_{Guid.NewGuid()}?mode=memory&cache=shared";
+
+    public RefreshTokenTestWebApplicationFactory()
+    {
+        _connection = new SqliteConnection(_connectionString);
+        _connection.Open();
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureServices(services =>
+        {
+            // Remove default/conflicting DbContext registrations
+            services.RemoveAll<DbContextOptions<CoreIdentDbContext>>();
+            services.RemoveAll<CoreIdentDbContext>();
+
+            // Register DbContext with our connection
+            services.AddDbContext<CoreIdentDbContext>(options => options.UseSqlite(_connection), ServiceLifetime.Scoped);
+            
+            // Register EF Core stores
+            services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
+
+            // Run migrations 
+            var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<RefreshTokenTestWebApplicationFactory>>();
+            try { db.Database.Migrate(); } catch (Exception ex) { logger.LogError(ex, "Migration failed"); throw; }
+            
+            // *** Add seeding logic here ***
+            SeedRequiredClients(db, logger); 
+        });
+        builder.UseEnvironment("Development");
+    }
+
+    // *** Add the seeding method ***
+    private void SeedRequiredClients(CoreIdentDbContext context, ILogger logger)
+    {
+        logger.LogInformation("Seeding required clients for RefreshToken tests...");
+        const string passwordClient = "__password_flow__";
+
+        if (!context.Clients.Any(c => c.ClientId == passwordClient))
+        {
+            logger.LogInformation("Client '{ClientId}' not found, adding.", passwordClient);
+            context.Clients.Add(new CoreIdentClient
+            {
+                ClientId = passwordClient,
+                ClientName = "Password Flow Client (Integration Tests)",
+                Enabled = true,
+                AllowedGrantTypes = new List<string> { "password" },
+                AllowedScopes = new List<string> { "openid", "profile", "email", "offline_access" },
+                AllowOfflineAccess = true,
+                AccessTokenLifetime = 3600,
+                RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                RefreshTokenExpiration = TokenExpiration.Sliding,
+                SlidingRefreshTokenLifetime = 2592000
+            });
+
+            try
+            {
+                context.SaveChanges();
+                logger.LogInformation("Client '{ClientId}' seeded successfully.", passwordClient);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to seed client '{ClientId}'.", passwordClient);
+                // Re-throw or handle as appropriate for test setup failure
+                throw; 
+            }
+        }
+        else
+        {
+             logger.LogInformation("Client '{ClientId}' already exists.", passwordClient);
+        }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) { _connection.Close(); _connection.Dispose(); }
+        base.Dispose(disposing);
+    }
+}
+
 /// <summary>
 /// Integration tests for the /token/refresh endpoint.
-/// These tests require the database to be set up via migrations.
 /// </summary>
-// Use the standard WebApplicationFactory with the Program entry point from CoreIdent.TestHost
-public class RefreshTokenEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+// Use the new custom factory
+public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly RefreshTokenTestWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public RefreshTokenEndpointTests(WebApplicationFactory<Program> factory)
+    public RefreshTokenEndpointTests(RefreshTokenTestWebApplicationFactory factory)
     {
         _factory = factory;
-        // Use a client configured for the TestServer
         _client = _factory.CreateClient(); 
     }
 
@@ -37,13 +130,32 @@ public class RefreshTokenEndpointTests : IClassFixture<WebApplicationFactory<Pro
         // Register
         var registerRequest = new RegisterRequest { Email = email, Password = password };
         var registerResponse = await _client.PostAsJsonAsync("/auth/register", registerRequest);
-        registerResponse.EnsureSuccessStatusCode(); // Throws if not 2xx
+        registerResponse.StatusCode.ShouldBeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict); // Allow conflict if user exists from previous run within same factory
+        if (registerResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+             // If conflict, just try logging in directly
+            // (Could happen if test runner reuses factory instance unexpectedly)
+        } else {
+             registerResponse.EnsureSuccessStatusCode(); // Ensure 201 Created otherwise
+        }
+        
 
         // Login
         var loginRequest = new LoginRequest { Email = email, Password = password };
         var loginResponse = await _client.PostAsJsonAsync("/auth/login", loginRequest);
-        loginResponse.EnsureSuccessStatusCode();
-        var tokenResponse = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+        
+        // *** Add detailed logging if login fails ***
+        if (!loginResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await loginResponse.Content.ReadAsStringAsync();
+            _factory.Services.GetRequiredService<ILogger<RefreshTokenEndpointTests>>().LogError(
+                "Login failed in RegisterAndLoginUser. Status: {StatusCode}, Reason: {ReasonPhrase}, Content: {ErrorContent}",
+                loginResponse.StatusCode, loginResponse.ReasonPhrase, errorContent);
+        }
+        loginResponse.EnsureSuccessStatusCode(); // Let this throw if login fails
+
+        // Explicitly qualify the type used for deserialization
+        var tokenResponse = await loginResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
         tokenResponse.ShouldNotBeNull();
         tokenResponse.RefreshToken.ShouldNotBeNullOrEmpty();
         tokenResponse.AccessToken.ShouldNotBeNullOrEmpty();
@@ -64,9 +176,13 @@ public class RefreshTokenEndpointTests : IClassFixture<WebApplicationFactory<Pro
         // Act: Refresh the token
         var refreshResponse1 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
 
+        // *** Log Raw JSON Response ***
+        var rawJson = await refreshResponse1.Content.ReadAsStringAsync();
+        _factory.Services.GetRequiredService<ILogger<RefreshTokenEndpointTests>>().LogInformation("Raw JSON response from /token/refresh: {RawJson}", rawJson);
+
         // Assert: First refresh is successful
         refreshResponse1.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var refreshedTokens = await refreshResponse1.Content.ReadFromJsonAsync<TokenResponse>();
+        var refreshedTokens = JsonSerializer.Deserialize<CoreIdent.Core.Models.Responses.TokenResponse>(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); // Deserialize manually
         refreshedTokens.ShouldNotBeNull();
         refreshedTokens.RefreshToken.ShouldNotBeNullOrEmpty();
         refreshedTokens.AccessToken.ShouldNotBeNullOrEmpty();

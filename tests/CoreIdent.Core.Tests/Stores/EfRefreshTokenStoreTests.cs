@@ -7,16 +7,20 @@ using Xunit;
 using System;
 using Microsoft.EntityFrameworkCore;
 using System.Threading;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace CoreIdent.Core.Tests.Stores;
 
 public class EfRefreshTokenStoreTests : SqliteInMemoryTestBase
 {
     private readonly EfRefreshTokenStore _refreshTokenStore;
+    private readonly Mock<ILogger<EfRefreshTokenStore>> _mockLogger;
 
     public EfRefreshTokenStoreTests()
     {
-        _refreshTokenStore = new EfRefreshTokenStore(DbContext);
+        _mockLogger = new Mock<ILogger<EfRefreshTokenStore>>();
+        _refreshTokenStore = new EfRefreshTokenStore(DbContext, _mockLogger.Object);
     }
 
     [Fact]
@@ -28,7 +32,8 @@ public class EfRefreshTokenStoreTests : SqliteInMemoryTestBase
             Handle = "test_handle_1",
             ClientId = "client1",
             SubjectId = "user1",
-            ExpirationTime = DateTime.UtcNow.AddHours(1)
+            ExpirationTime = DateTime.UtcNow.AddHours(1),
+            FamilyId = "family1"
         };
 
         // Act
@@ -54,7 +59,8 @@ public class EfRefreshTokenStoreTests : SqliteInMemoryTestBase
             Handle = handle,
             ClientId = "client_get",
             SubjectId = "user_get",
-            ExpirationTime = DateTime.UtcNow.AddHours(1)
+            ExpirationTime = DateTime.UtcNow.AddHours(1),
+            FamilyId = "family_get"
         };
         await _refreshTokenStore.StoreRefreshTokenAsync(token, CancellationToken.None);
 
@@ -89,7 +95,8 @@ public class EfRefreshTokenStoreTests : SqliteInMemoryTestBase
             Handle = handle,
             ClientId = "client_remove",
             SubjectId = "user_remove",
-            ExpirationTime = DateTime.UtcNow.AddHours(1)
+            ExpirationTime = DateTime.UtcNow.AddHours(1),
+            FamilyId = "family_remove"
         };
         await _refreshTokenStore.StoreRefreshTokenAsync(token, CancellationToken.None);
 

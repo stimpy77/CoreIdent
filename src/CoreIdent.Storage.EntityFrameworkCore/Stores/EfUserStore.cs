@@ -1,12 +1,15 @@
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite; // Required for SqliteException
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
@@ -16,10 +19,14 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 public class EfUserStore : IUserStore
 {
     protected readonly CoreIdentDbContext Context;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly ILogger<EfUserStore> _logger;
 
-    public EfUserStore(CoreIdentDbContext context)
+    public EfUserStore(CoreIdentDbContext context, IPasswordHasher passwordHasher, ILoggerFactory loggerFactory)
     {
         Context = context ?? throw new ArgumentNullException(nameof(context));
+        _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+        _logger = loggerFactory.CreateLogger<EfUserStore>();
     }
 
     // --- Core User Methods ---
@@ -28,19 +35,36 @@ public class EfUserStore : IUserStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(user);
-
+        _logger.LogDebug("Attempting to add user {Username} ({UserId}) to context.", user.UserName, user.Id);
         Context.Users.Add(user);
         try
         {
-            await Context.SaveChangesAsync(cancellationToken);
+            var changes = await Context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("SaveChangesAsync completed for CreateUserAsync. {Changes} changes saved for user {Username} ({UserId}).", changes, user.UserName, user.Id);
+
+            // --- Add verification step ---
+            _logger.LogDebug("Verifying user {UserId} presence immediately after save.", user.Id);
+            var verifyUser = await this.FindUserByIdAsync(user.Id, CancellationToken.None); // Use CancellationToken.None for verification
+            if (verifyUser == null)
+            {
+                 _logger.LogError("VERIFICATION FAILED: User {UserId} not found immediately after SaveChangesAsync! Returning Failure.", user.Id);
+                return StoreResult.Failure; // Indicate failure if verification fails
+            }
+             _logger.LogDebug("Verification successful: User {UserId} found immediately after save.", user.Id);
+            // --- End verification step ---
+
             return StoreResult.Success;
         }
-        catch (DbUpdateException) // Catches potential unique constraint violations (like NormalizedUserName)
+        catch (DbUpdateException ex) 
         {
-            // Could inspect inner exception for specific DB errors if needed
-            return StoreResult.Conflict; // Or Failure, depending on expected errors
+            if (ex.InnerException is SqliteException sqliteEx && sqliteEx.SqliteErrorCode == 19)
+            {
+                 _logger.LogWarning(sqliteEx, "SQLite unique constraint violation during user creation for {Username}. Result: Conflict", user.UserName);
+                return StoreResult.Conflict;
+            }
+             _logger.LogError(ex, "DbUpdateException during user creation for {Username}. Result: Conflict/Failure", user.UserName);
+            return StoreResult.Conflict; 
         }
-        // Catch other specific exceptions if needed
     }
 
     public virtual Task<CoreIdentUser?> FindUserByIdAsync(string userId, CancellationToken cancellationToken)
@@ -51,12 +75,16 @@ public class EfUserStore : IUserStore
         return Context.Users.FindAsync(new object[] { userId }, cancellationToken).AsTask();
     }
 
-    public virtual Task<CoreIdentUser?> FindUserByUsernameAsync(string normalizedUserName, CancellationToken cancellationToken)
+    public virtual async Task<CoreIdentUser?> FindUserByUsernameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(normalizedUserName);
-
-        return Context.Users.FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedUserName, cancellationToken);
+        _logger.LogDebug("Executing FindUserByUsernameAsync for normalized username: {NormalizedUsername}", normalizedUserName);
+        var user = await Context.Users
+           // .AsNoTracking() // Try this if tracking seems to be the issue
+           .FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedUserName, cancellationToken);
+        _logger.LogDebug("FindUserByUsernameAsync result for {NormalizedUsername}: {FoundStatus}", normalizedUserName, user == null ? "Not Found" : $"Found (UserId: {user.Id})");
+        return user;
     }
 
     // --- User Update/Delete ---
@@ -288,5 +316,17 @@ public class EfUserStore : IUserStore
         user.LockoutEnabled = enabled;
         // Note: Doesn't save to DB. UpdateUserAsync must be called.
         return Task.CompletedTask;
+    }
+
+    // Default implementation using PasswordHasher for stores that don't delegate
+    public virtual async Task<PasswordVerificationResult> ValidateCredentialsAsync(string normalizedUserName, string password, CancellationToken cancellationToken)
+    {
+        var user = await FindUserByUsernameAsync(normalizedUserName, cancellationToken);
+        if (user == null || user.PasswordHash == null)
+        {
+            return PasswordVerificationResult.Failed;
+        }
+
+        return _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
     }
 } 

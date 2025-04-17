@@ -10,12 +10,12 @@
 
 **Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
-**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows) development is underway.
+**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is underway.
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
 *   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
-*   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics (Authorization Code Flow + PKCE, Client Credentials, Discovery).
+*   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics (Authorization Code Flow + PKCE, Token Theft Detection, Client Credentials, Discovery).
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Phase 6:** Client Libraries for Mobile & Desktop Applications.
@@ -26,28 +26,29 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 *   🚀 **Developer Freedom & Experience:** Open-source (MIT) with a focus on minimizing boilerplate and maximizing productivity through conventions and clear APIs. Get secure auth running *fast*.
 *   🧩 **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
-*   🔒 **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation), password storage, and endpoint protection.
+*   🔒 **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, **token theft detection** using family tracking, **hashed token storage**), password storage, and endpoint protection.
 *   🔧 **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
 *   🌐 **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
 *   🚫 **No Vendor Lock-In:** Own your identity layer.
 
 ## Current State vs. Future Vision
 
-**What CoreIdent provides *today* (Phase 2 Complete):**
+**What CoreIdent provides *today* (Phase 3 In Progress):**
 
 *   **Core Authentication API:** Secure `/register`, `/login`, and `/token/refresh` endpoints.
 *   **JWT Issuance:** Standard access tokens upon login.
-*   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), and rotation.
+*   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), rotation, **hashed token handles**, and **token theft detection** with family revocation (enabled by default).
+*   **OAuth/OIDC:** Authorization Code Flow with PKCE (`/authorize`, `/token`).
 *   **Password Hashing:** Secure password handling using ASP.NET Core Identity's hasher.
 *   **Pluggable Storage:**
-    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users and refresh tokens in your database (SQL Server, PostgreSQL, SQLite, etc.).
+    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users, refresh tokens, clients, scopes, and auth codes in your database (SQL Server, PostgreSQL, SQLite, etc.).
     *   `CoreIdent.Adapters.DelegatedUserStore`: Integrate with your existing user database/authentication logic.
-*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore` interfaces for customization.
+*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore` interfaces for customization.
 *   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json`.
 
 **Where CoreIdent is heading (Future Phases):**
 
-*   **Full OAuth 2.0 / OIDC Server:** Implementing standard flows (Authorization Code + PKCE, Client Credentials, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
+*   **Full OAuth 2.0 / OIDC Server:** Implementing remaining standard flows (Client Credentials, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
 *   **OIDC Compliance:** Discovery (`/.well-known/openid-configuration`), JWKS (`/.well-known/jwks.json`), ID Tokens.
 *   **User Interaction:** Consent screens, standard logout endpoints.
 *   **Extensible Provider Model:**
@@ -68,13 +69,67 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 **Not yet, but that's the goal.** We are building the foundational pieces first, focusing on a solid core and flexible storage. Phase 3 is actively adding the core OAuth/OIDC mechanics.
 
-## Developer Guide
+## Core Features by Phase
 
-For a detailed walkthrough of the architecture, setup, and features through Phase 2, please refer to the **[Developer Training Guide](./docs/Developer_Training_Guide.md)**.
+### Phase 1: MVP Core (Foundation)
+
+The initial Phase 1 release established the fundamental authentication flow and core package structure:
+
+*   **Core Package Structure**:
+    *   `CoreIdent.Core` NuGet package targeting modern .NET
+    *   Configuration via `CoreIdentOptions` (Issuer, Audience, SigningKeySecret, token lifetimes)
+    *   Dependency injection via `AddCoreIdent()` and `MapCoreIdentEndpoints()` extension methods
+    
+*   **User Registration**:
+    *   `POST /register` endpoint for creating new users
+    *   Input validation (email format, password complexity)
+    *   Secure password hashing with `IPasswordHasher`/`DefaultPasswordHasher`
+    *   User storage with `IUserStore` interface
+
+*   **User Authentication & Token Handling**:
+    *   `POST /login` endpoint for authenticating users
+    *   JWT access token generation via `ITokenService`/`JwtTokenService`
+    *   Standard claims (`sub`, `iss`, `aud`, `exp`, `iat`, `jti`)
+    *   Basic refresh token flow with `POST /token/refresh` endpoint
+    
+*   **In-Memory Storage**:
+    *   `InMemoryUserStore` implementation for development/testing
+    *   Thread-safe collections for storing users and refresh tokens
+    *   Username normalization for case-insensitive lookups
+    *   Simple token validation and invalidation
+
+*   **Testing & Documentation**:
+    *   Unit tests for core services and interfaces
+    *   Integration tests for API endpoints
+    *   Initial documentation in README.md and Developer Training Guide
+
+Phase 1 provided a runnable, testable foundation focused on the core authentication flows, with in-memory storage suitable for development and testing.
+
+### Phase 2: Storage & Core Extensibility (Completed)
+
+Phase 2 built on the foundation by providing persistent storage options and enhancing extensibility:
+
+*   **Refined Core Interfaces**: Enhanced `IUserStore`, defined `IRefreshTokenStore`, `IClientStore`, `IScopeStore`.
+*   **Entity Framework Core Storage**: `CoreIdent.Storage.EntityFrameworkCore` for persisting users, refresh tokens, clients, scopes.
+*   **Delegated User Store Adapter**: `CoreIdent.Adapters.DelegatedUserStore` for integrating with existing user systems.
+*   **Robust Refresh Token Handling**: Implemented token rotation and persistence via `IRefreshTokenStore`.
+*   **Client and Scope Models**: Defined initial models for OAuth 2.0 / OIDC functionality.
+
+### Phase 3: Core OAuth 2.0 / OIDC Server Mechanics (Current)
+
+Phase 3 implements the essential backend logic for standard authorization flows and discovery:
+
+*   **Authorization Code Flow + PKCE**: Secure flow for web apps, SPAs, and mobile clients (`/authorize`, `/token`).
+*   **ID Token Issuance**: Standard OIDC ID tokens generated alongside access tokens.
+*   **Token Theft Detection**: Enhanced security for refresh tokens using family tracking and automatic revocation (enabled by default).
+*   **(In Progress)** Client Credentials Flow.
+*   **(In Progress)** OIDC Discovery & JWKS Endpoints.
+
+For more details on these features, see the [Developer Training Guide](./docs/Developer_Training_Guide.md).
 
 ## Getting Started
 
-This guide covers the setup for the core functionality available after Phase 2.
+This guide covers the setup for the core functionality available after Phase 3.
 
 ### 1. Installation
 
@@ -105,7 +160,12 @@ Configure the core options in your `appsettings.json` (or another configuration 
     "Audience": "myapi",             // IMPORTANT: Replace with your API audience identifier
     "SigningKeySecret": "REPLACE_THIS_WITH_A_VERY_STRONG_AND_SECRET_KEY_32_BYTES_OR_LONGER", // MUST be strong, unique, >= 32 Bytes (256 bits) for HS256, and kept secret!
     "AccessTokenLifetime": "00:15:00",  // 15 minutes
-    "RefreshTokenLifetime": "7.00:00:00" // 7 days
+    "RefreshTokenLifetime": "7.00:00:00", // 7 days
+    "ConsumedTokenRetentionPeriod": "30.00:00:00", // Optional: How long to keep consumed tokens (for audit/theft detection) before cleanup. Default: 30 days.
+    "TokenSecurity": { // Optional: Security settings
+      "EnableTokenFamilyTracking": true, // Default=true (Recommended). Set to false to disable family tracking & revocation on theft detection.
+      "TokenTheftDetectionMode": "RevokeFamily" // Default. Options: Silent, RevokeFamily, RevokeAllUserTokens. Only applies if EnableTokenFamilyTracking=true.
+    }
   }
 }
 ```
@@ -137,6 +197,7 @@ builder.Services.AddCoreIdent(options =>
 
     // You can also set options directly here if needed
     // options.Issuer = "https://my-issuer.com";
+    // options.TokenSecurity.EnableTokenFamilyTracking = false; // Example: Opt-out of default
 });
 
 // *** 2. Configure API Authentication (Optional - If your API validates CoreIdent JWTs) ***
@@ -171,7 +232,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // Se
 builder.Services.AddAuthorization(); // Needed for [Authorize] attributes
 
 
-// *** 3. Configure Storage (Choose ONE strategy for IUserStore) ***
+// *** 3. Configure Storage (Choose ONE strategy for IUserStore, IRefreshTokenStore etc.) ***
 
 // --- Option A: Entity Framework Core (Recommended for new apps or full control) ---
 // Prerequisite: Add NuGet packages CoreIdent.Storage.EntityFrameworkCore and a DB provider (e.g., Microsoft.EntityFrameworkCore.Sqlite)
@@ -185,6 +246,7 @@ builder.Services.AddDbContext<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbC
 
 // ii. Tell CoreIdent to use the EF Core stores mapped to your DbContext type
 // This MUST be called AFTER AddCoreIdent() and AddDbContext()
+// This registers EF Core implementations for: IUserStore, IRefreshTokenStore, IClientStore, IScopeStore, IAuthorizationCodeStore
 // Replace YourAppDbContext if you used your own DbContext above
 builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>();
 
@@ -258,12 +320,16 @@ builder.Services.AddCoreIdentDelegatedUserStore(options =>
      };
 });
 
-// NOTE: Delegated IUserStore only handles users. You STILL need persistent storage for Refresh Tokens.
-// Register the EF Core Refresh Token Store separately in this case:
+// NOTE: Delegated IUserStore only handles users. You STILL need persistent storage for
+// Refresh Tokens, Authorization Codes, Clients, and Scopes.
+// Register the EF Core stores separately in this case:
 // i. Register DbContext (as shown in Option A)
-// ii. Register ONLY the refresh token store
+// ii. Register the needed stores (EF Core stores are recommended)
 builder.Services.AddScoped<CoreIdent.Core.Stores.IRefreshTokenStore, EfRefreshTokenStore>();
-// Ensure migrations for Refresh Tokens table are applied (as shown in Option A).
+builder.Services.AddScoped<CoreIdent.Core.Stores.IAuthorizationCodeStore, EfAuthorizationCodeStore>(); // Requires EfAuthorizationCodeStore implementation
+builder.Services.AddScoped<CoreIdent.Core.Stores.IClientStore, EfClientStore>();
+builder.Services.AddScoped<CoreIdent.Core.Stores.IScopeStore, EfScopeStore>();
+// Ensure migrations for Refresh Tokens, Auth Codes, Clients, Scopes tables are applied (as shown in Option A).
 */
 
 
@@ -310,18 +376,62 @@ app.Run();
 
 ```
 
-### 4. Core Functionality Available Now (Phase 2)
+### 4. Core Functionality Available Now (Phase 3 In Progress)
 
 With the setup above, the following CoreIdent endpoints are available (default prefix `/auth`):
 
-*   `POST /auth/register`: Register a new user (requires non-delegated `IUserStore`, e.g., EF Core, or `CreateUserAsync` delegate). Request body: `{ "email": "user@example.com", "password": "YourPassword123!" }`
-*   `POST /auth/login`: Log in with email/password. Returns JWT access and refresh tokens. Request body: `{ "email": "user@example.com", "password": "YourPassword123!" }` Response body: `{ "accessToken": "...", "refreshToken": "...", "expiresIn": 900 }`
-*   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens (uses `IRefreshTokenStore`). Request body: `{ "refreshToken": "..." }` Response body: (Same as login)
+*   `POST /auth/register`: Register a new user (requires non-delegated `IUserStore`, e.g., EF Core, or `CreateUserAsync` delegate).
+    *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
+    *   **Response Status Codes**: `201 Created`, `400 Bad Request`, `409 Conflict`
+    *   **Usage Example (curl)**:
+        ```bash
+        curl -X POST "https://localhost:5001/register" \
+          -H "Content-Type: application/json" \
+          -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
+        ```
+
+*   `POST /auth/login`: Authenticates a user with email/password and issues JWT tokens.
+    *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
+    *   **Response Status Codes**: `200 OK`, `400 Bad Request`, `401 Unauthorized`, `500 Internal Server Error`
+    *   **Response Body**:
+        ```json
+        {
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "token_type": "Bearer",
+          "expires_in": 900, // Default Access Token Lifetime
+          "refresh_token": "abcdef123456..." // Opaque handle
+        }
+        ```
+    *   **Token Structure**: JWT Access Token + Opaque Refresh Token handle.
+    *   **Security Considerations**: Store tokens securely, use HTTPS. `SigningKeySecret` is critical.
+    *   **Usage Example (curl)**:
+        ```bash
+        curl -X POST "https://localhost:5001/login" \
+          -H "Content-Type: application/json" \
+          -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
+        ```
+
+*   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens (uses `IRefreshTokenStore`).
+    *   **Request Body**: `{ "refreshToken": "abcdef123456..." }`
+    *   **Response Body**: (Same as login)
+    *   **Security**: Implements refresh token rotation and **token theft detection** (family tracking & revocation) by default. You can opt-out via `CoreIdentOptions.TokenSecurity.EnableTokenFamilyTracking = false`.
+
+**OAuth 2.0 / OIDC Endpoints (Phase 3):**
+
+*   `GET /auth/authorize`: Initiates the Authorization Code flow. Validates the request, authenticates the user, and redirects back with an authorization code.
+    *   Required parameters: `client_id`, `redirect_uri`, `response_type=code`, `scope`
+    *   Recommended parameters: `state`, `nonce`
+    *   PKCE parameters: `code_challenge`, `code_challenge_method=S256`
+    *   Example: `/authorize?client_id=my-client&response_type=code&redirect_uri=https://my-app.com/callback&scope=openid%20profile&state=abc123&code_challenge=<challenge>&code_challenge_method=S256`
+*   `POST /auth/token` (grant_type=authorization_code): Exchanges an authorization code for tokens.
+    *   Required parameters (form-encoded): `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `code_verifier` (for PKCE)
+    *   Confidential clients also require authentication.
+    *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "refresh_token": "...", "id_token": "..." }`
 
 **Storage:**
-*   **EF Core:** Provides persistence for users and refresh tokens. (Client/Scope storage coming in Phase 3). Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations.
-*   **Delegated:** Adapts user operations (`IUserStore`) to your existing system via `CoreIdent.Adapters.DelegatedUserStore`. **Requires** a separate persistent store (like EF Core's `EfRefreshTokenStore`) for refresh tokens.
-*   **Refresh Tokens:** Persisted (usually via EF Core) and rotated upon use for security.
+*   **EF Core:** Provides persistence for users, refresh tokens, clients, scopes, and auth codes. Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations.
+*   **Delegated:** Adapts user operations (`IUserStore`) to your existing system via `CoreIdent.Adapters.DelegatedUserStore`. **Requires** separate persistent stores (like EF Core) for refresh tokens, auth codes, clients, and scopes.
+*   **Refresh Tokens:** Persisted (usually via EF Core) with **securely hashed handles (salted SHA-256)**, rotated upon use, and have token theft detection enabled by default (`EnableTokenFamilyTracking: true`).
 
 ## Running / Testing
 

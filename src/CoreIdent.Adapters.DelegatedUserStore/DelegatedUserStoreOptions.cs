@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 
 namespace CoreIdent.Adapters.DelegatedUserStore;
 
@@ -22,7 +27,7 @@ public sealed class DelegatedUserStoreOptions
     /// <summary>
     /// Delegate to validate a user's credentials (e.g., username and password). Required for login.
     /// </summary>
-    public Func<string, string, CancellationToken, Task<bool>>? ValidateCredentialsAsync { get; set; }
+    public Func<string, string, CancellationToken, Task<PasswordVerificationResult>>? ValidateCredentialsAsync { get; set; }
 
     /// <summary>
     /// Optional delegate to retrieve claims for a user. If not provided, only basic claims might be generated.

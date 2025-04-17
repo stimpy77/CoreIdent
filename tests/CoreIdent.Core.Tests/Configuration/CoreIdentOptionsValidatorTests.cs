@@ -20,7 +20,12 @@ public class CoreIdentOptionsValidatorTests
             Audience = "urn:test:audience",
             SigningKeySecret = "a_super_secret_key_longer_than_32_bytes_for_hs256_security", // Ensure length >= 32
             AccessTokenLifetime = TimeSpan.FromMinutes(15),
-            RefreshTokenLifetime = TimeSpan.FromDays(7)
+            RefreshTokenLifetime = TimeSpan.FromDays(7),
+            TokenSecurity = new TokenSecurityOptions
+            {
+                TokenTheftDetectionMode = TokenTheftDetectionMode.RevokeFamily,
+                EnableTokenFamilyTracking = true
+            }
         };
     }
 
@@ -193,6 +198,79 @@ public class CoreIdentOptionsValidatorTests
         result.Failures.ShouldHaveSingleItem().ShouldContain("RefreshTokenLifetime must be a positive duration.");
     }
 
+    // --- TokenSecurity Tests ---
+    [Fact]
+    public void Validate_WithNullTokenSecurity_ShouldReturnFailure()
+    {
+        // Arrange
+        _options.TokenSecurity = null!;
+
+        // Act
+        var result = _validator.Validate(null, _options);
+
+        // Assert
+        result.Failed.ShouldBeTrue();
+        result.Failures.ShouldHaveSingleItem().ShouldContain("TokenSecurity cannot be null.");
+    }
+
+    [Fact]
+    public void Validate_WithInvalidTokenTheftDetectionMode_ShouldReturnFailure()
+    {
+        // Arrange
+        // Cast an invalid value for the enum
+        _options.TokenSecurity!.TokenTheftDetectionMode = (TokenTheftDetectionMode)99;
+
+        // Act
+        var result = _validator.Validate(null, _options);
+
+        // Assert
+        result.Failed.ShouldBeTrue();
+        result.Failures.ShouldHaveSingleItem().ShouldContain("TokenTheftDetectionMode must be a valid TokenTheftDetectionMode value.");
+    }
+
+    [Fact]
+    public void Validate_WithRevokeFamilyAndNoTracking_ShouldReturnFailure()
+    {
+        // Arrange
+        _options.TokenSecurity!.TokenTheftDetectionMode = TokenTheftDetectionMode.RevokeFamily;
+        _options.TokenSecurity!.EnableTokenFamilyTracking = false;
+
+        // Act
+        var result = _validator.Validate(null, _options);
+
+        // Assert
+        result.Failed.ShouldBeTrue();
+        result.Failures.ShouldHaveSingleItem().ShouldContain("EnableTokenFamilyTracking must be true when TokenTheftDetectionMode is set to RevokeFamily.");
+    }
+
+    [Fact]
+    public void Validate_WithSilentModeAndNoTracking_ShouldSucceed()
+    {
+        // Arrange
+        _options.TokenSecurity!.TokenTheftDetectionMode = TokenTheftDetectionMode.Silent;
+        _options.TokenSecurity!.EnableTokenFamilyTracking = false;
+
+        // Act
+        var result = _validator.Validate(null, _options);
+
+        // Assert
+        result.Succeeded.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithRevokeAllUserTokensAndNoTracking_ShouldSucceed()
+    {
+        // Arrange
+        _options.TokenSecurity!.TokenTheftDetectionMode = TokenTheftDetectionMode.RevokeAllUserTokens;
+        _options.TokenSecurity!.EnableTokenFamilyTracking = false;
+
+        // Act
+        var result = _validator.Validate(null, _options);
+
+        // Assert
+        result.Succeeded.ShouldBeTrue();
+    }
+
     // --- Multiple Failures Test ---
     [Fact]
     public void Validate_WithMultipleFailures_ShouldListAllFailures()
@@ -203,17 +281,20 @@ public class CoreIdentOptionsValidatorTests
         _options.SigningKeySecret = "short";
         _options.AccessTokenLifetime = TimeSpan.Zero;
         _options.RefreshTokenLifetime = TimeSpan.FromSeconds(-10);
+        _options.TokenSecurity!.TokenTheftDetectionMode = TokenTheftDetectionMode.RevokeFamily;
+        _options.TokenSecurity!.EnableTokenFamilyTracking = false;
 
         // Act
         var result = _validator.Validate(null, _options);
 
         // Assert
         result.Failed.ShouldBeTrue();
-        result.Failures.Count().ShouldBe(5);
+        result.Failures.Count().ShouldBe(6);
         result.Failures.ShouldContain(f => f.Contains("Issuer is required."));
         result.Failures.ShouldContain(f => f.Contains("Audience is required."));
         result.Failures.ShouldContain(f => f.Contains("SigningKeySecret is too short"));
         result.Failures.ShouldContain(f => f.Contains("AccessTokenLifetime must be a positive duration."));
         result.Failures.ShouldContain(f => f.Contains("RefreshTokenLifetime must be a positive duration."));
+        result.Failures.ShouldContain(f => f.Contains("EnableTokenFamilyTracking must be true when TokenTheftDetectionMode is set to RevokeFamily."));
     }
 }

@@ -1,5 +1,6 @@
 using CoreIdent.Core.Stores;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Collections.Generic;
@@ -79,7 +80,7 @@ public sealed class DelegatedUserStore : IUserStore, IDisposable
         return claims;
     }
 
-    public Task<bool> ValidateCredentialsAsync(string username, string password, CancellationToken cancellationToken)
+    public Task<PasswordVerificationResult> ValidateCredentialsAsync(string username, string password, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
