@@ -187,7 +187,13 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
         var refreshRequest = new RefreshTokenRequest { RefreshToken = initialRefreshToken };
 
         // Act: Refresh the token (First time)
-        var refreshResponse1 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
+        var refreshPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", initialRefreshToken! },
+            { "client_id", "__password_flow__" } // Client ID is required for token endpoint
+        };
+        var refreshResponse1 = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(refreshPayload));
 
         // *** Log Raw JSON Response ***
         var rawJson = await refreshResponse1.Content.ReadAsStringAsync();
@@ -202,25 +208,41 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
         refreshedTokens1.RefreshToken.ShouldNotBe(initialRefreshToken, "A new refresh token should be issued.");
 
         // Act: Try to use the FIRST token again (Should fail due to consumption)
-        var reuseAttemptResponse = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
-        reuseAttemptResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Reusing the original token should fail.");
+        var reuseAttemptResponse = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", initialRefreshToken },
+            { "client_id", "__password_flow__" }
+        }));
+        reuseAttemptResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest); // Changed from Unauthorized to BadRequest (invalid_grant)
+        var errorResponseJson = await reuseAttemptResponse.Content.ReadAsStringAsync();
+        using var errorDoc = JsonDocument.Parse(errorResponseJson);
+        errorDoc.RootElement.TryGetProperty("error", out var errorElement).ShouldBeTrue();
+        errorElement.GetString().ShouldBe("invalid_grant"); // Check for specific error code
 
         // Act: Try to use the SECOND, newly issued token 
-        var refreshRequest2 = new RefreshTokenRequest { RefreshToken = refreshedTokens1.RefreshToken };
-        var refreshResponse2 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest2);
+        var refreshRequest2Payload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", refreshedTokens1.RefreshToken! },
+            { "client_id", "__password_flow__" }
+        };
+        var refreshResponse2 = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(refreshRequest2Payload));
 
         // Assert: Second refresh SHOULD NOW FAIL if RevokeFamily is enabled (default)
         // Because the reuse attempt above triggered family revocation.
         // If theft detection was Silent, this would be OK.
-        refreshResponse2.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Using the second token after the first was reused should fail due to family revocation."); 
+        refreshResponse2.StatusCode.ShouldBe(HttpStatusCode.BadRequest, "Using the second token after the first was reused should fail due to family revocation.");
+        var errorJson2 = await refreshResponse2.Content.ReadAsStringAsync();
+        using var errorDoc2 = JsonDocument.Parse(errorJson2);
+        errorDoc2.RootElement.TryGetProperty("error", out var errorElement2).ShouldBeTrue();
+        errorElement2.GetString().ShouldBe("invalid_grant");
 
         // We cannot proceed to test a third refresh as the family is already revoked.
         // // Assert: Third refresh (using token from refreshResponse2) is also successful
         // var refreshedTokens2 = JsonSerializer.Deserialize<CoreIdent.Core.Models.Responses.TokenResponse>(await refreshResponse2.Content.ReadAsStringAsync(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); 
-        // refreshedTokens2.ShouldNotBeNull("Second refresh should return tokens");
-        // refreshedTokens2.RefreshToken.ShouldNotBeNullOrEmpty("Second refresh should return a new refresh token");
-        // var refreshRequest3 = new RefreshTokenRequest { RefreshToken = refreshedTokens2.RefreshToken };
-        // var refreshResponse3 = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest3);
+        // var refreshRequest3Payload = new Dictionary<string, string> { { "grant_type", "refresh_token" }, { "refresh_token", refreshedTokens2.RefreshToken! }, { "client_id", "__password_flow__" } };
+        // var refreshResponse3 = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(refreshRequest3Payload));
         // refreshResponse3.StatusCode.ShouldBe(HttpStatusCode.OK, "The newly issued refresh token should be valid.");
     }
 
@@ -248,13 +270,22 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
             await dbContext.SaveChangesAsync();
         }
 
-        var refreshRequest = new RefreshTokenRequest { RefreshToken = initialRefreshToken };
+        var refreshPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", initialRefreshToken },
+            { "client_id", "__password_flow__" }
+        };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/auth/token/refresh", refreshRequest);
+        var response = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(refreshPayload));
 
         // Assert
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest); // Changed from Unauthorized to BadRequest (invalid_grant)
+        var errorJson = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(errorJson);
+        doc.RootElement.TryGetProperty("error", out var error).ShouldBeTrue();
+        error.GetString().ShouldBe("invalid_grant");
     }
 
     // TODO: Add test for expired refresh token
@@ -264,23 +295,37 @@ public class RefreshTokenEndpointTests : IClassFixture<RefreshTokenTestWebApplic
     public async Task RefreshToken_WithInvalidOrNonExistentToken_ReturnsUnauthorized()
     {
         // Arrange
-        var invalidTokenRequest = new RefreshTokenRequest { RefreshToken = "invalid-or-non-existent-token" };
+        var invalidTokenPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", "invalid-or-non-existent-token" },
+            { "client_id", "__password_flow__" }
+        };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/auth/token/refresh", invalidTokenRequest);
+        var response = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(invalidTokenPayload));
 
         // Assert
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest); // Changed from Unauthorized to BadRequest (invalid_grant)
+        var errorJson = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(errorJson);
+        doc.RootElement.TryGetProperty("error", out var error).ShouldBeTrue();
+        error.GetString().ShouldBe("invalid_grant");
     }
 
      [Fact]
     public async Task RefreshToken_WithMissingToken_ReturnsBadRequest()
     {
         // Arrange
-        var missingTokenRequest = new RefreshTokenRequest { RefreshToken = null }; // Or string.Empty
+        var missingTokenPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            // Missing refresh_token
+            { "client_id", "__password_flow__" }
+        };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/auth/token/refresh", missingTokenRequest);
+        var response = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(missingTokenPayload));
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);

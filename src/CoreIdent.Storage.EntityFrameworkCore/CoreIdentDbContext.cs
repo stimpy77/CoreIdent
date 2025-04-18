@@ -26,6 +26,9 @@ public class CoreIdentDbContext : DbContext
     public virtual DbSet<CoreIdentScope> Scopes { get; set; } = default!;
     public virtual DbSet<CoreIdentScopeClaim> ScopeClaims { get; set; } = default!;
 
+    // --- Authorization Code DbSet ---
+    public virtual DbSet<AuthorizationCode> AuthorizationCodes { get; set; } = default!;
+
     public CoreIdentDbContext(DbContextOptions<CoreIdentDbContext> options) : base(options)
     { }
 
@@ -103,31 +106,31 @@ public class CoreIdentDbContext : DbContext
             // EF Core 8+ has built-in support for JSON columns which is more robust.
             // Using Value Converter approach here for broader compatibility initially.
 
-            var stringCollectionConverter = new ValueConverter<ICollection<string>, string>(
+            var stringListConverter = new ValueConverter<List<string>, string>(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
             );
-            var stringCollectionComparer = new ValueComparer<ICollection<string>>(
-                (c1, c2) => c1!.SequenceEqual(c2!), // Ensure correct comparison
+            var stringListComparer = new ValueComparer<List<string>>(
+                (c1, c2) => c1!.SequenceEqual(c2!),
                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                c => (ICollection<string>)c.ToList() // Ensure correct snapshotting
+                c => c.ToList()
             );
 
             client.Property(c => c.AllowedGrantTypes)
-                  .HasConversion(stringCollectionConverter)
-                  .Metadata.SetValueComparer(stringCollectionComparer);
+                  .HasConversion(stringListConverter)
+                  .Metadata.SetValueComparer(stringListComparer);
 
             client.Property(c => c.RedirectUris)
-                  .HasConversion(stringCollectionConverter)
-                  .Metadata.SetValueComparer(stringCollectionComparer);
+                  .HasConversion(stringListConverter)
+                  .Metadata.SetValueComparer(stringListComparer);
 
             client.Property(c => c.PostLogoutRedirectUris)
-                  .HasConversion(stringCollectionConverter)
-                  .Metadata.SetValueComparer(stringCollectionComparer);
+                  .HasConversion(stringListConverter)
+                  .Metadata.SetValueComparer(stringListComparer);
 
             client.Property(c => c.AllowedScopes)
-                  .HasConversion(stringCollectionConverter)
-                  .Metadata.SetValueComparer(stringCollectionComparer);
+                  .HasConversion(stringListConverter)
+                  .Metadata.SetValueComparer(stringListComparer);
 
             client.ToTable("Clients");
         });
@@ -164,6 +167,36 @@ public class CoreIdentDbContext : DbContext
             scopeClaim.HasIndex(sc => sc.ScopeName);
 
             scopeClaim.ToTable("ScopeClaims");
+        });
+
+        // --- Authorization Code Configuration ---
+        modelBuilder.Entity<AuthorizationCode>(authCode =>
+        {
+            authCode.HasKey(ac => ac.CodeHandle);
+            authCode.Property(ac => ac.CodeHandle).HasMaxLength(128); // Adjust length as needed for code handle representation
+
+            authCode.Property(ac => ac.ClientId).IsRequired().HasMaxLength(256);
+            authCode.Property(ac => ac.SubjectId).IsRequired().HasMaxLength(256);
+            authCode.Property(ac => ac.RedirectUri).IsRequired(); // Redirect URIs can be long
+
+            authCode.HasIndex(ac => ac.ExpirationTime); // Index for cleanup tasks
+
+            // Configure RequestedScopes using the existing JSON converter and comparer
+            var stringListConverterForAuthCode = new ValueConverter<List<string>, string>(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
+            );
+            var stringListComparerForAuthCode = new ValueComparer<List<string>>(
+                (c1, c2) => c1!.SequenceEqual(c2!),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()
+            );
+
+            authCode.Property(ac => ac.RequestedScopes)
+                  .HasConversion(stringListConverterForAuthCode)
+                  .Metadata.SetValueComparer(stringListComparerForAuthCode);
+
+            authCode.ToTable("AuthorizationCodes");
         });
     }
 } 

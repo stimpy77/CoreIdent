@@ -270,181 +270,6 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .WithSummary("Logs in a user.")
         .WithDescription("Authenticates a user with email and password, returning JWT tokens.");
 
-        // Endpoint: /token/refresh (Refactored for IRefreshTokenStore and Rotation)
-        routeGroup.MapPost("token/refresh", async (
-            [FromBody] RefreshTokenRequest request,
-            IUserStore userStore,
-            ITokenService tokenService,
-            IRefreshTokenStore refreshTokenStore,
-            IOptions<CoreIdentOptions> options,
-            ILoggerFactory loggerFactory,
-            CancellationToken cancellationToken) =>
-        {
-            var logger = loggerFactory.CreateLogger("CoreIdent.RefreshToken");
-
-            // Basic validation
-            if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
-            {
-                return Results.BadRequest(new { Message = "Refresh token is required." });
-            }
-
-            // Validate the incoming refresh token handle using the store
-            CoreIdentRefreshToken? existingToken;
-            try
-            {
-                existingToken = await refreshTokenStore.GetRefreshTokenAsync(request.RefreshToken, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error retrieving refresh token during refresh operation.");
-                return Results.Problem("An unexpected error occurred during token validation.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            // Validation checks
-            if (existingToken == null)
-            {
-                logger.LogWarning("Refresh token handle not found: {RefreshTokenHandle}", request.RefreshToken);
-                return Results.Unauthorized(); // Token not found
-            }
-            if (existingToken.ConsumedTime.HasValue)
-            {
-                logger.LogWarning("Attempted reuse of consumed refresh token: {RefreshTokenHandle}", request.RefreshToken);
-                // Implement token theft detection response
-                try 
-                {
-                    var theftDetectionMode = options.Value.TokenSecurity.TokenTheftDetectionMode;
-                    
-                    if (theftDetectionMode != TokenTheftDetectionMode.Silent)
-                    {
-                        logger.LogWarning("Potential token theft detected for user {SubjectId}, client {ClientId}, token family {FamilyId}. Taking action: {Action}", 
-                            existingToken.SubjectId, existingToken.ClientId, existingToken.FamilyId, theftDetectionMode);
-                        
-                        if (theftDetectionMode == TokenTheftDetectionMode.RevokeFamily)
-                        {
-                            // Revoke all tokens in this family
-                            await refreshTokenStore.RevokeTokenFamilyAsync(existingToken.FamilyId, cancellationToken);
-                            logger.LogWarning("Revoked all tokens in family {FamilyId} due to potential token theft", existingToken.FamilyId);
-                        }
-                        else if (theftDetectionMode == TokenTheftDetectionMode.RevokeAllUserTokens)
-                        {
-                            // Find tokens by user ID and revoke them all
-                            var userTokens = await refreshTokenStore.FindTokensBySubjectIdAsync(existingToken.SubjectId, cancellationToken);
-                            int count = 0;
-                            
-                            foreach (var token in userTokens.Where(t => !t.ConsumedTime.HasValue))
-                            {
-                                token.ConsumedTime = DateTime.UtcNow;
-                                await refreshTokenStore.RemoveRefreshTokenAsync(token.Handle, cancellationToken);
-                                count++;
-                            }
-                            
-                            logger.LogWarning("Revoked {Count} active tokens for user {SubjectId} due to potential token theft", count, existingToken.SubjectId);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Log but don't block response - security action is best effort
-                    logger.LogError(ex, "Error during token theft response for token {RefreshTokenHandle}", request.RefreshToken);
-                }
-                
-                return Results.Unauthorized(); // Token already used
-            }
-            if (existingToken.ExpirationTime < DateTime.UtcNow)
-            {
-                 logger.LogWarning("Expired refresh token presented: {RefreshTokenHandle}", request.RefreshToken);
-                 return Results.Unauthorized(); // Token expired
-            }
-
-            // Mark the old token as consumed *before* issuing new ones
-            try
-            {
-                await refreshTokenStore.RemoveRefreshTokenAsync(existingToken.Handle, cancellationToken);
-            }
-            catch(Exception ex)
-            {
-                logger.LogError(ex, "Error consuming old refresh token {RefreshTokenHandle} during refresh.", existingToken.Handle);
-                // Fail the operation if we can't consume the old token to prevent potential replay
-                return Results.Problem("An unexpected error occurred during token refresh.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            // Found valid token, now find user
-            CoreIdentUser? user;
-            try
-            {
-                user = await userStore.FindUserByIdAsync(existingToken.SubjectId, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error finding user {UserId} during token refresh", existingToken.SubjectId);
-                // If user lookup fails, the old token is already consumed. Return error.
-                return Results.Problem("An unexpected error occurred during user lookup.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            if (user == null)
-            {
-                logger.LogError("User {UserId} associated with refresh token {RefreshTokenHandle} not found.", existingToken.SubjectId, existingToken.Handle);
-                // Old token consumed, user not found - return Unauthorized
-                return Results.Unauthorized();
-            }
-
-            // Generate NEW tokens
-            string newAccessToken;
-            string newRefreshTokenHandle;
-            try
-            {
-                // Refresh token grant typically reuses original scopes implicitly
-                // TODO: Potentially retrieve original scopes associated with the refresh token if needed?
-                newAccessToken = await tokenService.GenerateAccessTokenAsync(user);
-                
-                // Generate descendant token to maintain the family lineage for token theft detection
-                if (options.Value.TokenSecurity.EnableTokenFamilyTracking)
-                {
-                    newRefreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, existingToken.ClientId, existingToken);
-                }
-                else
-                {
-                    // Create a new token family if tracking is disabled
-                    newRefreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, existingToken.ClientId);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error generating new tokens for user {UserId} during refresh", user.Id);
-                return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            // Log the generated handle
-            logger.LogDebug("Generated new refresh token handle during refresh for user {UserId}: {RefreshTokenHandle}", user.Id, newRefreshTokenHandle ?? "<null>");
-
-            var response = new TokenResponse
-            {
-                AccessToken = newAccessToken,
-                ExpiresIn = (int)options.Value.AccessTokenLifetime.TotalSeconds,
-                RefreshToken = newRefreshTokenHandle,
-                TokenType = "Bearer" // Add missing TokenType
-                // No IdToken or Scope for refresh token grant
-            };
-
-            logger.LogInformation("Tokens refreshed successfully for user {UserId}", user.Id);
-            
-            // Log the response object *before* returning
-            logger.LogDebug("Returning TokenResponse from refresh: AccessTokenPresent={AccessTokenPresent}, RefreshTokenPresent={RefreshTokenPresent}", 
-                            !string.IsNullOrEmpty(response.AccessToken), 
-                            !string.IsNullOrEmpty(response.RefreshToken));
-
-            return Results.Ok(response);
-        })
-        .WithName("RefreshToken")
-        .WithTags("CoreIdent")
-        .Produces<TokenResponse>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest) // Invalid request (e.g., missing token)
-        .Produces(StatusCodes.Status401Unauthorized) // Invalid/Expired/Consumed token or User not found
-        .Produces(StatusCodes.Status500InternalServerError)
-        .WithSummary("Exchanges a refresh token for new tokens.")
-        .WithDescription("Provides a new access and refresh token if the provided refresh token is valid and unused.");
-
-
         // --- Phase 3: OAuth/OIDC Endpoints ---
 
         // Endpoint: GET /authorize
@@ -574,19 +399,6 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             // --- If authenticated and consented (or consent not required) ---
 
             // 5. Generate and Store Authorization Code
-            var authorizationCode = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
-                                    .Replace("+", "-").Replace("/", "_").TrimEnd('='); // URL-safe
-            var codeLifetime = TimeSpan.FromMinutes(5); // Example lifetime
-            var subjectId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (string.IsNullOrWhiteSpace(subjectId))
-            {
-                logger.LogError("Authenticated user is missing Subject ID (sub) claim.");
-                // This shouldn't happen for a properly authenticated user via OIDC/JWT principles
-                return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            // Ensure IAuthorizationCodeStore is resolved
             IAuthorizationCodeStore? authorizationCodeStore;
             try 
             {
@@ -596,6 +408,32 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             {
                 logger.LogError(ex, "Failed to resolve IAuthorizationCodeStore.");
                 return Results.Problem("Authorization storage service not available.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+            string authorizationCode;
+            int attempts = 0;
+            const int maxAttempts = 10;
+            do
+            {
+                authorizationCode = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                                    .Replace("+", "-").Replace("/", "_").TrimEnd('='); // URL-safe
+                var existing = await authorizationCodeStore.GetAuthorizationCodeAsync(authorizationCode, cancellationToken);
+                if (existing == null)
+                    break;
+                attempts++;
+            } while (attempts < maxAttempts);
+            if (attempts == maxAttempts)
+            {
+                logger.LogError("Failed to generate a unique authorization code after {Attempts} attempts.", maxAttempts);
+                return Results.Problem("Failed to generate a unique authorization code.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+            var codeLifetime = TimeSpan.FromMinutes(5); // Example lifetime
+            var subjectId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(subjectId))
+            {
+                logger.LogError("Authenticated user is missing Subject ID (sub) claim.");
+                // This shouldn't happen for a properly authenticated user via OIDC/JWT principles
+                return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
             var storedCode = new AuthorizationCode
@@ -647,7 +485,6 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
         .WithSummary("Starts the OAuth 2.0 Authorization Code flow.")
         .WithDescription("Validates the client request and redirects the user agent back to the client with an authorization code.");
-
 
         // Endpoint: POST /token
         // Handles various grant types for token issuance.
@@ -930,9 +767,149 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 }
 
             }
-            // --- Add other grant types (client_credentials, password, refresh_token) here later ---
-            // else if (grantType == "client_credentials") { ... }
-            // else if (grantType == "refresh_token") { ... Reuse existing /token/refresh logic or integrate here ... }
+            else if (grantType == "refresh_token")
+            {
+                // --- Logic moved from standalone /token/refresh endpoint ---
+                var refreshTokenRequest = new RefreshTokenRequest { RefreshToken = form["refresh_token"] }; // Extract refresh token from form
+                var refreshTokenStore = httpContext.RequestServices.GetRequiredService<IRefreshTokenStore>();
+
+                // Basic validation
+                if (refreshTokenRequest == null || string.IsNullOrWhiteSpace(refreshTokenRequest.RefreshToken))
+                {
+                    logger.LogWarning("Missing refresh_token parameter for refresh_token grant type.");
+                    return Results.BadRequest(new { error = "invalid_request", error_description = "refresh_token is required for grant_type=refresh_token." });
+                }
+
+                // Validate the incoming refresh token handle using the store
+                CoreIdentRefreshToken? existingToken;
+                try
+                {
+                    existingToken = await refreshTokenStore.GetRefreshTokenAsync(refreshTokenRequest.RefreshToken, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error retrieving refresh token during refresh operation.");
+                    return Results.Problem("An unexpected error occurred during token validation.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+
+                // Validation checks
+                if (existingToken == null)
+                {
+                    logger.LogWarning("Refresh token handle not found: {RefreshTokenHandle}", refreshTokenRequest.RefreshToken);
+                    return Results.BadRequest(new { error = "invalid_grant", error_description = "Refresh token is invalid or expired." }); // Use invalid_grant as per spec
+                }
+                if (existingToken.ConsumedTime.HasValue)
+                {
+                    logger.LogWarning("Attempted reuse of consumed refresh token: {RefreshTokenHandle}", refreshTokenRequest.RefreshToken);
+                    // Implement token theft detection response (reuse existing logic)
+                    try
+                    {
+                        var theftDetectionMode = options.Value.TokenSecurity.TokenTheftDetectionMode;
+                        if (theftDetectionMode != TokenTheftDetectionMode.Silent)
+                        {
+                            logger.LogWarning("Potential token theft detected for user {SubjectId}, client {ClientId}, token family {FamilyId}. Taking action: {Action}",
+                                existingToken.SubjectId, existingToken.ClientId, existingToken.FamilyId, theftDetectionMode);
+                            if (theftDetectionMode == TokenTheftDetectionMode.RevokeFamily)
+                            {
+                                await refreshTokenStore.RevokeTokenFamilyAsync(existingToken.FamilyId, cancellationToken);
+                                logger.LogWarning("Revoked all tokens in family {FamilyId} due to potential token theft", existingToken.FamilyId);
+                            }
+                            else if (theftDetectionMode == TokenTheftDetectionMode.RevokeAllUserTokens)
+                            {
+                                var userTokens = await refreshTokenStore.FindTokensBySubjectIdAsync(existingToken.SubjectId, cancellationToken);
+                                int count = 0;
+                                foreach (var token in userTokens.Where(t => !t.ConsumedTime.HasValue))
+                                {
+                                    await refreshTokenStore.RemoveRefreshTokenAsync(token.Handle, cancellationToken); // Consume/remove
+                                    count++;
+                                }
+                                logger.LogWarning("Revoked {Count} active tokens for user {SubjectId} due to potential token theft", count, existingToken.SubjectId);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error during token theft response for token {RefreshTokenHandle}", refreshTokenRequest.RefreshToken);
+                    }
+                    return Results.BadRequest(new { error = "invalid_grant", error_description = "Refresh token has already been used." }); // Use invalid_grant
+                }
+                if (existingToken.ExpirationTime < DateTime.UtcNow)
+                {
+                     logger.LogWarning("Expired refresh token presented: {RefreshTokenHandle}", refreshTokenRequest.RefreshToken);
+                     await refreshTokenStore.RemoveRefreshTokenAsync(existingToken.Handle, cancellationToken); // Consume expired token
+                     return Results.BadRequest(new { error = "invalid_grant", error_description = "Refresh token has expired." }); // Use invalid_grant
+                }
+
+                // Client check: Ensure the authenticated client matches the client associated with the refresh token
+                if (existingToken.ClientId != client.ClientId)
+                {
+                    logger.LogError("Client mismatch for refresh token {RefreshTokenHandle}. Expected {ExpectedClient}, Got {ActualClient}", existingToken.Handle, existingToken.ClientId, client.ClientId);
+                    // Consume the token as it's likely compromised or misused
+                    await refreshTokenStore.RemoveRefreshTokenAsync(existingToken.Handle, cancellationToken);
+                    return Results.BadRequest(new { error = "invalid_grant", error_description = "Client mismatch for refresh token." });
+                }
+
+                // Mark the old token as consumed *before* issuing new ones
+                try
+                {
+                    await refreshTokenStore.RemoveRefreshTokenAsync(existingToken.Handle, cancellationToken);
+                }
+                catch(Exception ex)
+                {
+                    logger.LogError(ex, "Error consuming old refresh token {RefreshTokenHandle} during refresh.", existingToken.Handle);
+                    return Results.Problem("An unexpected error occurred during token refresh.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+
+                // Found valid token, now find user
+                CoreIdentUser? user;
+                try
+                {
+                    user = await userStore.FindUserByIdAsync(existingToken.SubjectId, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error finding user {UserId} during token refresh", existingToken.SubjectId);
+                    return Results.Problem("An unexpected error occurred during user lookup.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+
+                if (user == null)
+                {
+                    logger.LogError("User {UserId} associated with refresh token {RefreshTokenHandle} not found.", existingToken.SubjectId, existingToken.Handle);
+                    return Results.BadRequest(new { error = "invalid_grant", error_description = "User associated with refresh token not found." });
+                }
+
+                // Generate NEW tokens
+                string newAccessToken;
+                string newRefreshTokenHandle;
+                try
+                {
+                    newAccessToken = await tokenService.GenerateAccessTokenAsync(user); // Reuse original scopes implicitly
+                    if (options.Value.TokenSecurity.EnableTokenFamilyTracking)
+                    {
+                        newRefreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, existingToken.ClientId, existingToken);
+                    }
+                    else
+                    {
+                        newRefreshTokenHandle = await tokenService.GenerateAndStoreRefreshTokenAsync(user, existingToken.ClientId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error generating new tokens for user {UserId} during refresh", user.Id);
+                    return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+
+                var response = new TokenResponse
+                {
+                    AccessToken = newAccessToken,
+                    ExpiresIn = (int)options.Value.AccessTokenLifetime.TotalSeconds,
+                    RefreshToken = newRefreshTokenHandle,
+                    TokenType = "Bearer"
+                };
+
+                logger.LogInformation("Tokens refreshed successfully for user {UserId} via grant_type=refresh_token", user.Id);
+                return Results.Ok(response);
+            }
             else
             {
                 logger.LogWarning("Unsupported grant_type requested: {GrantType}", grantType);
