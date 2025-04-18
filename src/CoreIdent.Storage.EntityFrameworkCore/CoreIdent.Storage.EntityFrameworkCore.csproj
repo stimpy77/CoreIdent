@@ -10,7 +10,7 @@
     <!-- NuGet Package Properties -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>CoreIdent.Storage.EntityFrameworkCore</PackageId>
-    <Version>0.3.1</Version> <!-- Sync with Core -->
+    <Version>0.3.2</Version> <!-- Sync with Core -->
     <Authors>Jon Davis, and other CoreIdent contributors</Authors>
     <Description>Entity Framework Core persistence provider for CoreIdent. Implements IUserStore, IRefreshTokenStore, etc. using EF Core.</Description>
     <PackageTags>identity;authentication;authorization;security;netcore;aspnetcore;entityframeworkcore;efcore;persistence</PackageTags>
