@@ -391,7 +391,7 @@ This document provides a detailed breakdown of tasks, components, features, test
         - [x] (Optional) Validate that `Audience` is a well-formed absolute URI, or clarify/document the expected format.
         - [x] Add/Update unit tests in `CoreIdent.Core.Tests` to cover all new validation logic and edge cases.
         - [x] Add/Update integration tests (if applicable) to ensure startup fails on invalid configuration.
-    - [ ] Improve documentation (`README`, Training Guide, examples) to consistently emphasize secure management of `SigningKeySecret` and `ClientSecrets`.
+    - [x] Improve documentation (`README`, Training Guide, examples) to consistently emphasize secure management of `SigningKeySecret` and `ClientSecrets`.
 
 ---
 

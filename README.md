@@ -162,7 +162,7 @@ Configure the core options in your `appsettings.json` (or another configuration 
   },
   "CoreIdent": {
     "Issuer": "https://localhost:5001", // IMPORTANT: Replace with your actual issuer URI (HTTPS recommended)
-    "Audience": "myapi",             // IMPORTANT: Replace with your API audience identifier
+    "Audience": "https://localhost:5001",             // IMPORTANT: Replace with your API audience identifier
     "SigningKeySecret": "REPLACE_THIS_WITH_A_VERY_STRONG_AND_SECRET_KEY_32_BYTES_OR_LONGER", // MUST be strong, unique, >= 32 Bytes (256 bits) for HS256, and kept secret!
     "AccessTokenLifetime": "00:15:00",  // 15 minutes
     "RefreshTokenLifetime": "7.00:00:00", // 7 days
@@ -175,7 +175,7 @@ Configure the core options in your `appsettings.json` (or another configuration 
 }
 ```
 
-**⚠️ Important Security Note:** The `SigningKeySecret` is critical. **Never** hardcode it in source control for production. Use secure management practices (Environment Variables, Azure Key Vault, AWS Secrets Manager, etc.). It **must** be cryptographically strong and meet the length requirements for the chosen algorithm (at least 32 bytes for the default HS256).
+**⚠️ Important Security Note:** The `SigningKeySecret` (and any ClientSecrets for confidential clients) are critical. **Never** store them in source control for production. Use secure management practices (Environment Variables, Azure Key Vault, AWS Secrets Manager, etc.). They **must** be cryptographically strong, unique, and kept confidential.
 
 ### 3. Application Setup (`Program.cs`)
 
@@ -626,5 +626,4 @@ Build succeeded.
 Applying migration '20250413033857_InitialCoreIdentSchema'.
 Done.
 ```
-
 If you see errors, double-check your DI registration order and that your DbContext is correctly configured and referenced.
