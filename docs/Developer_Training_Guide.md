@@ -33,7 +33,7 @@ Proper configuration is crucial for security and functionality. CoreIdent uses t
 *   **Key Options:**
     *   `Issuer` (string): The identifier for the token issuer (your application/service). This will appear in the `iss` claim of JWTs. Example: `"https://auth.yourapp.com"`
     *   `Audience` (string): The identifier for the intended recipient(s) of the tokens (your APIs). This will appear in the `aud` claim. Example: `"https://api.yourapp.com"`
-    *   `SigningKeySecret` (string): **CRITICAL:** The secret key used to sign JWTs (using symmetric HS256 algorithm by default in Phase 1). This key MUST be kept confidential and should be strong (long, random). **Never hardcode this in source control.** Use user secrets, environment variables, or Azure Key Vault in production. The key length must meet the requirements for HS256 (minimum 32 bytes / 256 bits recommended).
+    *   `SigningKeySecret` (string): **CRITICAL:** The secret key used to sign JWTs (using symmetric HS256 algorithm by default in Phase 1). This key (and any client secrets for confidential clients) MUST be kept confidential, unique, and cryptographically strong (minimum 32 bytes / 256 bits for HS256). **Never** hardcode secrets in source control. Use secure management practices (User Secrets, Environment Variables, Azure Key Vault, AWS Secrets Manager, etc.).
     *   `AccessTokenLifetime` (TimeSpan): How long an access token is valid. Keep this relatively short (e.g., `"00:15:00"` for 15 minutes).
     *   `RefreshTokenLifetime` (TimeSpan): How long a refresh token is valid. This is typically much longer than the access token (e.g., `"7.00:00:00"` for 7 days).
 
@@ -50,6 +50,7 @@ Proper configuration is crucial for security and functionality. CoreIdent uses t
       // ... other settings
     }
     ```
+    **⚠️ Security Note:** The `SigningKeySecret` and any client secrets for confidential clients are critical and must **never** be stored in source control. Use secure management practices such as Environment Variables, User Secrets, Azure Key Vault, or AWS Secrets Manager.
 *   **Validation:** CoreIdent includes validation for these options. If required settings like `Issuer`, `Audience`, or a sufficiently long `SigningKeySecret` are missing, the application will fail to start, preventing insecure configurations.
 
 **Dependency Injection (`AddCoreIdent`):**

@@ -1,5 +1,8 @@
 # CoreIdent Release Notes
 
+## Version 0.3.3
+- Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
+
 ## Version 0.3.2
 
 - Update `README.md` to fully detail Phase 3 progress (Authorization Code Flow specifics, PKCE, ID Tokens).
