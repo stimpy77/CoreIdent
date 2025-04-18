@@ -16,8 +16,8 @@ public static class CoreIdentEntityFrameworkCoreExtensions
     /// </summary>
     /// <typeparam name="TContext">Your application's DbContext type that includes CoreIdent entities.</typeparam>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-    /// <param name="enableTokenCleanup">Optional: Set to true to enable the background service that cleans up expired tokens (defaults to true).</param>
-    /// <param name="enableAuthorizationCodeCleanup">Optional: Set to true to enable the background service that cleans up expired authorization codes (defaults to true).</param>
+    /// <param name="enableTokenCleanup">Optional: Set to true to enable the background service that cleans up expired tokens.</param>
+    /// <param name="enableAuthorizationCodeCleanup">Optional: Set to true to enable the background service that cleans up expired authorization codes.</param>
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddCoreIdentEntityFrameworkStores<TContext>(
         this IServiceCollection services,

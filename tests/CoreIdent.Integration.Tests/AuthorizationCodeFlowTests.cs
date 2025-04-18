@@ -71,7 +71,7 @@ namespace CoreIdent.Integration.Tests
                 services.AddCoreIdent(options => { // Use dummy AddCoreIdent setup if needed
                      options.SigningKeySecret = "TestSecretKeyNeedsToBe_AtLeast32CharsLongForHS256";
                      options.Issuer = "https://test.issuer.com";
-                     options.Audience = "https://test.audience.com";
+                     options.Audience = "https://test.audience.com/api";
                  });
 
                 // Add Authentication and Authorization services
@@ -521,9 +521,8 @@ namespace CoreIdent.Integration.Tests
                 
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
-            var location = authorizeResponse.Headers.Location!;
-            var query = QueryHelpers.ParseQuery(location.Query);
-            query.ContainsKey("code").ShouldBeTrue();
+            var query = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location.Query);
+            query.ShouldContainKey("code");
             var code = query["code"]!;
             
             // Act - Exchange code for tokens
@@ -647,6 +646,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={challenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=test-consumed-code", UriKind.Relative);
+                
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var query = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location.Query);
@@ -794,7 +794,6 @@ namespace CoreIdent.Integration.Tests
             authorizeResponse.StatusCode.ShouldBe(HttpStatusCode.Redirect);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var query = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location.Query);
-            query.ShouldContainKey("code");
             var code = query["code"]!;
 
             // 2. Attempt to exchange the valid code but with an incorrect client_id

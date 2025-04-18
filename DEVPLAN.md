@@ -382,15 +382,15 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [X] Implement persistent `IAuthorizationCodeStore` using EF Core, including automatic cleanup/expiry.
     - [X] Ensure robust concurrency handling in the `IAuthorizationCodeStore` implementation (preventing race conditions).
     - [x] Define and document supported client authentication methods for the `/token` endpoint (e.g., Basic Auth header, request body parameters) and ensure secure handling/verification of client secrets.
-    - [ ] Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
-        - [ ] Validate that `Issuer` is a well-formed absolute URI (using `Uri.TryCreate` with `UriKind.Absolute`).
-        - [ ] Enforce that `Issuer` uses the `https` scheme, unless the host is a loopback address (e.g., `localhost` or `127.0.0.1`).
-        - [ ] Validate that `RefreshTokenLifetime` is strictly greater than `AccessTokenLifetime`.
-        - [ ] Enforce reasonable maximum values for token lifetimes (e.g., `AccessTokenLifetime` ≤ 1 day, `RefreshTokenLifetime` ≤ 90 days).
-        - [ ] Validate that `ConsumedTokenRetentionPeriod`, if specified, is non-negative.
-        - [ ] (Optional) Validate that `Audience` is a well-formed absolute URI, or clarify/document the expected format.
-        - [ ] Add/Update unit tests in `CoreIdent.Core.Tests` to cover all new validation logic and edge cases.
-        - [ ] Add/Update integration tests (if applicable) to ensure startup fails on invalid configuration.
+    - [x] Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
+        - [x] Validate that `Issuer` is a well-formed absolute URI (using `Uri.TryCreate` with `UriKind.Absolute`).
+        - [x] Enforce that `Issuer` uses the `https` scheme, unless the host is a loopback address (e.g., `localhost` or `127.0.0.1`).
+        - [x] Validate that `RefreshTokenLifetime` is strictly greater than `AccessTokenLifetime`.
+        - [x] Enforce reasonable maximum values for token lifetimes (e.g., `AccessTokenLifetime` ≤ 1 day, `RefreshTokenLifetime` ≤ 90 days).
+        - [x] Validate that `ConsumedTokenRetentionPeriod`, if specified, is non-negative.
+        - [x] (Optional) Validate that `Audience` is a well-formed absolute URI, or clarify/document the expected format.
+        - [x] Add/Update unit tests in `CoreIdent.Core.Tests` to cover all new validation logic and edge cases.
+        - [x] Add/Update integration tests (if applicable) to ensure startup fails on invalid configuration.
     - [ ] Improve documentation (`README`, Training Guide, examples) to consistently emphasize secure management of `SigningKeySecret` and `ClientSecrets`.
 
 ---
@@ -537,7 +537,6 @@ This document provides a detailed breakdown of tasks, components, features, test
     *   Example applications showcasing integration.
     *   CI/CD pipeline for automated builds, testing, and NuGet publishing.
     *   Contribution guidelines and community setup (e.g., GitHub Discussions).
-    - [ ] Perform ongoing code-level verification against documentation throughout Phase 5 activities.
 *   **Focus:** User adoption, developer support, community building, polish.
 
 ## Phase 6: Client Libraries for Mobile & Desktop Applications

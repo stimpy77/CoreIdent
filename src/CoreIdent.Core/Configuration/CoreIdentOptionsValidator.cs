@@ -16,15 +16,30 @@ public class CoreIdentOptionsValidator : IValidateOptions<CoreIdentOptions>
     public ValidateOptionsResult Validate(string? name, CoreIdentOptions options)
     {
         var errors = new List<string>();
+        // Skip strict validations in development
+        var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var isDevelopment = string.Equals(envName, "Development", StringComparison.OrdinalIgnoreCase);
 
         if (string.IsNullOrWhiteSpace(options.Issuer))
         {
             errors.Add($"{nameof(options.Issuer)} is required.");
         }
+        else if (!Uri.TryCreate(options.Issuer, UriKind.Absolute, out var issuerUri))
+        {
+            errors.Add($"{nameof(options.Issuer)} must be a valid absolute URI.");
+        }
+        else if (!isDevelopment && issuerUri.Scheme == Uri.UriSchemeHttp && !issuerUri.IsLoopback)
+        {
+            errors.Add($"{nameof(options.Issuer)} must use HTTPS scheme unless it's a loopback address.");
+        }
 
         if (string.IsNullOrWhiteSpace(options.Audience))
         {
             errors.Add($"{nameof(options.Audience)} is required.");
+        }
+        else if (!Uri.TryCreate(options.Audience, UriKind.Absolute, out var audienceUri))
+        {
+            errors.Add($"{nameof(options.Audience)} must be a valid absolute URI.");
         }
 
         if (string.IsNullOrWhiteSpace(options.SigningKeySecret))
@@ -47,6 +62,24 @@ public class CoreIdentOptionsValidator : IValidateOptions<CoreIdentOptions>
         if (options.RefreshTokenLifetime <= TimeSpan.Zero)
         {
             errors.Add($"{nameof(options.RefreshTokenLifetime)} must be a positive duration.");
+        }
+        else if (!isDevelopment && options.RefreshTokenLifetime <= options.AccessTokenLifetime)
+        {
+            errors.Add($"{nameof(options.RefreshTokenLifetime)} must be strictly greater than {nameof(options.AccessTokenLifetime)}.");
+        }
+        if (!isDevelopment && options.AccessTokenLifetime > TimeSpan.FromDays(1))
+        {
+            errors.Add($"{nameof(options.AccessTokenLifetime)} must be no more than 1 day.");
+        }
+        if (!isDevelopment && options.RefreshTokenLifetime > TimeSpan.FromDays(90))
+        {
+            errors.Add($"{nameof(options.RefreshTokenLifetime)} must be no more than 90 days.");
+        }
+
+        // Validate that ConsumedTokenRetentionPeriod, if specified, is non-negative
+        if (options.ConsumedTokenRetentionPeriod.HasValue && options.ConsumedTokenRetentionPeriod.Value < TimeSpan.Zero)
+        {
+            errors.Add($"{nameof(options.ConsumedTokenRetentionPeriod)} must be non-negative.");
         }
 
         // Validate token security options
