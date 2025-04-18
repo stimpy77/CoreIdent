@@ -297,7 +297,7 @@ namespace CoreIdent.Integration.Tests
 
         private string ExtractAuthorizationCode(HttpResponseMessage response)
         {
-            var query = QueryHelpers.ParseQuery(response.Headers.Location.Query);
+            var query = QueryHelpers.ParseQuery(response.Headers.Location?.Query ?? throw new InvalidOperationException("Location header is null"));
             query.ShouldContainKey("code");
             return query["code"]!;
         }
@@ -531,7 +531,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });
@@ -618,7 +618,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = invalidVerifier // Use the wrong verifier
             });
@@ -656,7 +656,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = verifier
             });
@@ -670,7 +670,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code, // Reuse the same code
+                ["code"] = code!, // Reuse the same code
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = verifier
             });
@@ -708,7 +708,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = wrongRedirectUri, // Mismatched URI
                 ["code_verifier"] = verifier
             });
@@ -802,7 +802,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "invalid-client-id", // Different from the client that obtained the code
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });
@@ -856,7 +856,7 @@ namespace CoreIdent.Integration.Tests
             var errorResponse = JsonDocument.Parse(responseContent).RootElement;
             
             errorResponse.GetProperty("error").GetString().ShouldBe("invalid_grant");
-            errorResponse.GetProperty("error_description").GetString().ShouldContain("verifier");
+            errorResponse.GetProperty("error_description").GetString()!.ShouldContain("verifier");
         }
 
         [Fact]
@@ -883,7 +883,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });
@@ -901,7 +901,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "refresh_token",
                 ["client_id"] = "test-authcode-client",
-                ["refresh_token"] = refreshToken!
+                ["refresh_token"] = refreshToken ?? string.Empty
             });
             
             var refreshResponse = await _client.PostAsync("/auth/token", refreshRequest);
@@ -928,7 +928,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "refresh_token",
                 ["client_id"] = "test-authcode-client",
-                ["refresh_token"] = invalidRefreshToken
+                ["refresh_token"] = invalidRefreshToken ?? string.Empty
             });
             
             var refreshResponse = await _client.PostAsync("/auth/token", refreshRequest);
@@ -966,7 +966,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });
@@ -996,7 +996,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "refresh_token",
                 ["client_id"] = "test-authcode-client",
-                ["refresh_token"] = refreshToken!
+                ["refresh_token"] = refreshToken ?? string.Empty
             });
             
             var refreshResponse = await _client.PostAsync("/auth/token", refreshRequest);
@@ -1118,7 +1118,7 @@ namespace CoreIdent.Integration.Tests
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
                 // client_id is in the Authorization header now
@@ -1161,7 +1161,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });
@@ -1212,7 +1212,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = "test-authcode-client",
-                ["code"] = code,
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = codeVerifier
             });

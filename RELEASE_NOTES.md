@@ -1,5 +1,18 @@
 # CoreIdent Release Notes
 
+## Version 0.3.2
+
+- Update `README.md` to fully detail Phase 3 progress (Authorization Code Flow specifics, PKCE, ID Tokens).
+- Enhance Developer Training Guide (`docs/Developer_Training_Guide.md`) with sections covering OAuth 2.0/OIDC concepts (Auth Code Flow, PKCE, ID Tokens).
+- Implement comprehensive negative-path and edge-case integration tests for existing flows (e.g., invalid/expired tokens/codes, PKCE failures, mismatched redirect_uri, client auth errors, malformed requests, concurrency issues).
+- Update `LLMINDEX.md` to include references to Phase 3 components and completed features (Authorization Code Flow, related models/stores).
+- Improve setup guidance and examples, clarifying DI registration order (`AddCoreIdent`, `AddDbContext`, `AddCoreIdentEntityFrameworkStores`) and EF Core migration process.
+- Add explicit documentation and examples emphasizing the security responsibilities when using `DelegatedUserStore` (especially `ValidateCredentialsAsync`).
+- Provide clear documentation and code examples for integrating CoreIdent entity configurations into an existing `DbContext` (both inheritance and `ApplyConfigurationsFromAssembly` methods).
+- Implement persistent `IAuthorizationCodeStore` using EF Core, including automatic cleanup/expiry.
+- Ensure robust concurrency handling in the `IAuthorizationCodeStore` implementation (preventing race conditions).
+- Define and document supported client authentication methods for the `/token` endpoint (e.g., Basic Auth header, request body parameters) and ensure secure handling/verification of client secrets.
+
 ## Version 0.3.1
 
 This release introduces significant features from Phase 3, focusing on standard OAuth 2.0/OIDC flows and enhanced security.
