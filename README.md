@@ -53,7 +53,7 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 **Where CoreIdent is heading (Future Phases):**
 
-*   **Full OAuth 2.0 / OIDC Server:** Implementing remaining standard flows (Client Credentials, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
+*   **Full OAuth 2.0 / OIDC Server:** Implementing remaining standard flows (~~Client Credentials~~, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
 *   **OIDC Compliance:** Discovery (`/.well-known/openid-configuration`), JWKS (`/.well-known/jwks.json`), ID Tokens.
 *   **User Interaction:** Consent screens, standard logout endpoints.
 *   **Extensible Provider Model:**
@@ -69,6 +69,11 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
     *   Secure token storage and management
     *   Offline authentication support
 *   **Tooling:** `dotnet new` templates, comprehensive documentation.
+*   **(In Progress)** Client Credentials Flow.
+*   **(Completed)** Client Credentials Flow (`/auth/token` grant type `client_credentials`).
+*   **(In Progress)** OIDC Discovery & JWKS Endpoints.
+
+For more details on these features, see the [Developer Training Guide](./docs/Developer_Training_Guide.md).
 
 **Is this a replacement for IdentityServer?**
 
@@ -431,8 +436,13 @@ app.UseHttpsRedirection();
 app.UseAuthentication(); // Must be called before UseAuthorization
 app.UseAuthorization();
 
-// Map CoreIdent endpoints (default prefix is /auth)
-app.MapCoreIdentEndpoints("/auth"); // Use basePath parameter to change, e.g., app.MapCoreIdentEndpoints(basePath: "/identity");
+// Map CoreIdent endpoints
+app.MapCoreIdentEndpoints(options =>
+{
+    // Example: Customize the base path or specific endpoints
+    // options.BasePath = "/identity";
+    // options.RegisterPath = "signup";
+});
 
 // Map your application's endpoints/controllers
 app.MapGet("/", () => "Hello World!");
@@ -447,9 +457,9 @@ app.Run();
 
 ### 4. Core Functionality Available Now (Phase 3 In Progress)
 
-With the setup above, the following CoreIdent endpoints are available (default prefix `/auth`):
+With the setup above, the following CoreIdent endpoints are available (default prefix `/auth`, configurable via `MapCoreIdentEndpoints`):
 
-*   `POST /auth/register`: Register a new user (requires non-delegated `IUserStore`, e.g., EF Core, or `CreateUserAsync` delegate).
+*   `POST /auth/register` (or configured path): Register a new user.
     *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
     *   **Response Status Codes**: `201 Created`, `400 Bad Request`, `409 Conflict`
     *   **Usage Example (curl)**:
@@ -459,7 +469,7 @@ With the setup above, the following CoreIdent endpoints are available (default p
           -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
         ```
 
-*   `POST /auth/login`: Authenticates a user with email/password and issues JWT tokens.
+*   `POST /auth/login` (or configured path): Authenticates a user with email/password and issues JWT tokens.
     *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
     *   **Response Status Codes**: `200 OK`, `400 Bad Request`, `401 Unauthorized`, `500 Internal Server Error`
     *   **Response Body**:
@@ -480,22 +490,26 @@ With the setup above, the following CoreIdent endpoints are available (default p
           -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
         ```
 
-*   `POST /auth/token/refresh`: Exchange a valid refresh token for new tokens (uses `IRefreshTokenStore`).
-    *   **Request Body**: `{ "refreshToken": "abcdef123456..." }`
-    *   **Response Body**: (Same as login)
+*   `POST /auth/token` (grant_type=refresh_token) (or configured path): Exchange a valid refresh token for new tokens.
+    *   **Request Body (form-urlencoded)**: `grant_type=refresh_token&refresh_token=abcdef123456...`
+    *   **Response Body**: (Same as login, potentially without refresh token depending on config/flow)
     *   **Security**: Implements refresh token rotation and **token theft detection** (family tracking & revocation) by default. You can opt-out via `CoreIdentOptions.TokenSecurity.EnableTokenFamilyTracking = false`.
 
 **OAuth 2.0 / OIDC Endpoints (Phase 3):**
 
-*   `GET /auth/authorize`: Initiates the Authorization Code flow. Validates the request, authenticates the user, and redirects back with an authorization code.
+*   `GET /auth/authorize` (or configured path): Initiates the Authorization Code flow.
     *   Required parameters: `client_id`, `redirect_uri`, `response_type=code`, `scope`
     *   Recommended parameters: `state`, `nonce`
     *   PKCE parameters: `code_challenge`, `code_challenge_method=S256`
     *   Example: `/auth/authorize?client_id=my-client&response_type=code&redirect_uri=https://my-app.com/callback&scope=openid%20profile&state=abc123&code_challenge=<challenge>&code_challenge_method=S256`
-*   `POST /auth/token` (grant_type=authorization_code): Exchanges an authorization code for tokens.
+*   `POST /auth/token` (grant_type=authorization_code) (or configured path): Exchanges an authorization code for tokens.
     *   Required parameters (form-encoded): `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `code_verifier` (for PKCE)
-    *   Confidential clients also require authentication.
+    *   Confidential clients also require authentication (Basic Auth or request body).
     *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "refresh_token": "...", "id_token": "..." }`
+*   `POST /auth/token` (grant_type=client_credentials) (or configured path): Issues an access token directly to a confidential client.
+    *   Required parameters (form-encoded): `grant_type=client_credentials`, `scope` (optional)
+    *   Requires client authentication (Basic Auth header OR `client_id`/`client_secret` in request body).
+    *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "scope": "..." }` (No refresh token)
 
 **Storage:**
 *   **EF Core:** Provides persistence for users, refresh tokens, clients, scopes, **and authorization codes**. Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations. **Expired authorization codes are cleaned up automatically by a background service.**
@@ -574,56 +588,4 @@ Contributions, feedback, and ideas are highly welcome! Please refer to the (upco
 
 ### Why does the DI registration order matter?
 **Order is critical** because:
-- `AddCoreIdent()` registers the core services and default (in-memory) stores.
-- `AddDbContext<YourDbContext>()` registers your EF Core context in the DI container.
-- `AddCoreIdentEntityFrameworkStores<YourDbContext>()` replaces the in-memory stores with EF Core-backed implementations, which depend on your DbContext being registered first.
-
-If you call `AddCoreIdentEntityFrameworkStores` before `AddDbContext`, the EF Core stores will not be able to resolve the context and will fail at runtime.
-
-### Common Issues & Solutions
-
-- **Error: "No service for type 'YourDbContext' has been registered."**
-  - **Solution:** Ensure you called `AddDbContext<YourDbContext>()` *before* `AddCoreIdentEntityFrameworkStores<YourDbContext>()`.
-
-- **Error: "Table 'Users'/'RefreshTokens' does not exist" or similar database errors**
-  - **Solution:** You likely have not run EF Core migrations. See the migration instructions below.
-
-- **Error: "Cannot access a disposed object" (when using SQLite in-memory for tests)**
-  - **Solution:** Ensure the SQLite connection remains open for the lifetime of your test host. See integration test examples for details.
-
-### EF Core Migration Process (Quick Reference)
-
-1. **Install EF Core CLI tools (if not already):**
-   ```bash
-   dotnet tool install --global dotnet-ef
-   ```
-2. **Add a migration:**
-   ```bash
-   dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject -o Data/Migrations
-   ```
-   - Replace `YourApplicationDbContext` with your DbContext class name.
-   - Adjust `--project` and `--startup-project` paths as needed.
-3. **Apply the migration:**
-   ```bash
-   dotnet ef database update --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject
-   ```
-
-**Official EF Core Migrations Documentation:**
-- [EF Core Migrations Guide (Microsoft Docs)](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli)
-
-### Sample Migration Output
-When you run `dotnet ef migrations add InitialCoreIdentSchema`, you should see output similar to:
-```
-Build started...
-Build succeeded.
-To undo this action, use 'ef migrations remove'
-Done. To undo this action, use 'ef migrations remove'
-```
-And after `dotnet ef database update`:
-```
-Build started...
-Build succeeded.
-Applying migration '20250413033857_InitialCoreIdentSchema'.
-Done.
-```
-If you see errors, double-check your DI registration order and that your DbContext is correctly configured and referenced.
+- `

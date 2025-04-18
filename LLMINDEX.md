@@ -44,6 +44,8 @@ things are or how they were supposed to work.
             *   Added automatic cleanup/expiry for authorization codes (`src/CoreIdent.Storage.EntityFrameworkCore/Services/AuthorizationCodeCleanupService.cs`).
             *   Ensured robust concurrency handling in `IAuthorizationCodeStore` implementations.
         *   **In Progress:** Client Credentials Flow, Discovery endpoints.
+        *   **Completed:** Client Credentials Flow (`grant_type=client_credentials` added to `/token` endpoint logic).
+        *   **Next:** Discovery endpoints.
     *   **Phase 4 (Future):** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
     *   **Phase 5 (Future):** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Reference:** `DEVPLAN.md`: Detailed breakdown of tasks for each phase.
@@ -112,6 +114,7 @@ This is the central library containing the core logic, interfaces, and models.
             *   Maps `GET /authorize` endpoint. Includes robust concurrency handling for code generation.
             *   Enhances `POST /token` endpoint to handle `grant_type=authorization_code` with PKCE validation.
             *   Token refresh endpoint (`POST /token/refresh`) implements token theft detection with configurable behavior.
+            *   Added `client_credentials` grant type handling to `/token` endpoint.
 
 ## 6. EF Core Storage Project Details: `src\CoreIdent.Storage.EntityFrameworkCore`
 
@@ -129,6 +132,8 @@ This is the central library containing the core logic, interfaces, and models.
         *   `AuthorizationCodeCleanupService.cs`: Background service that automatically removes expired authorization codes.
     *   `Extensions`: Contains DI extensions.
         *   `CoreIdentEntityFrameworkCoreExtensions.cs`: Contains `AddCoreIdentEntityFrameworkStores` extension to register EF Core stores (Scoped) with optional token and authorization code cleanup services.
+    *   **Next Steps:** Client Credentials Flow, Discovery endpoints
+    *   **Next Steps:** Discovery endpoints
 
 ## 6.5 Delegated User Store Adapter Project Details: `src\CoreIdent.Adapters.DelegatedUserStore`
 
@@ -145,7 +150,7 @@ This is the central library containing the core logic, interfaces, and models.
     *   `AuthorizationCodeFlowTests.cs`: Tests for the Authorization Code Flow with PKCE (including happy path and negative path tests).
     *   `RefreshTokenEndpointTests.cs`: Tests for the token refresh endpoint, including token theft detection scenarios.
 *   **`CoreIdent.TestHost`:** A helper project providing a shared `WebApplicationFactory` for integration tests.
-*   **Frameworks:** Uses `xUnit` as the test runner and `Shouldly` for assertions. Mocking is done using `Moq`.
+*   **Frameworks:** Uses `xUnit` (v3 - see [What's New](https://xunit.net/docs/getting-started/v3/whats-new) and [Migration Guide](https://xunit.net/docs/getting-started/v3/migration)) as the test runner and `Shouldly` for assertions. Mocking is done using `Moq`.
 
 ## 8. Documentation & Root Files
 
@@ -190,7 +195,10 @@ This is the central library containing the core logic, interfaces, and models.
             *   Enhanced `CoreIdentOptionsValidator` to validate token security configuration, ensuring consistent security behavior.
             *   Implemented secure hashing of refresh token handles using SHA-256 with user/client ID salting.
             *   Added support for storing both raw (legacy) and hashed token handles during migration period.
-    *   **Next Steps:** Client Credentials Flow, Discovery endpoints
+        *   **Completed:** Client Credentials Flow (`grant_type=client_credentials` added to `/token` endpoint logic).
+        *   **Next:** Discovery endpoints.
+    *   **Phase 4 (Future):** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
+    *   **Phase 5 (Future):** Advanced Features & Polish (More Flows, Extensibility, Templates).
 
 ## 10. Conclusion
 

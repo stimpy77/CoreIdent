@@ -15,8 +15,8 @@ public interface IAuthorizationCodeStore
     /// </summary>
     /// <param name="code">The authorization code details to store.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken);
+    /// <returns>A task that represents the asynchronous operation, containing the result of the store operation.</returns>
+    Task<StoreResult> StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken);
 
     /// <summary>
     /// Retrieves the authorization code details associated with the provided code handle.

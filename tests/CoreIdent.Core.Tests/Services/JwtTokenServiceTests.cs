@@ -126,6 +126,19 @@ public class JwtTokenServiceTests
         var user = _testUser;
         var requestedScopes = new List<string> { "api1" }; // Request the scope that allows "custom_claim"
 
+        // --- Check claims generation separately ---
+        var userClaimsFromStore = await _mockUserStore.Object.GetClaimsAsync(user, CancellationToken.None);
+        // Need access to the private GetClaimsForTokenAsync or replicate its logic for testing
+        // Let's create a minimal list based on expected logic for this test
+        var expectedClaims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id), // This is the key check
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // JTI is random, check type
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()), // IAT, check type/approx value
+            new Claim("custom_claim", "value"), // Allowed by scope api1
+            new Claim("scope", string.Join(" ", requestedScopes)) // Scope claim
+        };
+
         // Act
         var token = await _tokenService.GenerateAccessTokenAsync(user, requestedScopes);
 
@@ -155,9 +168,16 @@ public class JwtTokenServiceTests
         var jwtToken = (JwtSecurityToken)validatedToken;
         jwtToken.Issuer.ShouldBe(_options.Issuer);
         jwtToken.Audiences.ShouldContain(_options.Audience);
-        jwtToken.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == user.Id);
+
+        // Assert core claims exist and have correct values/types
+        var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub);
+        subClaim.ShouldNotBeNull();
+        subClaim.Value.ShouldBe(user.Id); // Specific assertion for sub claim
+
         jwtToken.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Jti); // Check for JTI
+        jwtToken.Claims.ShouldContain(c => c.Type == JwtRegisteredClaimNames.Iat); // Check for IAT
         jwtToken.Claims.ShouldContain(c => c.Type == "custom_claim" && c.Value == "value"); // Check for custom claim from store
+        jwtToken.Claims.ShouldContain(c => c.Type == "scope" && c.Value == string.Join(" ", requestedScopes)); // Check scope claim
 
         // Check expiry is roughly correct
         var expectedExpiry = DateTime.UtcNow.Add(_options.AccessTokenLifetime);

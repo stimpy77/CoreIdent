@@ -61,8 +61,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Map CoreIdent endpoints under the /auth base path
-app.MapCoreIdentEndpoints("/auth"); // Specify base path
+// Map CoreIdent endpoints - use the new Action overload
+app.MapCoreIdentEndpoints(options =>
+{
+    // Example: Customize routes if needed for testing
+    // options.BasePath = "/test-auth";
+});
 
 app.Run();
 

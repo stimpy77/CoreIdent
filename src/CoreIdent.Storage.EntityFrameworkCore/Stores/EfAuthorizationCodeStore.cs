@@ -23,7 +23,7 @@ public class EfAuthorizationCodeStore : IAuthorizationCodeStore
     }
 
     /// <inheritdoc />
-    public async Task StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
+    public async Task<StoreResult> StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
     {
         if (code == null) throw new ArgumentNullException(nameof(code));
         cancellationToken.ThrowIfCancellationRequested();
@@ -33,12 +33,24 @@ public class EfAuthorizationCodeStore : IAuthorizationCodeStore
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
+            return StoreResult.Success;
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex)) // Catch specific exception for conflicts
+        {
+            _logger.LogWarning(ex, "Conflict storing authorization code (likely duplicate CodeHandle) for ClientId: {ClientId}", code.ClientId);
+            // Detach the entity that caused the conflict to avoid issues if retried with the same context instance
+            _context.Entry(code).State = EntityState.Detached;
+            return StoreResult.Conflict; 
         }
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Error storing authorization code for ClientId: {ClientId}", code.ClientId);
-            // Consider specific handling for unique constraint violations if CodeHandle hashing is added
-            throw;
+            return StoreResult.Failure; // Indicate general storage failure
+        }
+        catch (Exception ex) // Catch broader exceptions
+        {
+            _logger.LogError(ex, "Unexpected error storing authorization code for ClientId: {ClientId}", code.ClientId);
+            return StoreResult.Failure;
         }
     }
 
@@ -109,5 +121,26 @@ public class EfAuthorizationCodeStore : IAuthorizationCodeStore
         {
             _logger.LogDebug("Authorization code not found during removal attempt.");
         }
+    }
+
+    /// <summary>
+    /// Checks if a DbUpdateException is likely caused by a unique constraint violation.
+    /// Note: This is a best-effort check and might need refinement based on the specific database provider.
+    /// </summary>
+    private bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        // Check for common SQL error codes or messages indicating unique constraint violations
+        // This might need adjustment for different DB providers (SQL Server, PostgreSQL, SQLite)
+        var innerExceptionMessage = ex.InnerException?.Message?.ToLowerInvariant();
+        if (innerExceptionMessage != null)
+        {
+            // SQLite specific check (adjust if using other providers)
+            if (innerExceptionMessage.Contains("sqlite error 19") && innerExceptionMessage.Contains("constraint failed"))
+            {
+                return true;
+            }
+            // Add checks for other providers if necessary (e.g., SQL Server error 2627 or 2601)
+        }
+        return false;
     }
 } 

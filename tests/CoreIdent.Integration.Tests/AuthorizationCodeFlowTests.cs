@@ -140,7 +140,10 @@ namespace CoreIdent.Integration.Tests
                 // 3. Map CoreIdent Endpoints
                 app.UseEndpoints(endpoints =>
                 {
-                    endpoints.MapCoreIdentEndpoints("/auth");
+                    endpoints.MapCoreIdentEndpoints(options => 
+                    {
+                        // Configure routes if needed for this specific test factory setup
+                    });
                 });
 
                 // 4. Add request logging middleware for debugging
