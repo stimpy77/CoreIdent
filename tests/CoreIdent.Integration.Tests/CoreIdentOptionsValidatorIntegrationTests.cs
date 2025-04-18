@@ -25,7 +25,9 @@ namespace CoreIdent.Integration.Tests
         }
 
         [Theory]
+#pragma warning disable xUnit1012 // allow null InlineData for invalidAudience test
         [InlineData(null)]
+#pragma warning restore xUnit1012
         [InlineData("")]
         [InlineData("   ")]
         public void HostStart_InvalidAudience_Missing_ShouldThrow(string invalidAudience)
