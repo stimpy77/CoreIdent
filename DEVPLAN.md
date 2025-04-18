@@ -371,18 +371,26 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `/token` request fails if client secret is incorrect (for confidential clients).
     - [x] `/token` request fails if `redirect_uri` does not match the initial request.
 - [x] **Update README.md** with details on `/authorize` endpoint, PKCE, and related configuration.
-- [ ] **Review Feedback Tasks (Post Phase 3 Auth Code Flow):**
-    - [ ] Update `README.md` to fully detail Phase 3 progress (Authorization Code Flow specifics, PKCE, ID Tokens).
-    - [ ] Enhance Developer Training Guide (`docs/Developer_Training_Guide.md`) with sections covering OAuth 2.0/OIDC concepts (Auth Code Flow, PKCE, ID Tokens).
-    - [ ] Implement comprehensive negative-path and edge-case integration tests for existing flows (e.g., invalid/expired tokens/codes, PKCE failures, mismatched redirect_uri, client auth errors, malformed requests, concurrency issues).
-    - [ ] Update `LLMINDEX.md` to include references to Phase 3 components and completed features (Authorization Code Flow, related models/stores).
-    - [ ] Improve setup guidance and examples, clarifying DI registration order (`AddCoreIdent`, `AddDbContext`, `AddCoreIdentEntityFrameworkStores`) and EF Core migration process.
-    - [ ] Add explicit documentation and examples emphasizing the security responsibilities when using `DelegatedUserStore` (especially `ValidateCredentialsAsync`).
-    - [ ] Provide clear documentation and code examples for integrating CoreIdent entity configurations into an existing `DbContext` (both inheritance and `ApplyConfigurationsFromAssembly` methods).
-    - [ ] Implement persistent `IAuthorizationCodeStore` using EF Core, including automatic cleanup/expiry.
-    - [ ] Ensure robust concurrency handling in the `IAuthorizationCodeStore` implementation (preventing race conditions).
-    - [ ] Define and document supported client authentication methods for the `/token` endpoint (e.g., Basic Auth header, request body parameters) and ensure secure handling/verification of client secrets.
+- [X] **Review Feedback Tasks (Post Phase 3 Auth Code Flow):**
+    - [X] Update `README.md` to fully detail Phase 3 progress (Authorization Code Flow specifics, PKCE, ID Tokens).
+    - [X] Enhance Developer Training Guide (`docs/Developer_Training_Guide.md`) with sections covering OAuth 2.0/OIDC concepts (Auth Code Flow, PKCE, ID Tokens).
+    - [x] Implement comprehensive negative-path and edge-case integration tests for existing flows (e.g., invalid/expired tokens/codes, PKCE failures, mismatched redirect_uri, client auth errors, malformed requests, concurrency issues).
+    - [X] Update `LLMINDEX.md` to include references to Phase 3 components and completed features (Authorization Code Flow, related models/stores).
+    - [X] Improve setup guidance and examples, clarifying DI registration order (`AddCoreIdent`, `AddDbContext`, `AddCoreIdentEntityFrameworkStores`) and EF Core migration process.
+    - [X] Add explicit documentation and examples emphasizing the security responsibilities when using `DelegatedUserStore` (especially `ValidateCredentialsAsync`).
+    - [X] Provide clear documentation and code examples for integrating CoreIdent entity configurations into an existing `DbContext` (both inheritance and `ApplyConfigurationsFromAssembly` methods).
+    - [X] Implement persistent `IAuthorizationCodeStore` using EF Core, including automatic cleanup/expiry.
+    - [X] Ensure robust concurrency handling in the `IAuthorizationCodeStore` implementation (preventing race conditions).
+    - [x] Define and document supported client authentication methods for the `/token` endpoint (e.g., Basic Auth header, request body parameters) and ensure secure handling/verification of client secrets.
     - [ ] Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
+        - [ ] Validate that `Issuer` is a well-formed absolute URI (using `Uri.TryCreate` with `UriKind.Absolute`).
+        - [ ] Enforce that `Issuer` uses the `https` scheme, unless the host is a loopback address (e.g., `localhost` or `127.0.0.1`).
+        - [ ] Validate that `RefreshTokenLifetime` is strictly greater than `AccessTokenLifetime`.
+        - [ ] Enforce reasonable maximum values for token lifetimes (e.g., `AccessTokenLifetime` ≤ 1 day, `RefreshTokenLifetime` ≤ 90 days).
+        - [ ] Validate that `ConsumedTokenRetentionPeriod`, if specified, is non-negative.
+        - [ ] (Optional) Validate that `Audience` is a well-formed absolute URI, or clarify/document the expected format.
+        - [ ] Add/Update unit tests in `CoreIdent.Core.Tests` to cover all new validation logic and edge cases.
+        - [ ] Add/Update integration tests (if applicable) to ensure startup fails on invalid configuration.
     - [ ] Improve documentation (`README`, Training Guide, examples) to consistently emphasize secure management of `SigningKeySecret` and `ClientSecrets`.
 
 ---

@@ -10,12 +10,14 @@
 
 **Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
-**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is underway.
+**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is underway, with **Authorization Code Flow + PKCE and ID Token issuance now complete**.
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
 *   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
-*   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics (Authorization Code Flow + PKCE, Token Theft Detection, Client Credentials, Discovery).
+*   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics
+    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection.
+    *   **In Progress:** Client Credentials Flow, Discovery endpoints.
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Phase 6:** Client Libraries for Mobile & Desktop Applications.
@@ -38,12 +40,15 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 *   **Core Authentication API:** Secure `/auth/register`, `/auth/login`, and `/auth/token/refresh` endpoints (default prefix `/auth`).
 *   **JWT Issuance:** Standard access tokens upon login.
 *   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), rotation, **securely hashed token handle storage** (raw handle returned to client, hash stored in DB), and **token theft detection** with family revocation (enabled by default).
-*   **OAuth/OIDC:** Authorization Code Flow with PKCE (`/auth/authorize`, `/auth/token`).
+*   **OAuth/OIDC:**
+    *   **Authorization Code Flow with PKCE:** Secure flow for web apps, SPAs, and mobile clients via `/auth/authorize` and `/auth/token` (grant type `authorization_code`). PKCE is enforced.
+    *   **ID Token Issuance:** Standard OIDC ID tokens are generated alongside access tokens for the Authorization Code flow.
 *   **Password Hashing:** Secure password handling using ASP.NET Core Identity's hasher.
 *   **Pluggable Storage:**
-    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users, refresh tokens, clients, scopes, and auth codes in your database (SQL Server, PostgreSQL, SQLite, etc.).
+    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users, refresh tokens, clients, scopes, **and authorization codes** in your database (SQL Server, PostgreSQL, SQLite, etc.).
     *   `CoreIdent.Adapters.DelegatedUserStore`: Integrate with your existing user database/authentication logic.
-*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore` interfaces for customization.
+*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore` interfaces for customization. **EF Core implementations** (e.g., `EfAuthorizationCodeStore`) are registered automatically when using `AddCoreIdentEntityFrameworkStores`.
+*   **Authorization Code Storage & Cleanup:** Authorization codes issued during OAuth flows are persisted in the database via EF Core (`EfAuthorizationCodeStore`). Expired codes are automatically cleaned up by a background service (`AuthorizationCodeCleanupService`) registered by default. The store implementation includes robust concurrency handling to prevent race conditions during code redemption and cleanup.
 *   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json`.
 
 **Where CoreIdent is heading (Future Phases):**
@@ -119,9 +124,9 @@ Phase 2 built on the foundation by providing persistent storage options and enha
 
 Phase 3 implements the essential backend logic for standard authorization flows and discovery:
 
-*   **Authorization Code Flow + PKCE**: Secure flow for web apps, SPAs, and mobile clients (`/auth/authorize`, `/auth/token`).
-*   **ID Token Issuance**: Standard OIDC ID tokens generated alongside access tokens.
-*   **Token Theft Detection**: Enhanced security for refresh tokens using family tracking and automatic revocation (enabled by default).
+*   **Authorization Code Flow + PKCE (Completed)**: Secure flow for web apps, SPAs, and mobile clients (`/auth/authorize`, `/auth/token`). PKCE is enforced.
+*   **ID Token Issuance (Completed)**: Standard OIDC ID tokens generated alongside access tokens for the Authorization Code flow.
+*   **Token Theft Detection (Completed)**: Enhanced security for refresh tokens using family tracking and automatic revocation (enabled by default).
 *   **(In Progress)** Client Credentials Flow.
 *   **(In Progress)** OIDC Discovery & JWKS Endpoints.
 
@@ -237,99 +242,163 @@ builder.Services.AddAuthorization(); // Needed for [Authorize] attributes
 // --- Option A: Entity Framework Core (Recommended for new apps or full control) ---
 // Prerequisite: Add NuGet packages CoreIdent.Storage.EntityFrameworkCore and a DB provider (e.g., Microsoft.EntityFrameworkCore.Sqlite)
 
-// i. Register your DbContext (make sure it inherits from CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext or includes its entity configurations)
+// i. Register your DbContext.
+//    Ensure your DbContext class (e.g., YourAppDbContext) either:
+//      a) Inherits from CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext, OR
+//      b) Includes CoreIdent's entity configurations by calling 
+//         `modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreIdentDbContext).Assembly);` 
+//         within its own `OnModelCreating` method.
+//
+//    Example a) Inheritance:
+//    ```csharp
+//    // In YourApplicationDbContext.cs
+//    using CoreIdent.Storage.EntityFrameworkCore;
+//    using Microsoft.EntityFrameworkCore;
+//    
+//    public class YourApplicationDbContext : CoreIdentDbContext // Inherit here
+//    {
+//        // Your application's specific DbSets
+//        public DbSet<YourAppEntity> YourAppEntities { get; set; }
+//
+//        public YourApplicationDbContext(DbContextOptions<YourApplicationDbContext> options)
+//            : base(options) // Pass options to base constructor
+//        {
+//        }
+//
+//        protected override void OnModelCreating(ModelBuilder modelBuilder)
+//        {
+//            base.OnModelCreating(modelBuilder); // IMPORTANT: Call base implementation FIRST
+//
+//            // Your application's specific entity configurations
+//            modelBuilder.Entity<YourAppEntity>().HasKey(e => e.Id);
+//            // ... other configurations ...
+//        }
+//    }
+//    ```
+//
+//    Example b) ApplyConfigurationsFromAssembly:
+//    ```csharp
+//    // In YourApplicationDbContext.cs
+//    using CoreIdent.Storage.EntityFrameworkCore; // Needed for CoreIdentDbContext type
+//    using Microsoft.EntityFrameworkCore;
+//    
+//    public class YourApplicationDbContext : DbContext // Inherit from standard DbContext
+//    {
+//        // Your application's specific DbSets
+//        public DbSet<YourAppEntity> YourAppEntities { get; set; }
+//
+//        // CoreIdent's DbSets (if you need to access them directly, otherwise optional)
+//        // public DbSet<CoreIdentUser> Users { get; set; }
+//        // public DbSet<CoreIdentRefreshToken> RefreshTokens { get; set; }
+//        // ... etc ...
+//
+//        public YourApplicationDbContext(DbContextOptions<YourApplicationDbContext> options)
+//            : base(options)
+//        {
+//        }
+//
+//        protected override void OnModelCreating(ModelBuilder modelBuilder)
+//        {
+//            base.OnModelCreating(modelBuilder); 
+//
+//            // Apply CoreIdent's configurations
+//            modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreIdentDbContext).Assembly); // Apply CoreIdent configurations
+//
+//            // Your application's specific entity configurations
+//            modelBuilder.Entity<YourAppEntity>().HasKey(e => e.Id);
+//            // ... other configurations ...
+//        }
+//    }
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "DataSource=coreident_readme.db;Cache=Shared";
-// Replace YourAppDbContext with your actual DbContext class name if you have one
-// If you don't have one, you can use CoreIdentDbContext directly for CoreIdent data
-builder.Services.AddDbContext<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>(options =>
+builder.Services.AddDbContext<YourApplicationDbContext>(options => // Replace YourApplicationDbContext with your actual DbContext class name
     options.UseSqlite(connectionString)); // Use your desired provider (UseSqlServer, UseNpgsql, etc.)
 
-// ii. Tell CoreIdent to use the EF Core stores mapped to your DbContext type
-// This MUST be called AFTER AddCoreIdent() and AddDbContext()
-// This registers EF Core implementations for: IUserStore, IRefreshTokenStore, IClientStore, IScopeStore, IAuthorizationCodeStore
-// Replace YourAppDbContext if you used your own DbContext above
-builder.Services.AddCoreIdentEntityFrameworkStores<CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext>();
+// ii. Register CoreIdent services and THEN the EF Core stores.
+//    DI Registration Order is IMPORTANT:
+//    1. AddCoreIdent()
+//    2. AddDbContext<YourDbContext>()
+//    3. AddCoreIdentEntityFrameworkStores<YourDbContext>()
+builder.Services.AddCoreIdentEntityFrameworkStores<YourApplicationDbContext>(); // Registers EfUserStore, EfRefreshTokenStore, EfClientStore, EfScopeStore, EfAuthorizationCodeStore, and background cleanup services (including AuthorizationCodeCleanupService) by default.
 
-// iii. IMPORTANT: Remember to add and apply EF Core migrations:
-//    1. dotnet ef migrations add InitialCreate --context CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext -o Data/Migrations -p path/to/YourWebAppProject -s path/to/YourWebAppProject
-//    2. dotnet ef database update --context CoreIdent.Storage.EntityFrameworkCore.CoreIdentDbContext -p path/to/YourWebAppProject -s path/to/YourWebAppProject
-//    Adjust context name and paths as needed. The -o specifies output dir for migrations.
+// iii. IMPORTANT: Add and apply EF Core migrations.
+//     Run these commands from the directory containing your solution file (.sln) or adjust paths accordingly.
+//    1. Add Migration (generates migration code in the storage project):
+//       dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject -o Data/Migrations
+//       - Replace YourApplicationDbContext with your DbContext class name.
+//       - Replace src/CoreIdent.Storage.EntityFrameworkCore with the path to the CoreIdent storage project.
+//       - Replace src/YourWebAppProject with the path to your web application project.
+//       - The -o parameter specifies the output directory within the storage project.
+//    2. Update Database (applies the migration to your database):
+//       dotnet ef database update --context YourApplicationDbContext --startup-project src/YourWebAppProject
+//       - Ensure the --startup-project points to your web application.
 
 // --- Option B: Delegated User Store (For integrating with existing user systems) ---
 /* // Uncomment to use Delegated Store
-// Prerequisite: Add NuGet package CoreIdent.Adapters.DelegatedUserStore
-
-// This replaces the default IUserStore registration (In-Memory or EF Core)
-builder.Services.AddCoreIdentDelegatedUserStore(options =>
-{
-    // Provide delegates that call your existing user management logic
-    // These are examples, implement your actual logic. Return null if user not found.
-
-    // REQUIRED: Find user by their unique ID (adjust types as needed)
-    options.FindUserByIdAsync = async (userId, ct) => {
-        Console.WriteLine($"Delegate: Finding user by ID: {userId}");
-        // Your logic to find user by ID in your system...
-        // Example: var user = await myUserService.FindByIdAsync(userId);
-        // Return a CoreIdentUser representation or null
-        if (userId == "user1_id") return new CoreIdentUser { Id = "user1_id", UserName = "existing_user@example.com", NormalizedUserName = "EXISTING_USER@EXAMPLE.COM" };
-        return null;
-    };
-
-    // REQUIRED: Find user by username/email (use normalized form for lookups)
-    options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
-        Console.WriteLine($"Delegate: Finding user by Normalized Username: {normalizedUsername}");
-        // Your logic to find user by username/email in your system...
-        // Example: var user = await myUserService.FindByEmailAsync(username); // Assuming username is email
-        // Return a CoreIdentUser representation or null
-         if (normalizedUsername == "EXISTING_USER@EXAMPLE.COM") return new CoreIdentUser { Id = "user1_id", UserName = "existing_user@example.com", NormalizedUserName = "EXISTING_USER@EXAMPLE.COM" };
-        return null;
-    };
-
-    // REQUIRED: Validate user credentials
-    options.ValidateCredentialsAsync = async (username, password, ct) => {
-        Console.WriteLine($"Delegate: Validating credentials for: {username}");
-        // Your logic to validate the password against your system...
-        // Example: bool isValid = await myAuthService.CheckPasswordAsync(username, password);
-        // Return true if valid, false otherwise
-        return (username == "existing_user@example.com" && password == "password123"); // Example check
-    };
-
-    // OPTIONAL: Get user claims
-    options.GetClaimsAsync = async (user, ct) => {
-         Console.WriteLine($"Delegate: Getting claims for: {user.UserName}");
-        // Your logic to get claims for the user...
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id!),
-            new Claim(ClaimTypes.Name, user.UserName!),
-            // Add other claims from your system
-            new Claim("custom_claim", "custom_value")
-        };
-        return await Task.FromResult(claims);
-    };
-
-     // OPTIONAL: Create user (if you want /register to work with your system)
-     options.CreateUserAsync = async (user, password, ct) => {
-         Console.WriteLine($"Delegate: Creating user: {user.UserName}");
-         // Your logic to create the user and hash/store the password in your system...
-         // Example: var userId = await myUserService.CreateAsync(user.UserName, password);
-         // Populate the user object with the ID generated by your system
-         user.Id = Guid.NewGuid().ToString(); // Example ID generation
-         // Return StoreResult.Success or StoreResult.Failure/Conflict
-         return await Task.FromResult(CoreIdent.Core.Stores.StoreResult.Success);
-     };
-});
-
+// ... existing code ...
 // NOTE: Delegated IUserStore only handles users. You STILL need persistent storage for
 // Refresh Tokens, Authorization Codes, Clients, and Scopes.
-// Register the EF Core stores separately in this case:
-// i. Register DbContext (as shown in Option A)
-// ii. Register the needed stores (EF Core stores are recommended)
-builder.Services.AddScoped<CoreIdent.Core.Stores.IRefreshTokenStore, EfRefreshTokenStore>();
-builder.Services.AddScoped<CoreIdent.Core.Stores.IAuthorizationCodeStore, EfAuthorizationCodeStore>(); // Requires EfAuthorizationCodeStore implementation
-builder.Services.AddScoped<CoreIdent.Core.Stores.IClientStore, EfClientStore>();
-builder.Services.AddScoped<CoreIdent.Core.Stores.IScopeStore, EfScopeStore>();
-// Ensure migrations for Refresh Tokens, Auth Codes, Clients, Scopes tables are applied (as shown in Option A).
+// Register the EF Core stores separately in this case following the same DI order principles:
+// 1. AddCoreIdent()
+// 2. AddDbContext<YourDbContext>()
+// 3. AddCoreIdentDelegatedUserStore() // Registers Delegated IUserStore
+// 4. Manually register the other EF Core stores you need:
+//    builder.Services.AddScoped<CoreIdent.Core.Stores.IRefreshTokenStore, EfRefreshTokenStore>();
+//    builder.Services.AddScoped<CoreIdent.Core.Stores.IAuthorizationCodeStore, EfAuthorizationCodeStore>(); // TODO: Create EfAuthorizationCodeStore 
+//    builder.Services.AddScoped<CoreIdent.Core.Stores.IClientStore, EfClientStore>();
+//    builder.Services.AddScoped<CoreIdent.Core.Stores.IScopeStore, EfScopeStore>();
+// Ensure migrations for the required tables (RefreshTokens, Auth Codes, Clients, Scopes) are applied (see Option A).
+
+builder.Services.AddCoreIdentDelegatedUserStore(options =>
+{
+    // REQUIRED: Provide functions to find users and validate credentials
+    // These delegates bridge CoreIdent to YOUR existing user system.
+
+    options.FindUserByIdAsync = async (userId, ct) => {
+        // Example: Replace with your actual user service call
+        // var externalUser = await myExternalUserService.FindByIdAsync(userId);
+        // if (externalUser == null) return null;
+        // return new CoreIdentUser { Id = externalUser.Id, UserName = externalUser.Email, ... };
+        await Task.Delay(10); // Placeholder
+        Console.WriteLine($"Delegated: Finding user by ID: {userId}");
+        return new CoreIdentUser { Id = userId, UserName = $"{userId}@delegated.com", Email = $"{userId}@delegated.com", NormalizedUserName = $"{userId}@delegated.com".ToUpperInvariant() }; // Example mapping
+    };
+
+    options.FindUserByUsernameAsync = async (normalizedUsername, ct) => {
+        // Example: Replace with your actual user service call
+        // var externalUser = await myExternalUserService.FindByUsernameAsync(normalizedUsername);
+        // if (externalUser == null) return null;
+        // return new CoreIdentUser { Id = externalUser.Id, UserName = externalUser.Email, ... };
+         await Task.Delay(10); // Placeholder
+         Console.WriteLine($"Delegated: Finding user by Username: {normalizedUsername}");
+         // Simulate finding a user for the example
+         if (normalizedUsername == "DELEGATED@EXAMPLE.COM") {
+             return new CoreIdentUser { Id = "delegated-user-123", UserName = "delegated@example.com", Email = "delegated@example.com", NormalizedUserName = "DELEGATED@EXAMPLE.COM" };
+         }
+         return null;
+    };
+
+    // ⚠️ CRITICAL SECURITY WARNING ⚠️
+    // The 'ValidateCredentialsAsync' delegate receives the user's PLAIN TEXT password.
+    // YOUR implementation of this delegate MUST securely validate this password against
+    // YOUR existing credential store (which MUST store hashed passwords).
+    // CoreIdent's IPasswordHasher is BYPASSED in this flow.
+    // YOU ARE RESPONSIBLE for the security of this validation process.
+    options.ValidateCredentialsAsync = async (username, password, ct) => {
+        // Example: Replace with your actual validation logic calling your service
+        // return await myExternalUserService.CheckPasswordAsync(username, password);
+         await Task.Delay(10); // Placeholder
+         Console.WriteLine($"Delegated: Validating credentials for: {username}");
+         // Simulate password check for the example user
+         return username == "delegated@example.com" && password == "Password123!";
+    };
+
+    // Optional: Provide a function to get user claims if needed
+    options.GetClaimsAsync = async (user, ct) => {
+         await Task.Delay(10); // Placeholder
+         Console.WriteLine($"Delegated: Getting claims for: {user.UserName}");
+         return new List<Claim> { new Claim(ClaimTypes.GivenName, "Delegated"), new Claim(ClaimTypes.Role, "User") };
+    };
+});
 */
 
 
@@ -429,9 +498,59 @@ With the setup above, the following CoreIdent endpoints are available (default p
     *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "refresh_token": "...", "id_token": "..." }`
 
 **Storage:**
-*   **EF Core:** Provides persistence for users, refresh tokens, clients, scopes, and auth codes. Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations.
+*   **EF Core:** Provides persistence for users, refresh tokens, clients, scopes, **and authorization codes**. Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations. **Expired authorization codes are cleaned up automatically by a background service.**
 *   **Delegated:** Adapts user operations (`IUserStore`) to your existing system via `CoreIdent.Adapters.DelegatedUserStore`. **Requires** separate persistent stores (like EF Core) for refresh tokens, auth codes, clients, and scopes.
 *   **Refresh Tokens:** Persisted (usually via EF Core) with the raw handle stored as the primary key and a **securely hashed handle (salted SHA-256)** stored separately. Tokens are rotated upon use, and token theft detection is enabled by default (`EnableTokenFamilyTracking: true`).
+
+## Client Authentication at the /token Endpoint
+
+The `/token` endpoint supports two standard methods for client authentication, as recommended by OAuth 2.0 (RFC 6749 Section 2.3.1):
+
+1. **HTTP Basic Authentication Header**
+   - The client sends its `client_id` and `client_secret` in the `Authorization` header using the `Basic` scheme.
+   - Example header: `Authorization: Basic base64(client_id:client_secret)`
+   - This is the most secure method for confidential clients (e.g., server-side web apps).
+
+2. **Request Body Parameters**
+   - The client includes `client_id` and `client_secret` as form fields in the POST body (content type: `application/x-www-form-urlencoded`).
+   - Example fields: `client_id=my-client&client_secret=supersecret`
+   - This method is supported for compatibility, but Basic Auth is preferred for confidential clients.
+
+**How Confidential vs. Public Clients Are Determined**
+- If a client has one or more registered secrets (`ClientSecrets`), it is treated as a confidential client and must authenticate using one of the above methods.
+- Public clients (e.g., SPAs, mobile apps) must not use secrets and are authenticated only by their `client_id`.
+
+**Secret Verification and Security**
+- Client secrets are securely hashed and stored in the database. Verification uses the same password hasher as user passwords.
+- Only confidential clients should use secrets. Never embed secrets in public client code.
+- If authentication fails (missing or invalid secret), the endpoint returns an `invalid_client` error.
+
+**Example: Basic Auth**
+```
+POST /auth/token
+Authorization: Basic base64(my-client:supersecret)
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=...&redirect_uri=...
+```
+
+**Example: Request Body**
+```
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&client_secret=supersecret
+```
+
+**Error Responses**
+- If client authentication fails, the response will be:
+  ```json
+  { "error": "invalid_client", "error_description": "Client authentication failed (client_id missing)." }
+  ```
+- Or for invalid secret:
+  ```json
+  { "error": "invalid_client", "error_description": "Invalid client secret." }
+  ```
 
 ## Running / Testing
 
@@ -450,3 +569,62 @@ CoreIdent is licensed under the [MIT License](LICENSE).
 ⭐ **Star this repo if you believe in the mission!** ⭐
 
 Contributions, feedback, and ideas are highly welcome! Please refer to the (upcoming) contribution guidelines or open an issue to discuss. Let's build the future of .NET identity together.
+
+## Troubleshooting & FAQ: DI Registration and EF Core Migrations
+
+### Why does the DI registration order matter?
+**Order is critical** because:
+- `AddCoreIdent()` registers the core services and default (in-memory) stores.
+- `AddDbContext<YourDbContext>()` registers your EF Core context in the DI container.
+- `AddCoreIdentEntityFrameworkStores<YourDbContext>()` replaces the in-memory stores with EF Core-backed implementations, which depend on your DbContext being registered first.
+
+If you call `AddCoreIdentEntityFrameworkStores` before `AddDbContext`, the EF Core stores will not be able to resolve the context and will fail at runtime.
+
+### Common Issues & Solutions
+
+- **Error: "No service for type 'YourDbContext' has been registered."**
+  - **Solution:** Ensure you called `AddDbContext<YourDbContext>()` *before* `AddCoreIdentEntityFrameworkStores<YourDbContext>()`.
+
+- **Error: "Table 'Users'/'RefreshTokens' does not exist" or similar database errors**
+  - **Solution:** You likely have not run EF Core migrations. See the migration instructions below.
+
+- **Error: "Cannot access a disposed object" (when using SQLite in-memory for tests)**
+  - **Solution:** Ensure the SQLite connection remains open for the lifetime of your test host. See integration test examples for details.
+
+### EF Core Migration Process (Quick Reference)
+
+1. **Install EF Core CLI tools (if not already):**
+   ```bash
+   dotnet tool install --global dotnet-ef
+   ```
+2. **Add a migration:**
+   ```bash
+   dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject -o Data/Migrations
+   ```
+   - Replace `YourApplicationDbContext` with your DbContext class name.
+   - Adjust `--project` and `--startup-project` paths as needed.
+3. **Apply the migration:**
+   ```bash
+   dotnet ef database update --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject
+   ```
+
+**Official EF Core Migrations Documentation:**
+- [EF Core Migrations Guide (Microsoft Docs)](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli)
+
+### Sample Migration Output
+When you run `dotnet ef migrations add InitialCoreIdentSchema`, you should see output similar to:
+```
+Build started...
+Build succeeded.
+To undo this action, use 'ef migrations remove'
+Done. To undo this action, use 'ef migrations remove'
+```
+And after `dotnet ef database update`:
+```
+Build started...
+Build succeeded.
+Applying migration '20250413033857_InitialCoreIdentSchema'.
+Done.
+```
+
+If you see errors, double-check your DI registration order and that your DbContext is correctly configured and referenced.

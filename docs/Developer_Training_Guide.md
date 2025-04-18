@@ -16,7 +16,7 @@ This section covers the fundamentals implemented in the initial Minimum Viable P
 *   **Dependency Injection:**
     *   Using `AddCoreIdent()` in `Program.cs` or `Startup.cs`.
     *   What services are registered by default.
-    *   *(Note: For persistent storage, the order matters: call `AddCoreIdent()` first, then `AddDbContext()`, then `AddCoreIdentEntityFrameworkStores()`)*
+    *   (Important: When using persistent storage like EF Core, the Dependency Injection registration order is critical. See details below.)
 *   **Endpoint Mapping:**
     *   Using `MapCoreIdentEndpoints()`. Accepts an optional `basePath` parameter (defaults to `/`, but the test host uses `/auth`).
     *   Default endpoints exposed (relative to base path): `/register`, `/login`, `/token/refresh`.
@@ -373,13 +373,81 @@ To keep the core library lean, all EF Core-specific code resides in a separate N
     *   This is the heart of the EF Core integration. It inherits from `Microsoft.EntityFrameworkCore.DbContext`.
     *   It defines `DbSet<>` properties for each CoreIdent entity that needs to be persisted (e.g., `public DbSet<CoreIdentUser> Users { get; set; }`, `public DbSet<CoreIdentRefreshToken> RefreshTokens { get; set; }`).
     *   The `OnModelCreating(ModelBuilder modelBuilder)` method is overridden to configure the database schema using EF Core's Fluent API. This includes defining primary keys (e.g., `refreshToken.HasKey(rt => rt.Handle)`), relationships, indexes, and constraints.
-    *   **Important:** Your application's main `DbContext` should either **inherit from `CoreIdentDbContext`** or **call its configuration logic** within its own `OnModelCreating` to ensure the CoreIdent tables are correctly set up.
+    *   **Important:** Your application's main `DbContext` should either **inherit from `CoreIdentDbContext`** or **call its configuration logic** within its own `OnModelCreating` to ensure the CoreIdent tables are correctly set up. There are two primary ways to achieve this:
+
+        1.  **Inheritance (Simplest):** Your `DbContext` inherits directly from `CoreIdentDbContext`.
+            ```csharp
+            // In YourApplicationDbContext.cs
+            using CoreIdent.Storage.EntityFrameworkCore;
+            using Microsoft.EntityFrameworkCore;
+            
+            public class YourApplicationDbContext : CoreIdentDbContext // Inherit here
+            {
+                // Your application's specific DbSets
+                public DbSet<YourAppEntity> YourAppEntities { get; set; }
+            
+                public YourApplicationDbContext(DbContextOptions<YourApplicationDbContext> options)
+                    : base(options) // Pass options to base constructor
+                {
+                }
+            
+                protected override void OnModelCreating(ModelBuilder modelBuilder)
+                {
+                    // IMPORTANT: Call base implementation FIRST to apply CoreIdent configs
+                    base.OnModelCreating(modelBuilder);
+            
+                    // Your application's specific entity configurations below
+                    modelBuilder.Entity<YourAppEntity>().HasKey(e => e.Id);
+                    // ... other configurations ...
+                }
+            }
+            ```
+
+        2.  **Applying Configurations (More Flexible):** Your `DbContext` inherits from the standard `Microsoft.EntityFrameworkCore.DbContext` and explicitly applies CoreIdent's configurations within its `OnModelCreating` method.
+            ```csharp
+            // In YourApplicationDbContext.cs
+            using CoreIdent.Storage.EntityFrameworkCore; // Needed for CoreIdentDbContext type
+            using Microsoft.EntityFrameworkCore;
+            
+            public class YourApplicationDbContext : DbContext // Inherit from standard DbContext
+            {
+                // Your application's specific DbSets
+                public DbSet<YourAppEntity> YourAppEntities { get; set; }
+            
+                // CoreIdent DbSets are optional here unless you need direct access
+                // public DbSet<CoreIdentUser> Users { get; set; }
+            
+                public YourApplicationDbContext(DbContextOptions<YourApplicationDbContext> options)
+                    : base(options)
+                {
+                }
+            
+                protected override void OnModelCreating(ModelBuilder modelBuilder)
+                {
+                    base.OnModelCreating(modelBuilder); 
+            
+                    // Apply CoreIdent's configurations from its assembly
+                    modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreIdentDbContext).Assembly);
+            
+                    // Your application's specific entity configurations below
+                    modelBuilder.Entity<YourAppEntity>().HasKey(e => e.Id);
+                    // ... other configurations ...
+                }
+            }
+            ```
 
 2.  **EF Core Store Implementations:**
     *   This package provides concrete implementations of the store interfaces from `CoreIdent.Core`:
         *   `EfUserStore`: Implements `IUserStore`. Uses the injected `CoreIdentDbContext` to perform LINQ queries (e.g., `_context.Users.FirstOrDefaultAsync(...)`) and save changes (`_context.SaveChangesAsync()`).
         *   `EfRefreshTokenStore`: Implements `IRefreshTokenStore`. Similarly uses the `DbContext` to manage `CoreIdentRefreshToken` entities.
-        *   *(Implementations for `IClientStore` and `IScopeStore` using EF Core will reside here when needed for Phase 3+)*
+        *   `EfClientStore`: Implements `IClientStore`.
+        *   `EfScopeStore`: Implements `IScopeStore`.
+        *   **`EfAuthorizationCodeStore`: Implements `IAuthorizationCodeStore` for persistent storage of authorization codes.**
+            *   Authorization codes issued during OAuth flows are stored in the `AuthorizationCodes` table.
+            *   The store implementation includes robust concurrency handling to prevent race conditions during code redemption and cleanup.
+            *   **Expired codes are automatically cleaned up** by a background service (`AuthorizationCodeCleanupService`) that runs periodically (by default, every hour).
+            *   This service is registered automatically when you use `AddCoreIdentEntityFrameworkStores` (can be disabled via parameter if needed).
+            *   You do not need to manually remove expired codes; the service handles this for you.
 
 3.  **DI Registration Extension (`AddCoreIdentEntityFrameworkStores<TContext>`):**
     *   To switch from the default in-memory stores to EF Core, you use the `AddCoreIdentEntityFrameworkStores<TContext>()` extension method provided in this package.
@@ -409,20 +477,39 @@ To keep the core library lean, all EF Core-specific code resides in a separate N
 Once you configure EF Core, you need to manage your database schema using **EF Core Migrations**.
 
 1.  **Install Tools:** Ensure you have the EF Core command-line tools installed (`dotnet tool install --global dotnet-ef`).
-2.  **Add Migration:** From your terminal, in the directory containing your *web application project* (`.csproj`), run:
+2.  **Add Migration:** From your terminal, navigate to the directory containing your *startup project's* `.csproj` file (usually your web application). Then, run the migration command, specifying the project containing your `DbContext` and the project containing `CoreIdentDbContext` configuration (if they are different).
+
+    *   **If your `DbContext` is in your startup project (e.g., `MyWebApp.csproj`):**
+        ```bash
+        # -p: Points to the project containing CoreIdent's EF Core configuration
+        # -s: Points to the startup project (implicitly the current directory if run from there)
+        # --context: Specifies YOUR DbContext class name
+        dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext -p ../path/to/src/CoreIdent.Storage.EntityFrameworkCore
+        ```
+    *   **If your `DbContext` is in a separate project (e.g., `MyDataAccess.csproj`):**
+        ```bash
+        # Assume you are running this from the root solution directory or the startup project directory
+        # -p: Points to the project containing YOUR DbContext
+        # -s: Points to the startup project (e.g., your web app)
+        # --context: Specifies YOUR DbContext class name
+        # The command needs access to both YourDbContext and CoreIdentDbContext configurations.
+        # Ensure your DbContext project references CoreIdent.Storage.EntityFrameworkCore
+        # Ensure your Startup project references your DbContext project.
+        dotnet ef migrations add InitialCoreIdentSchema --project src/MyDataAccess/MyDataAccess.csproj --startup-project src/MyWebApp/MyWebApp.csproj --context YourApplicationDbContext
+        ```
+    *   Replace `InitialCoreIdentSchema` with a descriptive name.
+    *   Replace `YourApplicationDbContext` with the name of *your* `DbContext`.
+    *   Replace the paths (`../path/to/src/CoreIdent.Storage.EntityFrameworkCore`, `src/MyDataAccess/MyDataAccess.csproj`, `src/MyWebApp/MyWebApp.csproj`) with the actual relative paths from where you are running the command.
+    *   This command generates C# migration files in a `Migrations` folder within the project specified by `-p` (or the startup project if `-p` isn't used and the context is there).
+
+3.  **Apply Migration:** To apply the changes to your database, run (usually from the startup project directory):
     ```bash
-    dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext -p ../path/to/src/CoreIdent.Storage.EntityFrameworkCore
-    ```
-    *   Replace `InitialCoreIdentSchema` with a descriptive name for the migration.
-    *   Replace `YourApplicationDbContext` with the name of *your* application's `DbContext` class.
-    *   The `-p` argument points to the project containing the `CoreIdentDbContext` configuration (our storage project).
-    *   The `-s` argument (optional if run from the web project directory) points to the startup project.
-    This command generates C# code files in a `Migrations` folder within the storage project, describing the schema changes needed.
-3.  **Apply Migration:** To apply the changes to your database, run:
-    ```bash
+    # Ensure the --context matches the one used for adding the migration
+    # The --startup-project (-s) and --project (-p) might be needed if running from a different directory,
+    # similar to the 'add' command, to ensure the correct configuration and connection string are found.
     dotnet ef database update --context YourApplicationDbContext
     ```
-    This connects to the database specified in your connection string and executes the necessary SQL to create/update tables.
+    This connects to the database specified in your startup project's configuration (e.g., `appsettings.json`) and executes the necessary SQL.
 
 **Refresh Token Handling with Persistence:**
 
@@ -494,7 +581,15 @@ Instead of implementing `IUserStore` to directly interact with a database, the `
 
 **Important Considerations:**
 
-*   **Password Validation:** The `ValidateCredentialsAsync` delegate is critical. It receives the plain-text password entered by the user. Your implementation *must* securely validate this against your existing system's credential store (which should be storing hashed passwords). **CoreIdent's `IPasswordHasher` is NOT used in this flow.**
+*   **Password Validation:** 
+    > [!WARNING]
+    > **CRITICAL SECURITY RESPONSIBILITY**: The `ValidateCredentialsAsync` delegate receives the user's **plain text password** entered during login. 
+    > 
+    > *   Your implementation of this delegate **MUST** securely validate this plain text password against your existing credential store.
+    > *   Your external system **MUST** store passwords securely using a strong, salted hashing algorithm (like Argon2id or PBKDF2).
+    > *   **CoreIdent's `IPasswordHasher` is completely bypassed** in this flow. The security of password checking rests entirely on your delegate's implementation.
+    > *   Failure to handle this correctly represents a major security vulnerability.
+*
 *   **Mapping:** You are responsible for mapping your external user model to the `CoreIdentUser` model within the `FindUser...` delegates. Only map necessary properties like `Id` and `UserName`. **Do not map password hashes.**
 *   **Write Operations:** The `DelegatedUserStore` intentionally does **not** implement user creation, update, or deletion methods (`CreateAsync`, `UpdateAsync`, `DeleteAsync`). These operations should be handled directly within your existing user management system.
 
@@ -566,6 +661,222 @@ This flow clearly shows how the adapter acts as a bridge, invoking your custom l
 
 **Testing Setup Note:** When writing integration tests involving database interactions (like testing refresh token storage or EF Core stores), it's crucial to ensure the database is correctly configured and migrations are applied *before* the test logic runs. A common pattern using `WebApplicationFactory` is to configure the `DbContext` (often with an in-memory provider like SQLite with `cache=shared`) and run `dbContext.Database.Migrate()` within the `ConfigureServices` block of a custom `WebApplicationFactory` or using `WithWebHostBuilder` within the test class itself. This ensures the database schema is ready for the test execution.
 
+## Troubleshooting & FAQ: Dependency Injection, EF Core Migrations, and Real-World Pitfalls
+
+Setting up CoreIdent with EF Core is straightforward, but real-world projects and development environments can introduce subtle issues. This section provides a thorough, readable guide to help you avoid and resolve common problems.
+
+### Why Does DI Registration Order Matter?
+
+**Dependency Injection (DI) in ASP.NET Core is order-sensitive.**
+
+- `AddCoreIdent()` registers the core services and default (in-memory) stores.
+- `AddDbContext<YourDbContext>()` registers your EF Core context in the DI container.
+- `AddCoreIdentEntityFrameworkStores<YourDbContext>()` replaces the in-memory stores with EF Core-backed implementations, which depend on your DbContext being registered first.
+
+If you call `AddCoreIdentEntityFrameworkStores` before `AddDbContext`, the EF Core stores will not be able to resolve the context and will fail at runtime.
+
+> **Tip:** Always follow this order in your `Program.cs`:
+> 1. `AddCoreIdent()`
+> 2. `AddDbContext<YourDbContext>()`
+> 3. `AddCoreIdentEntityFrameworkStores<YourDbContext>()`
+
+### Common Errors and Solutions
+
+| Error Message or Symptom | Likely Cause | Solution |
+|-------------------------|--------------|----------|
+| `No service for type 'YourDbContext' has been registered.` | `AddDbContext` was not called before `AddCoreIdentEntityFrameworkStores`. | Register your DbContext *before* the EF Core stores. |
+| `Table 'Users'/'RefreshTokens' does not exist` or similar DB errors | EF Core migrations have not been applied. | Run the migration commands (see below). |
+| `Cannot access a disposed object` (with SQLite in-memory) | SQLite connection was closed/disposed before test completed. | Keep the SQLite connection open for the test host's lifetime. |
+| `The entity type 'X' requires a primary key` | Your DbContext does not inherit from `CoreIdentDbContext` or does not apply its configurations. | Inherit from `CoreIdentDbContext` or call `ApplyConfigurationsFromAssembly(typeof(CoreIdentDbContext).Assembly)` in `OnModelCreating`. |
+| `The model backing the 'YourDbContext' context has changed since the database was created` | Database schema is out of sync with your model. | Re-run migrations or delete/recreate the dev/test database. |
+| `Migrations are not applied in production` | Database was not updated after deployment. | Ensure `dotnet ef database update` is run as part of your deployment process. |
+
+### Step-by-Step EF Core Migration Checklist
+
+1. **Install EF Core CLI tools (if not already):**
+   ```bash
+   dotnet tool install --global dotnet-ef
+   ```
+2. **Add a migration:**
+   ```bash
+   dotnet ef migrations add InitialCoreIdentSchema --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject -o Data/Migrations
+   ```
+   - Replace `YourApplicationDbContext` with your DbContext class name.
+   - Adjust `--project` and `--startup-project` paths as needed.
+   - The `-o` parameter specifies the output directory for migration files.
+3. **Apply the migration:**
+   ```bash
+   dotnet ef database update --context YourApplicationDbContext --project src/CoreIdent.Storage.EntityFrameworkCore --startup-project src/YourWebAppProject
+   ```
+   - This updates your database schema to match your model.
+4. **Verify the database:**
+   - Check that tables like `Users`, `RefreshTokens`, `Clients`, and `Scopes` exist in your database.
+   - If using SQLite, you can use tools like [DB Browser for SQLite](https://sqlitebrowser.org/) to inspect the file.
+5. **Automate for CI/CD:**
+   - Add migration and update steps to your deployment pipeline to avoid production drift.
+
+### Sample Migration Output
+
+When you run `dotnet ef migrations add InitialCoreIdentSchema`, you should see output similar to:
+```
+Build started...
+Build succeeded.
+To undo this action, use 'ef migrations remove'
+Done. To undo this action, use 'ef migrations remove'
+```
+And after `dotnet ef database update`:
+```
+Build started...
+Build succeeded.
+Applying migration '20250413033857_InitialCoreIdentSchema'.
+Done.
+```
+
+If you see errors, double-check your DI registration order and that your DbContext is correctly configured and referenced.
+
+### Official Documentation and Further Reading
+
+- [EF Core Migrations Guide (Microsoft Docs)](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli)
+- [ASP.NET Core Dependency Injection Fundamentals](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection)
+- [EF Core Design-Time DbContext Creation](https://learn.microsoft.com/en-us/ef/core/cli/dbcontext-creation)
+
+### Real-World Tips and Scenarios
+
+- **Multi-Project Solutions:**
+  - If your `DbContext` is in a different project than your web app, use the `--project` and `--startup-project` flags to point to the correct locations.
+  - Ensure all projects reference each other as needed (web app → storage project, storage project → CoreIdent.Core).
+
+- **Test Setup with SQLite In-Memory:**
+  - Keep the SQLite connection open for the entire test run (see integration test examples).
+  - Always run `dbContext.Database.Migrate()` before executing tests to ensure the schema is present.
+
+- **Production Deployments:**
+  - Never use SQLite in-memory for production.
+  - Always use a persistent, production-grade database (SQL Server, PostgreSQL, etc.).
+  - Automate migrations as part of your deployment process.
+
+- **DbContext Configuration:**
+  - If you want to use your own `DbContext`, either inherit from `CoreIdentDbContext` or call `modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreIdentDbContext).Assembly)` in your `OnModelCreating` method. This ensures all CoreIdent tables and relationships are created.
+
+- **Seeding Data:**
+  - For development, you may want to seed default clients, scopes, or users. Do this after applying migrations, typically in a `using (var scope = app.Services.CreateScope())` block in your startup logic.
+
+- **Debugging Migrations:**
+  - If migrations fail, check for typos in class names, missing references, or misconfigured connection strings.
+  - Use `dotnet ef migrations list` to see all applied and pending migrations.
+
+- **Security Reminder:**
+  - Never check secrets (like `SigningKeySecret`) or production connection strings into source control.
+  - Use environment variables or a secret manager for production secrets.
+
 ---
- 
-*(Further Phases will add sections on Storage, OAuth/OIDC Flows, UI, MFA, Providers, etc.)*
+
+## Phase 3: Core OAuth 2.0 / OIDC Server Mechanics
+
+Phase 3 introduces the foundational server-side logic for standard OAuth 2.0 and OpenID Connect (OIDC) flows, enabling secure delegated authorization for various client applications (web apps, Single Page Applications (SPAs), mobile apps).
+
+### 1. Introduction to OAuth 2.0 / OIDC in CoreIdent
+
+OAuth 2.0 is the industry-standard framework for delegated authorization. It allows users to grant third-party applications limited access to their resources (e.g., profile information, APIs) without sharing their credentials directly. OpenID Connect (OIDC) is a simple identity layer built on top of OAuth 2.0, providing a standard way for clients to verify the identity of the end-user based on the authentication performed by an Authorization Server (like CoreIdent) and obtain basic profile information.
+
+CoreIdent aims to provide robust, spec-compliant implementations of these protocols. Phase 3 focuses on the backend mechanics for the most common and secure flows.
+
+### 2. Authorization Code Flow (with PKCE)
+
+The Authorization Code Flow is the primary and most secure OAuth 2.0 flow, suitable for both traditional web applications (which can keep a client secret confidential) and public clients like SPAs and mobile apps (which cannot). CoreIdent implements this flow with **Proof Key for Code Exchange (PKCE)** enforced, which is mandatory for public clients and recommended for all clients today.
+
+**Conceptual Flow:**
+
+1.  **Initiation:** The user clicks a "Login with CoreIdent" button in the Client Application.
+2.  **Redirect to Authorize:** The Client App redirects the user's browser to CoreIdent's `/authorize` endpoint, including parameters like its `client_id`, requested `scope`s, a `redirect_uri`, and PKCE parameters (`code_challenge`, `code_challenge_method`).
+3.  **User Authentication & Consent:** CoreIdent authenticates the user (if not already logged in) and potentially prompts for consent to grant the Client App the requested permissions (`scope`s). (Consent UI is planned for Phase 4).
+4.  **Code Issuance:** Upon successful authentication and consent, CoreIdent generates a short-lived, single-use **authorization code** and redirects the user's browser back to the Client App's registered `redirect_uri`, including the `code` and the original `state` parameter (if provided).
+5.  **Token Exchange:** The Client App's backend receives the authorization code. It then makes a direct, backend POST request to CoreIdent's `/token` endpoint, sending the `code`, its `client_id`, its `client_secret` (for confidential clients), the `redirect_uri`, and the PKCE `code_verifier`.
+6.  **Token Issuance:** CoreIdent validates the request (including the code, client credentials/PKCE verifier, redirect URI). If valid, it consumes the code and issues an `access_token`, a `refresh_token` (if `offline_access` scope was granted), and an `id_token` (if `openid` scope was granted).
+7.  **Client Usage:** The Client App receives the tokens and can now use the `access_token` to make requests to protected APIs on behalf of the user. It uses the `id_token` to get user identity information.
+
+**CoreIdent Endpoints Involved:**
+
+*   **`GET /auth/authorize` (Example Base Path: `/auth`)**
+    *   **Purpose:** Initiates the flow, handles user authentication/consent, and issues the authorization code.
+    *   **Key Request Parameters:**
+        *   `client_id`: Identifier of the client application requesting authorization.
+        *   `response_type=code`: Specifies the Authorization Code flow.
+        *   `redirect_uri`: Where CoreIdent redirects the user back after authorization. Must match one of the URIs registered for the client.
+        *   `scope`: Space-separated list of permissions requested (e.g., `openid profile email offline_access`). `openid` is required for OIDC flows and ID Tokens.
+        *   `state`: An opaque value used by the client to maintain state between the request and callback. CoreIdent echoes it back in the redirect. (Recommended for CSRF protection).
+        *   `nonce`: String value used to associate a client session with an ID Token and mitigate replay attacks. Required for OIDC implicit flow, optional but recommended for code flow ID Tokens.
+        *   `code_challenge`: The PKCE code challenge (Base64Url-encoded SHA256 hash of the `code_verifier`).
+        *   `code_challenge_method=S256`: Specifies the hashing method used for the PKCE challenge (CoreIdent supports `S256`).
+    *   **Validation:** CoreIdent validates the `client_id`, checks if the `redirect_uri` is registered for that client, and verifies requested `scope`s are allowed.
+    *   **Response:** Redirects to the client's `redirect_uri` with `code` and `state` (and potentially `error` parameters if something goes wrong).
+
+*   **`POST /auth/token` (Grant Type: `authorization_code`)**
+    *   **Purpose:** Exchanges the authorization code for tokens. This request MUST come from the client's backend (or securely handled in the frontend for public clients using PKCE).
+    *   **Request Body (Form-encoded):**
+        *   `grant_type=authorization_code`: Specifies the grant type.
+        *   `code`: The authorization code received from the `/authorize` redirect.
+        *   `redirect_uri`: Must match the `redirect_uri` used in the initial `/authorize` request.
+        *   `client_id`: The client application's identifier.
+        *   `code_verifier`: The PKCE code verifier (the original secret that was hashed to create the `code_challenge`).
+        *   *(Confidential Clients Only):* `
+
+### Authorization Code Flow: Persistence and Cleanup
+
+When using EF Core storage, authorization codes issued by the `/auth/authorize` endpoint are persisted in the database via `EfAuthorizationCodeStore`. This ensures:
+- Codes are durable and can be validated/redeemed even if the server restarts.
+- Expired codes are automatically removed by the `AuthorizationCodeCleanupService` background service.
+- The store implementation is concurrency-safe, so multiple simultaneous attempts to redeem or clean up a code are handled correctly.
+
+**Troubleshooting:**
+- If you receive an error that an authorization code is invalid or expired, it may have already been redeemed or cleaned up by the background service. Codes are single-use and short-lived by design.
+
+## Client Authentication at the /token Endpoint
+
+The `/token` endpoint supports two standard methods for client authentication, as recommended by OAuth 2.0 (RFC 6749 Section 2.3.1):
+
+1. **HTTP Basic Authentication Header**
+   - The client sends its `client_id` and `client_secret` in the `Authorization` header using the `Basic` scheme.
+   - Example header: `Authorization: Basic base64(client_id:client_secret)`
+   - This is the most secure method for confidential clients (e.g., server-side web apps).
+
+2. **Request Body Parameters**
+   - The client includes `client_id` and `client_secret` as form fields in the POST body (content type: `application/x-www-form-urlencoded`).
+   - Example fields: `client_id=my-client&client_secret=supersecret`
+   - This method is supported for compatibility, but Basic Auth is preferred for confidential clients.
+
+**How Confidential vs. Public Clients Are Determined**
+- If a client has one or more registered secrets (`ClientSecrets`), it is treated as a confidential client and must authenticate using one of the above methods.
+- Public clients (e.g., SPAs, mobile apps) must not use secrets and are authenticated only by their `client_id`.
+
+**Secret Verification and Security**
+- Client secrets are securely hashed and stored in the database. Verification uses the same password hasher as user passwords.
+- Only confidential clients should use secrets. Never embed secrets in public client code.
+- If authentication fails (missing or invalid secret), the endpoint returns an `invalid_client` error.
+
+**Example: Basic Auth**
+```
+POST /auth/token
+Authorization: Basic base64(my-client:supersecret)
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=...&redirect_uri=...
+```
+
+**Example: Request Body**
+```
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&client_secret=supersecret
+```
+
+**Error Responses**
+- If client authentication fails, the response will be:
+  ```json
+  { "error": "invalid_client", "error_description": "Client authentication failed (client_id missing)." }
+  ```
+- Or for invalid secret:
+  ```json
+  { "error": "invalid_client", "error_description": "Invalid client secret." }
+  ```

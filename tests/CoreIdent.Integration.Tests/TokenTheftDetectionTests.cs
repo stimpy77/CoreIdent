@@ -186,10 +186,13 @@ public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Prog
         var originalRefreshToken = loginTokens.RefreshToken;
 
         // Act 1 - Use the refresh token to get a new token (legitimate refresh)
-        var firstRefreshResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
-        { 
-            RefreshToken = originalRefreshToken 
-        });
+        var firstRefreshPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", originalRefreshToken },
+            { "client_id", "__password_flow__" }
+        };
+        var firstRefreshResponse = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(firstRefreshPayload));
 
         firstRefreshResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
         
@@ -202,23 +205,37 @@ public class TokenTheftDetectionTests : IClassFixture<WebApplicationFactory<Prog
         var secondRefreshToken = firstRefreshedTokens.RefreshToken;
 
         // Act 2 - Try to use the original refresh token again (simulating theft)
-        var theftAttemptResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
-        { 
-            RefreshToken = originalRefreshToken 
-        });
+        var theftAttemptPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", originalRefreshToken },
+            { "client_id", "__password_flow__" }
+        };
+        var theftAttemptResponse = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(theftAttemptPayload));
 
         // Assert - First, the theft attempt should fail
-        theftAttemptResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        theftAttemptResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest); // Changed from Unauthorized to BadRequest (invalid_grant)
+        var errorJson = await theftAttemptResponse.Content.ReadAsStringAsync();
+        using var errorDoc = JsonDocument.Parse(errorJson);
+        errorDoc.RootElement.TryGetProperty("error", out var errorElement).ShouldBeTrue();
+        errorElement.GetString().ShouldBe("invalid_grant");
 
         // Act 3 - Now try to use the second (legitimate) token - it should be revoked 
         // due to family-wide revocation
-        var postTheftLegitimateRefreshResponse = await _client.PostAsJsonAsync("/auth/token/refresh", new RefreshTokenRequest 
-        { 
-            RefreshToken = secondRefreshToken 
-        });
+        var postTheftLegitimateRefreshPayload = new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", secondRefreshToken! },
+            { "client_id", "__password_flow__" }
+        };
+        var postTheftLegitimateRefreshResponse = await _client.PostAsync("/auth/token", new FormUrlEncodedContent(postTheftLegitimateRefreshPayload));
 
         // Assert - The legitimate token should also be rejected because the whole family is revoked
-        postTheftLegitimateRefreshResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        postTheftLegitimateRefreshResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest); // Changed from Unauthorized to BadRequest (invalid_grant)
+        var errorJsonAfterTheft = await postTheftLegitimateRefreshResponse.Content.ReadAsStringAsync();
+        using var errorDocAfterTheft = JsonDocument.Parse(errorJsonAfterTheft);
+        errorDocAfterTheft.RootElement.TryGetProperty("error", out var errorElementAfterTheft).ShouldBeTrue();
+        errorElementAfterTheft.GetString().ShouldBe("invalid_grant");
 
         // Verify in the database that the family is revoked
         using (var scope = _factory.Services.CreateScope())

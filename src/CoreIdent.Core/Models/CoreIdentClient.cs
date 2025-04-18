@@ -42,22 +42,22 @@ public class CoreIdentClient
     /// Specifies the grant types the client is allowed to use.
     /// Use constants (e.g., GrantType.AuthorizationCode, GrantType.ClientCredentials).
     /// </summary>
-    public virtual ICollection<string> AllowedGrantTypes { get; set; } = new List<string>();
+    public virtual List<string> AllowedGrantTypes { get; set; } = new List<string>();
 
     /// <summary>
     /// Specifies the allowed URIs to return tokens or authorization codes to.
     /// </summary>
-    public virtual ICollection<string> RedirectUris { get; set; } = new List<string>();
+    public virtual List<string> RedirectUris { get; set; } = new List<string>();
 
     /// <summary>
     /// Specifies the allowed URIs to redirect to after logout.
     /// </summary>
-    public virtual ICollection<string> PostLogoutRedirectUris { get; set; } = new List<string>();
+    public virtual List<string> PostLogoutRedirectUris { get; set; } = new List<string>();
 
     /// <summary>
     /// Specifies the scopes that the client is allowed to request. If empty, the client can request all scopes defined in the system.
     /// </summary>
-    public virtual ICollection<string> AllowedScopes { get; set; } = new List<string>();
+    public virtual List<string> AllowedScopes { get; set; } = new List<string>();
 
     /// <summary>
     /// Specifies whether this client must use PKCE for the authorization code flow (defaults to true for public clients).
