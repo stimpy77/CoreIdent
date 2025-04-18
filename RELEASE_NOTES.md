@@ -1,5 +1,8 @@
 # CoreIdent Release Notes
 
+## Version 0.3.4
+- **Client Credentials Flow:** Implemented `POST /token` (with `grant_type=client_credentials`) endpoint to support machine-to-machine authentication. Requires `IClientStore` implementation (e.g., EF Core). Validates client credentials and allowed scopes, issuing an access token representing the client.
+
 ## Version 0.3.3
 - Enhance `CoreIdentOptionsValidator` to include more comprehensive checks (e.g., valid Issuer URI, reasonable lifetimes).
 

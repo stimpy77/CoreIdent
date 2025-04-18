@@ -13,9 +13,17 @@ public interface ITokenService
     /// Generates a JWT access token for the specified user, optionally including claims based on scopes.
     /// </summary>
     /// <param name="user">The user for whom to generate the token.</param>
-    /// <param name="scopes">Optional. The scopes granted, used to determine claims in the token.</param>
+    /// <param name="allowedScopes">Optional. The scopes granted, used to determine claims in the token.</param>
     /// <returns>A task representing the asynchronous operation, containing the generated JWT access token.</returns>
-    Task<string> GenerateAccessTokenAsync(CoreIdentUser user, IEnumerable<string>? scopes = null);
+    Task<string> GenerateAccessTokenAsync(CoreIdentUser user, IEnumerable<string>? allowedScopes = null);
+
+    /// <summary>
+    /// Generates an access token for a client principal (client credentials flow).
+    /// </summary>
+    /// <param name="client">The client for whom to generate the token.</param>
+    /// <param name="grantedScopes">The specific scopes granted for this token.</param>
+    /// <returns>A JWT access token string.</returns>
+    Task<string> GenerateAccessTokenAsync(CoreIdentClient client, IEnumerable<string> grantedScopes);
 
     /// <summary>
     /// Generates an OIDC ID token.
@@ -25,7 +33,7 @@ public interface ITokenService
     /// <param name="nonce">The nonce value from the authorization request (if any).</param>
     /// <param name="scopes">The scopes granted, used to determine claims in the token.</param>
     /// <returns>A task representing the asynchronous operation, containing the generated JWT ID token.</returns>
-    Task<string> GenerateIdTokenAsync(CoreIdentUser user, string clientId, string? nonce, IEnumerable<string> scopes);
+    Task<string?> GenerateIdTokenAsync(CoreIdentUser user, string clientId, string? nonce, IEnumerable<string>? scopes = null);
 
     /// <summary>
     /// Generates a secure refresh token handle and stores its details.

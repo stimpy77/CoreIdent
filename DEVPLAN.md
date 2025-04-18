@@ -398,7 +398,7 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: Client Credentials Flow Backend
 
 *   **Component:** Token Endpoint (Grant Type: `client_credentials`)
-    - [ ] Extend `POST /token` endpoint to handle `grant_type=client_credentials`.
+    - [x] Extend `POST /token` endpoint to handle `grant_type=client_credentials`.
         *   *Guidance:* 
             * Accepts parameters: `grant_type`, `client_id`, `client_secret`, `scope` (optional).
         *   *Guidance:* 
@@ -412,12 +412,13 @@ This document provides a detailed breakdown of tasks, components, features, test
         *   *Guidance:* 
             * Return access token in the response.
 *   **Test Case (Integration):**
-    - [ ] `POST /token` with `grant_type=client_credentials` and valid client credentials 
+    - [x] `POST /token` with `grant_type=client_credentials` and valid client credentials 
           returns an access token.
-    - [ ] Token represents the client (e.g., `sub` claim is `client_id`).
-    - [ ] Request fails if client credentials are invalid.
-    - [ ] Request fails if requested scopes are not allowed for the client.
-- [ ] **Update README.md** with details on `/token` endpoint for `client_credentials` grant type.
+    - [x] Token represents the client (e.g., `sub` claim is `client_id`).
+    - [x] Request fails if client credentials are invalid.
+    - [x] Request fails if requested scopes are not allowed for the client.
+    - [x] Client authentication works with both Basic Auth header and request body parameters.
+- [x] **Update README.md** with details on `/token` endpoint for `client_credentials` grant type.
 
 ---
 

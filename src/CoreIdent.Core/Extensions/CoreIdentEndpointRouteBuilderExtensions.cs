@@ -24,7 +24,7 @@ using System.Security.Cryptography; // For PKCE random generation
 using System.Text; // For Encoding
 using Microsoft.Extensions.Primitives; // For StringValues
 using System.Net.Http.Headers; // For Basic Authentication
-using System.Text.Json; // For JsonSerializer
+using System.Text.Json;
 
 namespace CoreIdent.Core.Extensions;
 
@@ -34,20 +34,28 @@ namespace CoreIdent.Core.Extensions;
 public static class CoreIdentEndpointRouteBuilderExtensions
 {
     /// <summary>
-    /// Maps the CoreIdent core authentication endpoints (/register, /login, /token/refresh).
+    /// Maps the CoreIdent core authentication and OAuth/OIDC endpoints.
     /// </summary>
     /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to add the routes to.</param>
-    /// <param name="basePath">Optional base path for the endpoints (e.g., "/api/auth"). Defaults to "/".</param>
-    /// <returns>A <see cref="RouteGroupBuilder"/> for further customization.</returns>
-    public static RouteGroupBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints, string basePath = "/")
+    /// <param name="configureRoutes">Optional action to configure the default routes.</param>
+    /// <returns>A <see cref="RouteGroupBuilder"/> containing the mapped CoreIdent endpoints.</returns>
+    public static RouteGroupBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints, Action<CoreIdentRouteOptions>? configureRoutes = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
-        basePath = string.IsNullOrWhiteSpace(basePath) ? "/" : basePath.TrimEnd('/') + "/"; // Ensure trailing slash
 
-        var routeGroup = endpoints.MapGroup(basePath);
+        var routeOptions = new CoreIdentRouteOptions();
+        configureRoutes?.Invoke(routeOptions);
+
+        // Validate BasePath
+        if (string.IsNullOrWhiteSpace(routeOptions.BasePath) || !routeOptions.BasePath.StartsWith("/"))
+        {
+            throw new InvalidOperationException($"{nameof(CoreIdentRouteOptions.BasePath)} must be configured and start with a '/'. Current value: '{routeOptions.BasePath}'");
+        }
+
+        var routeGroup = endpoints.MapGroup(routeOptions.BasePath);
 
         // Endpoint: /register
-        routeGroup.MapPost("register", async (
+        routeGroup.MapPost(routeOptions.RegisterPath, async (
             [FromBody] RegisterRequest request,
             HttpContext httpContext,
             IUserStore userStore,
@@ -123,7 +131,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
 
         // Endpoint: /login
-        routeGroup.MapPost("login", async (
+        routeGroup.MapPost(routeOptions.LoginPath, async (
             [FromBody] LoginRequest request,
             HttpContext httpContext,
             IUserStore userStore,
@@ -274,7 +282,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
         // Endpoint: GET /authorize
         // Handles the start of the Authorization Code flow.
-        routeGroup.MapGet("authorize", async (
+        routeGroup.MapGet(routeOptions.AuthorizePath, async (
             HttpRequest request, // Access query parameters directly
             HttpResponse response, // Needed for redirects
             HttpContext httpContext,
@@ -400,7 +408,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
             // 5. Generate and Store Authorization Code
             IAuthorizationCodeStore? authorizationCodeStore;
-            try 
+            try
             {
                 authorizationCodeStore = httpContext.RequestServices.GetRequiredService<IAuthorizationCodeStore>();
             }
@@ -409,58 +417,90 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 logger.LogError(ex, "Failed to resolve IAuthorizationCodeStore.");
                 return Results.Problem("Authorization storage service not available.", statusCode: StatusCodes.Status500InternalServerError);
             }
-            string authorizationCode;
+
+            AuthorizationCode? storedCode = null;
+            string? generatedCode = null;
             int attempts = 0;
             const int maxAttempts = 10;
-            do
+
+            while (storedCode == null && attempts < maxAttempts)
             {
-                authorizationCode = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
-                                    .Replace("+", "-").Replace("/", "_").TrimEnd('='); // URL-safe
-                var existing = await authorizationCodeStore.GetAuthorizationCodeAsync(authorizationCode, cancellationToken);
-                if (existing == null)
-                    break;
                 attempts++;
-            } while (attempts < maxAttempts);
-            if (attempts == maxAttempts)
-            {
-                logger.LogError("Failed to generate a unique authorization code after {Attempts} attempts.", maxAttempts);
-                return Results.Problem("Failed to generate a unique authorization code.", statusCode: StatusCodes.Status500InternalServerError);
-            }
-            var codeLifetime = TimeSpan.FromMinutes(5); // Example lifetime
-            var subjectId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                generatedCode = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                                    .Replace("+", "-").Replace("/", "_").TrimEnd('='); // URL-safe
 
-            if (string.IsNullOrWhiteSpace(subjectId))
+                // Check if it exists *before* attempting to store (optimistic check, race condition still possible)
+                var existing = await authorizationCodeStore.GetAuthorizationCodeAsync(generatedCode, cancellationToken);
+                if (existing != null)
+                {
+                    logger.LogWarning("Generated authorization code collision detected *before* store attempt {Attempt}, retrying.", attempts);
+                    continue; // Collision detected, generate a new code
+                }
+
+                // Construct the code object to store
+                var codeLifetime = TimeSpan.FromMinutes(5); // Example lifetime
+                var subjectId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrWhiteSpace(subjectId))
+                {
+                    logger.LogError("Authenticated user is missing Subject ID (sub) claim.");
+                    return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+
+                var codeToStore = new AuthorizationCode
+                {
+                    CodeHandle = generatedCode, // Use the generated code
+                    ClientId = clientId,
+                    SubjectId = subjectId,
+                    RequestedScopes = requestedScopes.ToList(),
+                    RedirectUri = redirectUri,
+                    Nonce = nonce,
+                    CodeChallenge = codeChallenge,
+                    CodeChallengeMethod = codeChallengeMethod,
+                    CreationTime = DateTime.UtcNow,
+                    ExpirationTime = DateTime.UtcNow.Add(codeLifetime)
+                };
+
+                // Attempt to store the code, checking the result for conflicts
+                StoreResult storeResult = StoreResult.Failure; // Default to failure
+                try
+                {
+                    storeResult = await authorizationCodeStore.StoreAuthorizationCodeAsync(codeToStore, cancellationToken);
+
+                    if (storeResult == StoreResult.Success)
+                    {
+                        storedCode = codeToStore; // Success! Store the successfully stored code
+                        logger.LogInformation("Stored authorization code {CodeHandle} for client {ClientId} and user {UserId} on attempt {Attempt}",
+                            generatedCode, clientId, subjectId, attempts);
+                        // Break the loop since we succeeded
+                    }
+                    else if (storeResult == StoreResult.Conflict)
+                    {
+                        logger.LogWarning("Conflict storing authorization code {CodeHandle} on attempt {Attempt} (detected by store), retrying.", generatedCode, attempts);
+                        // Let the loop continue to generate a new code
+                    }
+                    else // Handle Failure or other unexpected results
+                    {
+                         logger.LogError("Authorization code storage failed with result {StoreResult} for code {CodeHandle} on attempt {Attempt}", storeResult, generatedCode, attempts);
+                         return Results.Problem("Failed to store authorization request.", statusCode: StatusCodes.Status500InternalServerError);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log other unexpected errors during storage call and fail
+                    logger.LogError(ex, "Unexpected exception calling StoreAuthorizationCodeAsync for code {CodeHandle} on attempt {Attempt}", generatedCode, attempts);
+                    return Results.Problem("Failed to store authorization request due to unexpected error.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+            }
+            
+            // Check if code generation failed after max attempts
+            if (storedCode == null)
             {
-                logger.LogError("Authenticated user is missing Subject ID (sub) claim.");
-                // This shouldn't happen for a properly authenticated user via OIDC/JWT principles
-                return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
+                 logger.LogError("Failed to generate and store a unique authorization code after {Attempts} attempts.", maxAttempts);
+                 return Results.Problem("Failed to generate a unique authorization code.", statusCode: StatusCodes.Status500InternalServerError);
             }
 
-            var storedCode = new AuthorizationCode
-            {
-                CodeHandle = authorizationCode,
-                ClientId = clientId,
-                SubjectId = subjectId,
-                RequestedScopes = requestedScopes.ToList(), // Store the validated scopes
-                RedirectUri = redirectUri,
-                Nonce = nonce,
-                CodeChallenge = codeChallenge,
-                CodeChallengeMethod = codeChallengeMethod,
-                CreationTime = DateTime.UtcNow,
-                ExpirationTime = DateTime.UtcNow.Add(codeLifetime)
-            };
-
-            try
-            {
-                await authorizationCodeStore.StoreAuthorizationCodeAsync(storedCode, cancellationToken);
-                logger.LogInformation("Stored authorization code {CodeHandle} for client {ClientId} and user {UserId}", 
-                    authorizationCode, clientId, subjectId);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to store authorization code {CodeHandle}", authorizationCode);
-                return Results.Problem("Failed to store authorization request.", statusCode: StatusCodes.Status500InternalServerError);
-            }
+            // --- Code successfully generated and stored --- Use storedCode.CodeHandle from here ---
+            var authorizationCode = storedCode.CodeHandle;
 
             // 6. Redirect Back to Client
             var redirectUrlBuilder = new StringBuilder(redirectUri);
@@ -488,7 +528,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
         // Endpoint: POST /token
         // Handles various grant types for token issuance.
-        routeGroup.MapPost("token", async (
+        routeGroup.MapPost(routeOptions.TokenPath, async (
             HttpRequest request,
             HttpContext httpContext,
             IClientStore clientStore,
@@ -910,6 +950,86 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 logger.LogInformation("Tokens refreshed successfully for user {UserId} via grant_type=refresh_token", user.Id);
                 return Results.Ok(response);
             }
+            else if (grantType == "client_credentials")
+            {
+                // --- Client Credentials Grant --- Handle M2M authentication ---
+                logger.LogInformation("Processing client_credentials grant type for client {ClientId}", client.ClientId);
+
+                // 1. Validate Client Grant Type
+                if (!client.AllowedGrantTypes.Contains("client_credentials"))
+                {
+                    logger.LogWarning("Client {ClientId} is not allowed to use grant_type=client_credentials.", client.ClientId);
+                    return Results.BadRequest(new { error = "unauthorized_client", error_description = "Client is not authorized to use this grant type." });
+                }
+
+                // 2. Validate Scopes (Optional for this grant, but good practice)
+                string? scopeParam = form["scope"];
+                var requestedScopes = scopeParam?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? Enumerable.Empty<string>();
+                List<string> grantedScopes = new();
+
+                if (requestedScopes.Any())
+                {
+                    var scopeStore = httpContext.RequestServices.GetRequiredService<IScopeStore>();
+                    IEnumerable<CoreIdentScope> validScopes;
+                    try
+                    {
+                        validScopes = await scopeStore.FindScopesByNameAsync(requestedScopes, cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error retrieving scopes during client_credentials grant for client {ClientId}. Scopes: {Scopes}", client.ClientId, scopeParam);
+                        return Results.Problem("An unexpected error occurred during scope validation.", statusCode: StatusCodes.Status500InternalServerError);
+                    }
+
+                    // Filter requested scopes to only those allowed for the client
+                    foreach (var requestedScope in requestedScopes)
+                    {
+                        var scopeDetail = validScopes.FirstOrDefault(s => s.Name == requestedScope);
+                        if (scopeDetail == null || !scopeDetail.Enabled)
+                        {
+                             logger.LogWarning("Client {ClientId} requested invalid or disabled scope: {Scope}", client.ClientId, requestedScope);
+                             // Per spec, ignore invalid scopes or return error? Return error for now.
+                             return Results.BadRequest(new { error = "invalid_scope", error_description = $"Scope '{requestedScope}' is invalid or disabled." });
+                        }
+                        if (!client.AllowedScopes.Contains(requestedScope))
+                        {
+                            logger.LogWarning("Client {ClientId} requested scope {Scope} which is not allowed for this client.", client.ClientId, requestedScope);
+                            return Results.BadRequest(new { error = "invalid_scope", error_description = $"Scope '{requestedScope}' is not allowed for this client." });
+                        }
+                        grantedScopes.Add(requestedScope);
+                    }
+                    logger.LogInformation("Client {ClientId} granted scopes: [{GrantedScopes}]", client.ClientId, string.Join(", ", grantedScopes));
+                }
+                else
+                {
+                    // If no scope requested, grant client's default allowed scopes or none?
+                    // For now, grant none if none requested.
+                     logger.LogInformation("Client {ClientId} requested no scopes.", client.ClientId);
+                }
+
+                // 3. Issue Access Token (No Refresh Token for client_credentials)
+                try
+                {
+                    var accessToken = await tokenService.GenerateAccessTokenAsync(client, grantedScopes);
+
+                    var tokenResponse = new TokenResponse
+                    {
+                        AccessToken = accessToken,
+                        TokenType = "Bearer",
+                        ExpiresIn = (int)options.Value.AccessTokenLifetime.TotalSeconds,
+                        Scope = grantedScopes.Any() ? string.Join(" ", grantedScopes) : null // Echo back granted scopes
+                        // No Refresh Token or ID Token for client_credentials
+                    };
+
+                    logger.LogInformation("Access token issued successfully via client_credentials grant for client {ClientId}", client.ClientId);
+                    return Results.Ok(tokenResponse);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error issuing tokens during client_credentials grant for client {ClientId}", client.ClientId);
+                    return Results.Problem("An unexpected error occurred during token generation.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+            }
             else
             {
                 logger.LogWarning("Unsupported grant_type requested: {GrantType}", grantType);
@@ -926,7 +1046,38 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .WithSummary("Exchanges various grants for access tokens.")
         .WithDescription("Handles token issuance based on grant types like authorization_code, client_credentials, etc.");
 
+        // Map well-known endpoints relative to the root
+        // Endpoint: GET /.well-known/openid-configuration
+        endpoints.MapGet(routeOptions.DiscoveryPath, (IOptions<CoreIdentOptions> options, ILogger<CoreIdentRouteOptions> logger) =>
+        {
+            logger.LogInformation("Discovery endpoint hit: {Path}", routeOptions.DiscoveryPath);
+            // TODO: Implement OIDC Discovery endpoint logic
+            // Read from CoreIdentOptions and dynamically build the response
+            return Results.NotFound(new { message = "OIDC Discovery endpoint not yet implemented." });
+        })
+        .WithName("OidcDiscovery")
+        .WithTags("CoreIdent")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithSummary("Provides OpenID Connect discovery information.");
 
+        // Endpoint: GET /.well-known/jwks.json
+        endpoints.MapGet(routeOptions.JwksPath, (IOptions<CoreIdentOptions> options, ILogger<CoreIdentRouteOptions> logger) =>
+        {
+            logger.LogInformation("JWKS endpoint hit: {Path}", routeOptions.JwksPath);
+            // TODO: Implement JWKS endpoint logic
+            // Retrieve public signing keys (e.g., from ISigningKeyManager)
+            return Results.NotFound(new { message = "JWKS endpoint not yet implemented." });
+        })
+        .WithName("OidcJwks")
+        .WithTags("CoreIdent")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithSummary("Provides the JSON Web Key Set (JWKS) for token validation.");
+
+        // Note: Refresh token endpoint is now handled within the main /token endpoint
+        // via grant_type=refresh_token. The old RefreshTokenPath is kept for potential
+        // legacy use or different configuration but is not mapped by default here.
 
         return routeGroup;
     }
@@ -945,21 +1096,29 @@ public class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
         _logger = logger;
     }
 
-    public Task StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
+    public Task<StoreResult> StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
     {
-        _codes[code.CodeHandle] = code;
-        _logger.LogDebug("Stored authorization code: {CodeHandle}, Expires: {Expiry}", code.CodeHandle, code.ExpirationTime);
-        // Start a background task to remove expired code (simple cleanup)
-        _ = Task.Delay(code.ExpirationTime - DateTime.UtcNow + TimeSpan.FromSeconds(5), cancellationToken)
-            .ContinueWith(_ =>
-            {
-                if (_codes.TryRemove(code.CodeHandle, out var removedCode) && removedCode.ExpirationTime <= DateTime.UtcNow)
+        // Use TryAdd for better concurrency handling, although conflict unlikely with truly random codes
+        if (_codes.TryAdd(code.CodeHandle, code))
+        {
+            _logger.LogDebug("Stored authorization code: {CodeHandle}, Expires: {Expiry}", code.CodeHandle, code.ExpirationTime);
+            // Start a background task to remove expired code (simple cleanup)
+            _ = Task.Delay(code.ExpirationTime - DateTime.UtcNow + TimeSpan.FromSeconds(5), cancellationToken)
+                .ContinueWith(_ =>
                 {
-                    _logger.LogDebug("Removed expired authorization code: {CodeHandle}", code.CodeHandle);
-                }
-            }, CancellationToken.None); // Use CancellationToken.None for the cleanup task
-
-        return Task.CompletedTask;
+                    if (_codes.TryRemove(code.CodeHandle, out var removedCode) && removedCode.ExpirationTime <= DateTime.UtcNow)
+                    {
+                        _logger.LogDebug("Removed expired authorization code: {CodeHandle}", code.CodeHandle);
+                    }
+                }, CancellationToken.None); // Use CancellationToken.None for the cleanup task
+             return Task.FromResult(StoreResult.Success);
+        }
+        else
+        {
+            // This case should be rare with good random code generation
+             _logger.LogWarning("Conflict storing authorization code in memory store: {CodeHandle}", code.CodeHandle);
+            return Task.FromResult(StoreResult.Conflict);
+        }
     }
 
     public Task<AuthorizationCode?> GetAuthorizationCodeAsync(string codeHandle, CancellationToken cancellationToken)

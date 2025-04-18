@@ -57,86 +57,66 @@ public class JwtTokenService : ITokenService
     }
 
     /// <inheritdoc />
-    public async Task<string> GenerateAccessTokenAsync(CoreIdentUser user, IEnumerable<string>? scopes = null)
+    public async Task<string> GenerateAccessTokenAsync(CoreIdentUser user, IEnumerable<string>? allowedScopes = null)
     {
-        if (user == null) throw new ArgumentNullException(nameof(user));
+        _logger.LogDebug("Generating access token for user {UserId} with scopes: {Scopes}", user.Id, allowedScopes);
+        var userClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
+        var claims = await GetClaimsForTokenAsync(user, userClaims, allowedScopes);
 
-        var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique token identifier
-            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-            // Add username/email if available
-            // Name claim should come from profile scope usually
-            // new Claim(JwtRegisteredClaimNames.Name, user.UserName ?? "")
-        };
+        // Ensure standard claims are present before final generation
+        claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Sub, user.Id));
+        claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
+        claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64));
 
-        // Add user claims based on requested scopes
-        if (scopes != null && scopes.Any())
-        {
-            var userClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
-            var scopesFromStore = await _scopeStore.FindScopesByNameAsync(scopes, CancellationToken.None);
+        // Issuer and Audience are added in GetClaimsForTokenAsync or GenerateJwtTokenInternal
 
-            var allowedClaimTypes = scopesFromStore
-                .SelectMany(s => s.UserClaims.Select(uc => uc.Type))
-                .Distinct()
-                .ToList();
-
-            // Include standard OIDC claims based on standard scopes
-            if (scopes.Contains("profile"))
-            {
-                 allowedClaimTypes.AddRange(new[] { "name", "family_name", "given_name", "middle_name", "nickname", "preferred_username", "profile", "picture", "website", "gender", "birthdate", "zoneinfo", "locale", "updated_at" });
-            }
-             if (scopes.Contains("email"))
-            {
-                allowedClaimTypes.AddRange(new[] { "email", "email_verified" });
-            }
-            if (scopes.Contains("address"))
-            {
-                 allowedClaimTypes.Add("address");
-            }
-            if (scopes.Contains("phone"))
-            {
-                 allowedClaimTypes.AddRange(new[] { "phone_number", "phone_number_verified" });
-            }
-
-            allowedClaimTypes = allowedClaimTypes.Distinct().ToList();
-
-            claims.AddRange(userClaims.Where(uc => allowedClaimTypes.Contains(uc.Type)));
-        }
-
-        // Issuer & Audience
-        var issuer = _options.Issuer ?? throw new InvalidOperationException("Issuer not configured.");
-        var audience = _options.Audience ?? throw new InvalidOperationException("Audience not configured.");
-
-        claims.Add(new Claim(JwtRegisteredClaimNames.Iss, issuer));
-        claims.Add(new Claim(JwtRegisteredClaimNames.Aud, audience)); // Access token audience is typically the resource server
-
-        // Signing Key
-        var securityKey = GetSecurityKey();
-        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); // Ensure algorithm matches key type
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.Add(_options.AccessTokenLifetime),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials = credentials
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-
-        return tokenHandler.WriteToken(token);
+        return GenerateJwtTokenInternal(claims, user.Id);
     }
 
     /// <inheritdoc />
-    public async Task<string> GenerateIdTokenAsync(CoreIdentUser user, string clientId, string? nonce, IEnumerable<string> scopes)
+    public Task<string> GenerateAccessTokenAsync(CoreIdentClient client, IEnumerable<string> grantedScopes)
     {
+        _logger.LogDebug("Generating access token for client {ClientId} with scopes: {Scopes}", client.ClientId, grantedScopes);
+
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, client.ClientId), // Subject is the Client ID
+            new Claim("client_id", client.ClientId), // Explicit client_id claim
+            // Add Jti and Iat which are standard
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+        };
+
+        if (grantedScopes != null && grantedScopes.Any())
+        {
+            claims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
+        }
+
+        // Issuer and Audience are standard for access tokens
+        claims.Add(new Claim(JwtRegisteredClaimNames.Iss, _options.Issuer ?? throw new InvalidOperationException("Issuer not configured.")));
+        if (!string.IsNullOrEmpty(_options.Audience))
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Aud, _options.Audience));
+        }
+
+        // Use the existing internal helper method
+        return Task.FromResult(GenerateJwtTokenInternal(claims, client.ClientId));
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GenerateIdTokenAsync(CoreIdentUser user, string clientId, string? nonce, IEnumerable<string>? scopes = null)
+    {
+        _logger.LogDebug("Generating ID token for user {UserId}, client {ClientId}, nonce: {Nonce}, scopes: {Scopes}",
+            user.Id, clientId, nonce, scopes);
+
         if (user == null) throw new ArgumentNullException(nameof(user));
         if (string.IsNullOrEmpty(clientId)) throw new ArgumentNullException(nameof(clientId));
-        if (scopes == null) throw new ArgumentNullException(nameof(scopes));
+        // Nonce is optional, scopes might be optional depending on context, but usually required for openid
+        if (scopes == null || !scopes.Contains("openid"))
+        {
+            _logger.LogDebug("ID token not generated: 'openid' scope missing.");
+            return null; // ID token requires 'openid' scope
+        }
 
         var now = DateTimeOffset.UtcNow;
         var claims = new List<Claim>
@@ -152,35 +132,56 @@ public class JwtTokenService : ITokenService
             claims.Add(new Claim(JwtRegisteredClaimNames.Nonce, nonce));
         }
 
-        // Add user claims based on requested scopes (similar logic to access token, but tailored for ID token)
+        // Add user claims based on requested scopes
         var userClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
         var scopesFromStore = await _scopeStore.FindScopesByNameAsync(scopes, CancellationToken.None);
 
+        // Get claim types allowed by the requested scopes
         var allowedClaimTypes = scopesFromStore
             .SelectMany(s => s.UserClaims.Select(uc => uc.Type))
             .Distinct()
-            .ToList();
+            .ToHashSet(); // Use HashSet for faster lookups
 
-        // Include standard OIDC claims based on standard scopes
-         if (scopes.Contains("profile"))
+        // Include standard OIDC claims based on standard scopes requested
+        foreach (var scopeName in scopes)
         {
-            allowedClaimTypes.AddRange(new[] { "name", "family_name", "given_name", "middle_name", "nickname", "preferred_username", "profile", "picture", "website", "gender", "birthdate", "zoneinfo", "locale", "updated_at" });
+            _logger.LogDebug("Adding claims based on scope: {ScopeName}", scopeName);
+            if (scopeName == "profile")
+            {
+                // Add claims allowed by the 'profile' scope definition
+                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Name) && !string.IsNullOrEmpty(user.UserName))
+                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Name, user.UserName));
+                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.FamilyName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.FamilyName)?.Value is string familyName)
+                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.FamilyName, familyName));
+                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.GivenName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.GivenName)?.Value is string givenName)
+                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.GivenName, givenName));
+                // Add other profile claims (middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, updated_at)
+            }
+            else if (scopeName == "email")
+            {
+                 // Add claims allowed by the 'email' scope definition
+                 // Assuming UserName is the email for CoreIdentUser currently
+                 if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Email) && !string.IsNullOrEmpty(user.UserName)) // Use UserName as Email source
+                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Email, user.UserName));
+                 // if (allowedClaimTypes.Contains("email_verified") && userClaims.FirstOrDefault(c => c.Type == "email_verified")?.Value is string emailVerified)
+                 //    claims.AddIfNotExist(new Claim("email_verified", emailVerified));
+            }
+            else if (scopeName == "address")
+            {
+                // Add claims allowed by the 'address' scope definition
+                // if (allowedClaimTypes.Contains("address") && userClaims.FirstOrDefault(c => c.Type == "address")?.Value is string addressJson)
+                //    claims.AddIfNotExist(new Claim("address", addressJson, JsonClaimValueTypes.Json));
+            }
+             else if (scopeName == "phone")
+            {
+                // Add claims allowed by the 'phone' scope definition
+                // if (allowedClaimTypes.Contains("phone_number") && userClaims.FirstOrDefault(c => c.Type == "phone_number")?.Value is string phone)
+                //    claims.AddIfNotExist(new Claim("phone_number", phone));
+                // if (allowedClaimTypes.Contains("phone_number_verified") && userClaims.FirstOrDefault(c => c.Type == "phone_number_verified")?.Value is string phoneVerified)
+                //    claims.AddIfNotExist(new Claim("phone_number_verified", phoneVerified));
+            }
+            // Add other scope-to-claim mappings here for custom scopes
         }
-        if (scopes.Contains("email"))
-        {
-            allowedClaimTypes.AddRange(new[] { "email", "email_verified" });
-        }
-         if (scopes.Contains("address"))
-        {
-            allowedClaimTypes.Add("address");
-        }
-        if (scopes.Contains("phone"))
-        {
-            allowedClaimTypes.AddRange(new[] { "phone_number", "phone_number_verified" });
-        }
-
-        allowedClaimTypes = allowedClaimTypes.Distinct().ToList();
-        claims.AddRange(userClaims.Where(uc => allowedClaimTypes.Contains(uc.Type)));
 
         // Issuer & Audience
         var issuer = _options.Issuer ?? throw new InvalidOperationException("Issuer not configured.");
@@ -312,7 +313,7 @@ public class JwtTokenService : ITokenService
         {
             throw new InvalidOperationException("SigningKeySecret not configured.");
         }
-        // TODO: Add support for asymmetric keys (reading from config/file)
+        // TODO: Add support for asymmetric keys (RS256 etc.) based on config
         return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret));
     }
 
@@ -325,4 +326,94 @@ public class JwtTokenService : ITokenService
     //     rng.GetBytes(randomNumber);
     //     return Task.FromResult(Convert.ToBase64String(randomNumber));
     // }
+
+    private async Task<List<Claim>> GetClaimsForTokenAsync(CoreIdentUser user, IEnumerable<Claim> userClaims, IEnumerable<string>? allowedScopes = null)
+    {
+        var claims = new List<Claim>();
+
+        // Add user claims based on requested scopes
+        if (allowedScopes != null && allowedScopes.Any())
+        {
+            var scopesFromStore = await _scopeStore.FindScopesByNameAsync(allowedScopes, CancellationToken.None);
+
+            var allowedClaimTypes = scopesFromStore
+                .SelectMany(s => s.UserClaims.Select(uc => uc.Type))
+                .Distinct()
+                .ToList();
+
+            // Include standard OIDC claims based on standard scopes
+            if (allowedScopes.Contains("profile"))
+            {
+                 allowedClaimTypes.AddRange(new[] { "name", "family_name", "given_name", "middle_name", "nickname", "preferred_username", "profile", "picture", "website", "gender", "birthdate", "zoneinfo", "locale", "updated_at" });
+            }
+             if (allowedScopes.Contains("email"))
+            {
+                allowedClaimTypes.AddRange(new[] { "email", "email_verified" });
+            }
+            if (allowedScopes.Contains("address"))
+            {
+                 allowedClaimTypes.Add("address");
+            }
+            if (allowedScopes.Contains("phone"))
+            {
+                 allowedClaimTypes.AddRange(new[] { "phone_number", "phone_number_verified" });
+            }
+
+            allowedClaimTypes = allowedClaimTypes.Distinct().ToList();
+
+            claims.AddRange(userClaims.Where(uc => allowedClaimTypes.Contains(uc.Type)));
+        }
+
+        // Issuer & Audience
+        var issuer = _options.Issuer ?? throw new InvalidOperationException("Issuer not configured.");
+        var audience = _options.Audience ?? throw new InvalidOperationException("Audience not configured.");
+
+        claims.Add(new Claim(JwtRegisteredClaimNames.Iss, issuer));
+        claims.Add(new Claim(JwtRegisteredClaimNames.Aud, audience)); // Access token audience is typically the resource server
+
+        // Add Subject claim here as it's fundamental
+        claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Sub, user.Id));
+
+        // Add scope claim if scopes were requested and processed
+        if (allowedScopes != null && allowedScopes.Any())
+        {
+            claims.Add(new Claim("scope", string.Join(" ", allowedScopes)));
+        }
+
+        return claims;
+    }
+
+    private string GenerateJwtTokenInternal(List<Claim> claims, string subject)
+    {
+        // Signing Key
+        var securityKey = GetSecurityKey();
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256); // Ensure algorithm matches key type
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.Add(_options.AccessTokenLifetime),
+            Issuer = _options.Issuer ?? throw new InvalidOperationException("Issuer not configured."),
+            Audience = _options.Audience ?? throw new InvalidOperationException("Audience not configured."),
+            SigningCredentials = credentials
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var tokenString = tokenHandler.WriteToken(token);
+         _logger.LogDebug("Generated JWT for principal {PrincipalId}. Issuer: {Issuer}, Audience: {Audience}, Expires: {Expiry}",
+            subject, tokenDescriptor.Issuer, tokenDescriptor.Audience, tokenDescriptor.Expires);
+        return tokenString;
+    }
+}
+
+internal static class ClaimsExtensions
+{
+    internal static void AddIfNotExist(this List<Claim> claims, Claim claimToAdd)
+    {
+        if (!claims.Any(c => c.Type == claimToAdd.Type /* && c.Value == claimToAdd.Value */)) // Allow multiple claims of same type (e.g., roles)
+        {
+            claims.Add(claimToAdd);
+        }
+    }
 }
