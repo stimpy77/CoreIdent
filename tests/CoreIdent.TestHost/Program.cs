@@ -20,7 +20,7 @@ builder.Services.AddCoreIdent(options =>
     // Use a secure, sufficiently long key (at least 32 bytes / 256 bits recommended for HS256)
     options.SigningKeySecret = "MySuperSecretTestHostKeyLongEnough32Bytes";
     options.AccessTokenLifetime = TimeSpan.FromMinutes(5);
-    options.RefreshTokenLifetime = TimeSpan.FromSeconds(30); // Short lifetime for testing expiration
+    options.RefreshTokenLifetime = TimeSpan.FromMinutes(10); // Short lifetime for testing expiration, > AccessTokenLifetime
 });
 
 // --- Keep Storage Configuration Commented Out in TestHost Program.cs ---

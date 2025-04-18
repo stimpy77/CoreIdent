@@ -60,7 +60,7 @@ public class TokenCleanupServiceTests
                         services.AddCoreIdent(options => 
                         {
                             options.Issuer = "https://test.coreident.com";
-                            options.Audience = "test_api";
+                            options.Audience = "https://test.coreident.com/resources";
                             options.SigningKeySecret = "a_very_secure_test_key_that_is_long_enough_for_testing";
                         });
                         
@@ -71,7 +71,7 @@ public class TokenCleanupServiceTests
                         });
                         
                         // Add EF Core stores with cleanup service enabled/disabled
-                        services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>(enableCleanupService);
+                        services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>(enableTokenCleanupService: enableCleanupService);
                     })
                     .Configure(app => 
                     {
