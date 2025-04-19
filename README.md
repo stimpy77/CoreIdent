@@ -10,14 +10,13 @@
 
 **Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
-**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is underway, with **Authorization Code Flow + PKCE and ID Token issuance now complete**.
+**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is complete, with **Authorization Code Flow + PKCE, ID Token issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints, and Client Credentials Flow now complete**.
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
 *   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
-*   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics
-    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints.
-    *   **In Progress:** Client Credentials Flow, Discovery endpoints.
+*   **Phase 3 (Completed):** Core OAuth 2.0 / OIDC Server Mechanics
+    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints, Client Credentials Flow.
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Phase 6:** Client Libraries for Mobile & Desktop Applications.
@@ -36,7 +35,7 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 ## Current State vs. Future Vision
 
-**What CoreIdent provides *today* (Phase 3 In Progress):**
+**What CoreIdent provides *today* (Phase 3 Complete):**
 
 *   **Core Authentication API:** Secure `/auth/register`, `/auth/login`, and `/auth/token/refresh` endpoints (default prefix `/auth`).
 *   **JWT Issuance:** Standard access tokens upon login.
