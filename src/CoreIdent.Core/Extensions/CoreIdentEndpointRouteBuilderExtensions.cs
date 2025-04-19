@@ -1048,12 +1048,38 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
         // Map well-known endpoints relative to the root
         // Endpoint: GET /.well-known/openid-configuration
-        endpoints.MapGet(routeOptions.DiscoveryPath, (IOptions<CoreIdentOptions> options, ILogger<CoreIdentRouteOptions> logger) =>
+        endpoints.MapGet(routeOptions.DiscoveryPath, (IOptions<CoreIdentOptions> options, ILogger<CoreIdentRouteOptions> logger, LinkGenerator links, HttpContext httpContext) =>
         {
-            logger.LogInformation("Discovery endpoint hit: {Path}", routeOptions.DiscoveryPath);
-            // TODO: Implement OIDC Discovery endpoint logic
-            // Read from CoreIdentOptions and dynamically build the response
-            return Results.NotFound(new { message = "OIDC Discovery endpoint not yet implemented." });
+            try
+            {
+                logger.LogInformation("Discovery endpoint hit: {Path}", routeOptions.DiscoveryPath);
+                var opts = options.Value;
+                var issuer = opts.Issuer ?? httpContext.Request.Scheme + "://" + httpContext.Request.Host.Value;
+                var baseUrl = issuer.TrimEnd('/');
+                var jwksUri = baseUrl + "/.well-known/jwks.json";
+                var authorizationEndpoint = baseUrl + "/auth/authorize";
+                var tokenEndpoint = baseUrl + "/auth/token";
+                var userinfoEndpoint = baseUrl + "/auth/userinfo";
+                var discovery = new {
+                    issuer = issuer,
+                    jwks_uri = jwksUri,
+                    authorization_endpoint = authorizationEndpoint,
+                    token_endpoint = tokenEndpoint,
+                    userinfo_endpoint = userinfoEndpoint,
+                    response_types_supported = new[] { "code", "token" },
+                    subject_types_supported = new[] { "public" },
+                    id_token_signing_alg_values_supported = new[] { "HS256" },
+                    scopes_supported = new[] { "openid", "profile", "email" },
+                    token_endpoint_auth_methods_supported = new[] { "client_secret_post", "client_secret_basic" },
+                    grant_types_supported = new[] { "authorization_code", "client_credentials", "refresh_token", "password" }
+                };
+                return Results.Json(discovery);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Discovery endpoint error");
+                return Results.Problem($"{ex.Message}\n{ex.StackTrace}", statusCode: StatusCodes.Status500InternalServerError);
+            }
         })
         .WithName("OidcDiscovery")
         .WithTags("CoreIdent")
@@ -1062,12 +1088,35 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .WithSummary("Provides OpenID Connect discovery information.");
 
         // Endpoint: GET /.well-known/jwks.json
-        endpoints.MapGet(routeOptions.JwksPath, (IOptions<CoreIdentOptions> options, ILogger<CoreIdentRouteOptions> logger) =>
+        endpoints.MapGet(routeOptions.JwksPath, (
+            IOptions<CoreIdentOptions> options,
+            [Microsoft.AspNetCore.Mvc.FromServices] JwtTokenService tokenService,
+            ILogger<CoreIdentRouteOptions> logger) =>
         {
-            logger.LogInformation("JWKS endpoint hit: {Path}", routeOptions.JwksPath);
-            // TODO: Implement JWKS endpoint logic
-            // Retrieve public signing keys (e.g., from ISigningKeyManager)
-            return Results.NotFound(new { message = "JWKS endpoint not yet implemented." });
+            try
+            {
+                logger.LogInformation("JWKS endpoint hit: {Path}", routeOptions.JwksPath);
+                // Only HS256 supported for now
+                var securityKey = tokenService.GetSecurityKey() as Microsoft.IdentityModel.Tokens.SymmetricSecurityKey;
+                if (securityKey == null)
+                {
+                    return Results.Problem("No symmetric key configured.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+                var jwk = new {
+                    kty = "oct",
+                    k = System.Convert.ToBase64String(securityKey.Key),
+                    alg = "HS256",
+                    use = "sig",
+                    kid = "coreident-hs256"
+                };
+                var jwks = new { keys = new[] { jwk } };
+                return Results.Json(jwks);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "JWKS endpoint error");
+                return Results.Problem($"{ex.Message}\n{ex.StackTrace}", statusCode: StatusCodes.Status500InternalServerError);
+            }
         })
         .WithName("OidcJwks")
         .WithTags("CoreIdent")

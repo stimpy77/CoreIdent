@@ -1,5 +1,19 @@
 # CoreIdent Release Notes
 
+## Version 0.3.5
+### Added
+- ID Token issuance is now fully OIDC-compliant, with claims sourced from the user store when available (profile/email).
+- Comprehensive unit and integration tests for all ID Token claim variations and nonce round-trip.
+- DEVPLAN updated: Added Phase 3 checklist for real-world gaps (custom claims, consent UI, revocation, dynamic clients, key rotation, etc.).
+
+### Changed
+- JwtTokenService now prefers user claims from the user store for `name` and `email`, falling back to `UserName` only if claims are missing.
+- All Core, EF, and DelegatedUserStore packages bumped to 0.3.5.
+
+### Fixed
+- False positive spec adherence: Claims logic now matches real-world OIDC expectations for extensibility and correctness.
+- All tests passing after claims logic improvements and expanded coverage.
+
 ## Version 0.3.4
 - **Client Credentials Flow:** Implemented `POST /token` (with `grant_type=client_credentials`) endpoint to support machine-to-machine authentication. Requires `IClientStore` implementation (e.g., EF Core). Validates client credentials and allowed scopes, issuing an access token representing the client.
 

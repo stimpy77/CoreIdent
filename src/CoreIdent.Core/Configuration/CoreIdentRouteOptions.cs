@@ -75,7 +75,7 @@ public class CoreIdentRouteOptions
         // Handle paths that should be relative to root, not base path
         if (relativePath.StartsWith(".well-known/"))
         {
-             // Ensure it starts with exactly one '/'
+            // Ensure it starts with exactly one '/'
             return "/" + relativePath.TrimStart('/');
         }
 
@@ -84,10 +84,20 @@ public class CoreIdentRouteOptions
             throw new InvalidOperationException($"{nameof(BasePath)} must be configured and start with a '/'. Current value: '{BasePath}'");
         }
 
-        // Ensure BasePath ends with a single '/' and relativePath does not start with one
+        // Use System.Uri to combine and normalize the path
+        // Ensure BasePath ends with a slash, but does not have double slashes
         var basePathNormalized = BasePath.TrimEnd('/') + "/";
         var relativePathNormalized = relativePath.TrimStart('/');
 
-        return basePathNormalized + relativePathNormalized;
+        var baseUri = new Uri("http://temp-coreident-host" + basePathNormalized, UriKind.Absolute);
+        var combinedUri = new Uri(baseUri, relativePathNormalized);
+        var absolutePath = combinedUri.AbsolutePath;
+
+        // Remove trailing slash except for root
+        if (absolutePath.Length > 1 && absolutePath.EndsWith("/"))
+        {
+            absolutePath = absolutePath.TrimEnd('/');
+        }
+        return absolutePath;
     }
 } 

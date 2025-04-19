@@ -148,26 +148,37 @@ public class JwtTokenService : ITokenService
             _logger.LogDebug("Adding claims based on scope: {ScopeName}", scopeName);
             if (scopeName == "profile")
             {
-                // Add claims allowed by the 'profile' scope definition
-                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Name) && !string.IsNullOrEmpty(user.UserName))
-                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Name, user.UserName));
-                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.FamilyName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.FamilyName)?.Value is string familyName)
-                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.FamilyName, familyName));
-                if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.GivenName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.GivenName)?.Value is string givenName)
-                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.GivenName, givenName));
-                // Add other profile claims (middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, updated_at)
-            }
-            else if (scopeName == "email")
-            {
-                 // Add claims allowed by the 'email' scope definition
-                 // Assuming UserName is the email for CoreIdentUser currently
-                 if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Email) && !string.IsNullOrEmpty(user.UserName)) // Use UserName as Email source
-                    claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Email, user.UserName));
-                 // if (allowedClaimTypes.Contains("email_verified") && userClaims.FirstOrDefault(c => c.Type == "email_verified")?.Value is string emailVerified)
-                 //    claims.AddIfNotExist(new Claim("email_verified", emailVerified));
-            }
-            else if (scopeName == "address")
-            {
+                 // Add claims allowed by the 'profile' scope definition
+                 if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Name))
+                 {
+                     var nameClaim = userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value;
+                     if (!string.IsNullOrEmpty(nameClaim))
+                         claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Name, nameClaim));
+                     else if (!string.IsNullOrEmpty(user.UserName))
+                         claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Name, user.UserName));
+                 }
+                 if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.FamilyName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.FamilyName)?.Value is string familyName)
+                     claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.FamilyName, familyName));
+                 if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.GivenName) && userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.GivenName)?.Value is string givenName)
+                     claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.GivenName, givenName));
+                 // Add other profile claims (middle_name, nickname, preferred_username, profile, picture, website, gender, birthdate, zoneinfo, locale, updated_at)
+             }
+             else if (scopeName == "email")
+             {
+                  // Add claims allowed by the 'email' scope definition
+                  if (allowedClaimTypes.Contains(JwtRegisteredClaimNames.Email))
+                  {
+                      var emailClaim = userClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value;
+                      if (!string.IsNullOrEmpty(emailClaim))
+                          claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Email, emailClaim));
+                      else if (!string.IsNullOrEmpty(user.UserName))
+                          claims.AddIfNotExist(new Claim(JwtRegisteredClaimNames.Email, user.UserName));
+                  }
+                  // if (allowedClaimTypes.Contains("email_verified") && userClaims.FirstOrDefault(c => c.Type == "email_verified")?.Value is string emailVerified)
+                  //    claims.AddIfNotExist(new Claim("email_verified", emailVerified));
+             }
+             else if (scopeName == "address")
+             {
                 // Add claims allowed by the 'address' scope definition
                 // if (allowedClaimTypes.Contains("address") && userClaims.FirstOrDefault(c => c.Type == "address")?.Value is string addressJson)
                 //    claims.AddIfNotExist(new Claim("address", addressJson, JsonClaimValueTypes.Json));
@@ -307,7 +318,8 @@ public class JwtTokenService : ITokenService
         }
     }
 
-    private SecurityKey GetSecurityKey()
+    // Make the security key accessible for JWKS endpoint
+    public SecurityKey GetSecurityKey()
     {
         if (string.IsNullOrWhiteSpace(_options.SigningKeySecret))
         {

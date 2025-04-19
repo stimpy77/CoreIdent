@@ -4,6 +4,9 @@
 
 This document serves as a comprehensive index and manifest for the CoreIdent project, specifically tailored for Large Language Models (LLMs). Its goal is to provide a quick and detailed understanding of the project's structure, components, current status, and development plan, enabling more effective and context-aware assistance.
 
+The appendix is auto-generated for traceability of classes. If you add or remove classes, please update this 
+section accordingly. In fact, please update this whole file (all sections) as you complete each action.
+
 ### Developer Addendum
 
 Always, ALWAYS be sure you are implementing a system that complies with industry standard conventions, that the end result
@@ -43,9 +46,9 @@ things are or how they were supposed to work.
             *   Implemented persistent `IAuthorizationCodeStore` using EF Core (`src/CoreIdent.Storage.EntityFrameworkCore/Stores/EfAuthorizationCodeStore.cs`).
             *   Added automatic cleanup/expiry for authorization codes (`src/CoreIdent.Storage.EntityFrameworkCore/Services/AuthorizationCodeCleanupService.cs`).
             *   Ensured robust concurrency handling in `IAuthorizationCodeStore` implementations.
-        *   **In Progress:** Client Credentials Flow, Discovery endpoints.
         *   **Completed:** Client Credentials Flow (`grant_type=client_credentials` added to `/token` endpoint logic).
-        *   **Next:** Discovery endpoints.
+        *   **Completed:** OIDC Discovery (/.well-known/openid-configuration) and JWKS (/.well-known/jwks.json) endpoints, including robust error handling and DI registration improvements for `JwtTokenService`.
+        *   **Next:** User interaction endpoints, consent, and UI.
     *   **Phase 4 (Future):** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
     *   **Phase 5 (Future):** Advanced Features & Polish (More Flows, Extensibility, Templates).
 *   **Reference:** `DEVPLAN.md`: Detailed breakdown of tasks for each phase.
@@ -58,8 +61,7 @@ things are or how they were supposed to work.
     *   `CoreIdent.Storage.EntityFrameworkCore`: EF Core persistence layer (DbContext, entities configuration, store implementations).
     *   `CoreIdent.Adapters.DelegatedUserStore`: Adapter for using external user stores.
 *   **Tests Directory:** `c:\dev\prj\CoreIdent\tests\`
-    *   `CoreIdent.Core.Tests`: Unit tests for `CoreIdent.Core` and store implementations.
-        *   `Stores/EfAuthorizationCodeStoreTests.cs`: Tests for the EF Core auth code store.
+    *   `CoreIdent.Core.Tests`: Unit tests for `CoreIdent.Core` and store implementations. See the appendix for a full list of test classes.
     *   `CoreIdent.Integration.Tests`: Integration tests using `TestServer`.
         *   `AuthorizationCodeFlowTests.cs`: Tests for the Auth Code flow.
     *   `CoreIdent.TestHost`: Shared test hosting setup.
@@ -196,10 +198,61 @@ This is the central library containing the core logic, interfaces, and models.
             *   Implemented secure hashing of refresh token handles using SHA-256 with user/client ID salting.
             *   Added support for storing both raw (legacy) and hashed token handles during migration period.
         *   **Completed:** Client Credentials Flow (`grant_type=client_credentials` added to `/token` endpoint logic).
-        *   **Next:** Discovery endpoints.
+        *   **Completed:** OIDC Discovery (/.well-known/openid-configuration) and JWKS (/.well-known/jwks.json) endpoints, including robust error handling and DI registration improvements for `JwtTokenService`.
+        *   **Next:** User interaction endpoints, consent, and UI.
     *   **Phase 4 (Future):** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
     *   **Phase 5 (Future):** Advanced Features & Polish (More Flows, Extensibility, Templates).
 
 ## 10. Conclusion
 
 This index provides a snapshot of the CoreIdent project after completing the Authorization Code Flow, ID Token generation, token theft detection, and the EF Core Authorization Code Store implementation. Referencing this document should give an LLM a solid foundation for understanding the codebase, its current state, and the planned trajectory. Key documents like `DEVPLAN.md` and `Developer_Training_Guide.md` offer further details on specific aspects but require updates for the latest changes.
+
+## 11. Appendix: Full Class Index (Traceability)
+
+This appendix lists every class in the CoreIdent codebase (src and tests), with its full file path for maximum traceability. Classes are grouped by project/component.
+
+### src/CoreIdent.Core
+- Models/CoreIdentUser.cs: CoreIdentUser
+- Models/CoreIdentClient.cs: CoreIdentClient, CoreIdentClientSecret
+- Models/CoreIdentScope.cs: CoreIdentScope
+- Models/CoreIdentRefreshToken.cs: CoreIdentRefreshToken
+- Stores/InMemoryClientStore.cs: InMemoryClientStore
+- Stores/InMemoryScopeStore.cs: InMemoryScopeStore
+
+### src/CoreIdent.Storage.EntityFrameworkCore
+- CoreIdentDbContext.cs: CoreIdentDbContext
+- Migrations/CoreIdentDbContextModelSnapshot.cs: CoreIdentDbContextModelSnapshot
+- Stores/EfUserStore.cs: EfUserStore
+- Stores/EfClientStore.cs: EfClientStore
+- Stores/EfScopeStore.cs: EfScopeStore
+- Stores/EfRefreshTokenStore.cs: EfRefreshTokenStore
+- Stores/EfAuthorizationCodeStore.cs: EfAuthorizationCodeStore
+- Factories/DesignTimeDbContextFactory.cs: DesignTimeDbContextFactory
+- Extensions/CoreIdentEntityFrameworkBuilderExtensions.cs: CoreIdentEntityFrameworkBuilderExtensions
+
+### src/CoreIdent.Adapters.DelegatedUserStore
+- DelegatedUserStore.cs: DelegatedUserStore
+- DelegatedUserStoreOptions.cs: DelegatedUserStoreOptions
+
+### tests/CoreIdent.Core.Tests
+- Extensions/CoreIdentServiceCollectionExtensionsTests.cs: CoreIdentServiceCollectionExtensionsTests
+- Stores/InMemoryUserStoreTests.cs: InMemoryUserStoreTests
+- Stores/EfUserStoreTests.cs: EfUserStoreTests
+- Services/JwtTokenServiceTests.cs: JwtTokenServiceTests
+- Services/RefreshTokenCleanupServiceTests.cs: RefreshTokenCleanupServiceTests
+- Services/DefaultPasswordHasherTests.cs: DefaultPasswordHasherTests
+- Infrastructure/SqliteInMemoryTestBase.cs: SqliteInMemoryTestBase
+
+### tests/CoreIdent.Integration.Tests
+- AuthorizationCodeFlowTests.cs: AuthorizationCodeFlowTests
+- RefreshTokenEndpointTests.cs: RefreshTokenEndpointTests, RefreshTokenTestWebApplicationFactory
+- DelegatedUserStoreIntegrationTests.cs: DelegatedUserStoreIntegrationTests, DelegatedUserStoreWebApplicationFactory
+- TokenCleanupServiceTests.cs: TokenCleanupServiceTests
+- TokenTheftDetectionTests.cs: TokenTheftDetectionTests
+
+### tests/CoreIdent.TestHost
+- Setup/TestSetupFixture.cs: TestSetupFixture
+
+---
+
+**Note:** This appendix is auto-generated for traceability. If you add or remove classes, please update this section accordingly.

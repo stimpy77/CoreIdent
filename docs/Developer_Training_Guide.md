@@ -881,3 +881,19 @@ grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&clie
   ```json
   { "error": "invalid_client", "error_description": "Invalid client secret." }
   ```
+### OpenID Connect: ID Token
+
+- The **ID Token** is a JWT issued as part of the OIDC flow (e.g., Authorization Code).
+- Contains claims about the authenticated user and session:
+    - `iss`: Issuer
+    - `sub`: User ID (subject)
+    - `aud`: Audience (client ID)
+    - `exp`: Expiration
+    - `iat`: Issued-at
+    - `nonce`: Nonce from the original request (prevents replay)
+    - `name`, `email`: User claims if requested via scopes
+- Returned in the `id_token` property of the `/token` endpoint response.
+- Signed using the server's signing key (see [README.md](../README.md)).
+- **Testing:**
+    - Unit tests verify claim presence and signature.
+    - Integration tests verify issuance during the Authorization Code flow and round-trip of the nonce value.

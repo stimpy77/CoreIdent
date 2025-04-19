@@ -1292,5 +1292,70 @@ namespace CoreIdent.Integration.Tests
             // This verifies that a CSRF attack (where an attacker tries to use a different state value)
             // would be detected because the state parameter must be preserved
         }
+
+        [Fact]
+        public async Task Token_WithValidAuthorizationCode_ReturnsTokens_AndIdToken()
+        {
+            // Arrange - First get an authorization code
+            var (codeVerifier, codeChallenge) = GeneratePkceValues();
+            var nonce = "test-nonce-123";
+            var authorizeUri = new Uri($"/auth/authorize?client_id=test-authcode-client" +
+                "&response_type=code" +
+                "&redirect_uri=" + WebUtility.UrlEncode("http://localhost:12345/callback") +
+                "&scope=openid%20profile%20api1%20offline_access" +
+                "&code_challenge=" + codeChallenge +
+                "&code_challenge_method=S256" +
+                "&state=test-state" +
+                "&nonce=" + nonce, UriKind.Relative);
+            var authorizeResponse = await _client.GetAsync(authorizeUri);
+            authorizeResponse.Headers.Location.ShouldNotBeNull();
+            var query = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location.Query);
+            query.ShouldContainKey("code");
+            var code = query["code"]!;
+
+            // Act - Exchange code for tokens
+            var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = "test-authcode-client",
+                ["code"] = code!,
+                ["redirect_uri"] = "http://localhost:12345/callback",
+                ["code_verifier"] = codeVerifier
+            });
+            var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
+            // Assert
+            tokenResponse.EnsureSuccessStatusCode();
+            var content = await tokenResponse.Content.ReadAsStringAsync();
+            using JsonDocument document = JsonDocument.Parse(content);
+            JsonElement root = document.RootElement;
+            string accessToken = root.GetProperty("access_token").GetString()!;
+            string tokenType = root.GetProperty("token_type").GetString()!;
+            string refreshToken = root.GetProperty("refresh_token").GetString()!;
+            int expiresIn = root.GetProperty("expires_in").GetInt32();
+            // --- NEW: Check for id_token ---
+            root.TryGetProperty("id_token", out var idTokenElement).ShouldBeTrue("id_token should be present in the response");
+            var idToken = idTokenElement.GetString();
+            idToken.ShouldNotBeNullOrWhiteSpace();
+            // Validate the id_token is a valid JWT and contains expected claims
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var validationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("TestSecretKeyNeedsToBe_AtLeast32CharsLongForHS256")),
+                ValidateIssuer = true,
+                ValidIssuer = "https://test.issuer.com",
+                ValidateAudience = false, // Not set in ID token yet
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+            handler.ValidateToken(idToken!, validationParameters, out var validatedToken);
+            var jwtToken = (System.IdentityModel.Tokens.Jwt.JwtSecurityToken)validatedToken;
+            jwtToken.Claims.ShouldContain(c => c.Type == "sub");
+            jwtToken.Claims.ShouldContain(c => c.Type == "iat");
+            jwtToken.Claims.ShouldContain(c => c.Type == "nonce" && c.Value == nonce); // nonce should match
+            // Optionally check for profile/email claims if present in user
+            // jwtToken.Claims.ShouldContain(c => c.Type == "name");
+            // jwtToken.Claims.ShouldContain(c => c.Type == "email");
+        }
     }
 }

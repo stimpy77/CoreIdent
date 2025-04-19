@@ -16,7 +16,7 @@
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
 *   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
 *   **Phase 3 (Current):** Core OAuth 2.0 / OIDC Server Mechanics
-    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection.
+    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints.
     *   **In Progress:** Client Credentials Flow, Discovery endpoints.
 *   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
 *   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
@@ -26,12 +26,13 @@
 
 Tired of wrestling with complex identity vendors or rolling your own auth from scratch? CoreIdent offers a different path:
 
-*   🚀 **Developer Freedom & Experience:** Open-source (MIT) with a focus on minimizing boilerplate and maximizing productivity through conventions and clear APIs. Get secure auth running *fast*.
-*   🧩 **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
-*   🔒 **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, **token theft detection** using family tracking, **securely hashed token handle storage**), password storage, and endpoint protection.
-*   🔧 **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
-*   🌐 **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
-*   🚫 **No Vendor Lock-In:** Own your identity layer.
+*   **Developer Freedom & Experience:** Open-source (MIT) with a focus on minimizing boilerplate and maximizing productivity through conventions and clear APIs. Get secure auth running *fast*.
+*   **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
+*   **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, **token theft detection** using family tracking, **securely hashed token handle storage**), password storage, and endpoint protection.
+*   **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
+*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints for OIDC metadata and public key discovery. Convention-based, robust error handling, and automatic DI for `JwtTokenService`—no manual registration needed.
+*   **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
+*   **No Vendor Lock-In:** Own your identity layer.
 
 ## Current State vs. Future Vision
 
@@ -51,91 +52,40 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 *   **Authorization Code Storage & Cleanup:** Authorization codes issued during OAuth flows are persisted in the database via EF Core (`EfAuthorizationCodeStore`). Expired codes are automatically cleaned up by a background service (`AuthorizationCodeCleanupService`) registered by default. The store implementation includes robust concurrency handling to prevent race conditions during code redemption and cleanup.
 *   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json`.
 
-**Where CoreIdent is heading (Future Phases):**
+## OpenID Connect ID Token Issuance
 
-*   **Full OAuth 2.0 / OIDC Server:** Implementing remaining standard flows (~~Client Credentials~~, Implicit, Hybrid) for web apps, SPAs, mobile apps, and APIs.
-*   **OIDC Compliance:** Discovery (`/.well-known/openid-configuration`), JWKS (`/.well-known/jwks.json`), ID Tokens.
-*   **User Interaction:** Consent screens, standard logout endpoints.
-*   **Extensible Provider Model:**
-    *   **MFA:** Pluggable Multi-Factor Authentication (TOTP, SMS, Email).
-    *   **Passwordless:** Passkeys / WebAuthn / FIDO2.
-    *   **Social Logins:** Google, Microsoft, etc.
-    *   **Decentralized:** Web3 Wallet Login (MetaMask), LNURL-auth.
-*   **UI Components:** Optional package (`CoreIdent.UI.Web`) providing basic, themeable UI (Razor Pages/Components) for login, registration, consent, etc.
-*   **Administration:** Optional Admin UI for managing users, clients, scopes.
-*   **Client Libraries:**
-    *   Core client library (`CoreIdent.Client`) for mobile & desktop apps
-    *   Platform-specific implementations (.NET MAUI, WPF)
-    *   Secure token storage and management
-    *   Offline authentication support
-*   **Tooling:** `dotnet new` templates, comprehensive documentation.
-*   **(In Progress)** Client Credentials Flow.
-*   **(Completed)** Client Credentials Flow (`/auth/token` grant type `client_credentials`).
-*   **(In Progress)** OIDC Discovery & JWKS Endpoints.
+CoreIdent issues an **ID Token** as part of the OpenID Connect Authorization Code flow. The ID Token is a signed JWT and contains the following claims:
 
-For more details on these features, see the [Developer Training Guide](./docs/Developer_Training_Guide.md).
+| Claim      | Description                                           |
+|------------|-------------------------------------------------------|
+| iss        | Issuer identifier for the authorization server        |
+| sub        | Subject identifier (user ID)                         |
+| aud        | Audience (client ID or resource)                     |
+| exp        | Expiration time (epoch seconds)                      |
+| iat        | Issued-at time (epoch seconds)                       |
+| nonce      | Value to associate a client session with the token    |
+| name       | User's display name (if profile scope requested)      |
+| email      | User's email (if email scope requested)               |
 
-**Is this a replacement for IdentityServer?**
+**Example ID Token Payload:**
+```json
+{
+  "iss": "https://your-issuer.com",
+  "sub": "user-guid-or-id",
+  "aud": "client-id",
+  "exp": 1713559200,
+  "iat": 1713555600,
+  "nonce": "random-nonce-value",
+  "name": "Jane Doe",
+  "email": "jane@example.com"
+}
+```
 
-**Not yet, but that's the goal.** We are building the foundational pieces first, focusing on a solid core and flexible storage. Phase 3 is actively adding the core OAuth/OIDC mechanics.
+- The ID Token is returned in the `id_token` property of the `/token` endpoint response when the `openid` scope is requested.
+- Claims included depend on the requested scopes and user data.
+- The token is signed using the configured signing key.
 
-## Core Features by Phase
-
-### Phase 1: MVP Core (Foundation)
-
-The initial Phase 1 release established the fundamental authentication flow and core package structure:
-
-*   **Core Package Structure**:
-    *   `CoreIdent.Core` NuGet package targeting modern .NET
-    *   Configuration via `CoreIdentOptions` (Issuer, Audience, SigningKeySecret, token lifetimes)
-    *   Dependency injection via `AddCoreIdent()` and `MapCoreIdentEndpoints()` extension methods
-
-*   **User Registration**:
-    *   `POST /register` endpoint for creating new users
-    *   Input validation (email format, password complexity)
-    *   Secure password hashing with `IPasswordHasher`/`DefaultPasswordHasher`
-    *   User storage with `IUserStore` interface
-
-*   **User Authentication & Token Handling**:
-    *   `POST /login` endpoint for authenticating users
-    *   JWT access token generation via `ITokenService`/`JwtTokenService`
-    *   Standard claims (`sub`, `iss`, `aud`, `exp`, `iat`, `jti`)
-    *   Basic refresh token flow with `POST /token/refresh` endpoint
-
-*   **In-Memory Storage**:
-    *   `InMemoryUserStore` implementation for development/testing
-    *   Thread-safe collections for storing users and refresh tokens
-    *   Username normalization for case-insensitive lookups
-    *   Simple token validation and invalidation
-
-*   **Testing & Documentation**:
-    *   Unit tests for core services and interfaces
-    *   Integration tests for API endpoints
-    *   Initial documentation in README.md and Developer Training Guide
-
-Phase 1 provided a runnable, testable foundation focused on the core authentication flows, with in-memory storage suitable for development and testing.
-
-### Phase 2: Storage & Core Extensibility (Completed)
-
-Phase 2 built on the foundation by providing persistent storage options and enhancing extensibility:
-
-*   **Refined Core Interfaces**: Enhanced `IUserStore`, defined `IRefreshTokenStore`, `IClientStore`, `IScopeStore`.
-*   **Entity Framework Core Storage**: `CoreIdent.Storage.EntityFrameworkCore` for persisting users, refresh tokens, clients, scopes.
-*   **Delegated User Store Adapter**: `CoreIdent.Adapters.DelegatedUserStore` for integrating with existing user systems.
-*   **Robust Refresh Token Handling**: Implemented token rotation and persistence via `IRefreshTokenStore`.
-*   **Client and Scope Models**: Defined initial models for OAuth 2.0 / OIDC functionality.
-
-### Phase 3: Core OAuth 2.0 / OIDC Server Mechanics (Current)
-
-Phase 3 implements the essential backend logic for standard authorization flows and discovery:
-
-*   **Authorization Code Flow + PKCE (Completed)**: Secure flow for web apps, SPAs, and mobile clients (`/auth/authorize`, `/auth/token`). PKCE is enforced.
-*   **ID Token Issuance (Completed)**: Standard OIDC ID tokens generated alongside access tokens for the Authorization Code flow.
-*   **Token Theft Detection (Completed)**: Enhanced security for refresh tokens using family tracking and automatic revocation (enabled by default).
-*   **(In Progress)** Client Credentials Flow.
-*   **(In Progress)** OIDC Discovery & JWKS Endpoints.
-
-For more details on these features, see the [Developer Training Guide](./docs/Developer_Training_Guide.md).
+See the [DEVPLAN.md](./DEVPLAN.md) for test coverage and implementation status.
 
 ## Getting Started
 
@@ -452,140 +402,3 @@ app.MapGet("/protected", (ClaimsPrincipal user) => $"Hello {user.Identity?.Name}
 
 
 app.Run();
-
-```
-
-### 4. Core Functionality Available Now (Phase 3 In Progress)
-
-With the setup above, the following CoreIdent endpoints are available (default prefix `/auth`, configurable via `MapCoreIdentEndpoints`):
-
-*   `POST /auth/register` (or configured path): Register a new user.
-    *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
-    *   **Response Status Codes**: `201 Created`, `400 Bad Request`, `409 Conflict`
-    *   **Usage Example (curl)**:
-        ```bash
-        curl -X POST "https://localhost:5001/auth/register" \
-          -H "Content-Type: application/json" \
-          -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
-        ```
-
-*   `POST /auth/login` (or configured path): Authenticates a user with email/password and issues JWT tokens.
-    *   **Request Body**: `{ "email": "user@example.com", "password": "YourPassword123!" }`
-    *   **Response Status Codes**: `200 OK`, `400 Bad Request`, `401 Unauthorized`, `500 Internal Server Error`
-    *   **Response Body**:
-        ```json
-        {
-          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          "token_type": "Bearer",
-          "expires_in": 900, // Default Access Token Lifetime
-          "refresh_token": "abcdef123456..." // Opaque handle (raw value)
-        }
-        ```
-    *   **Token Structure**: JWT Access Token + Opaque Refresh Token handle.
-    *   **Security Considerations**: Store tokens securely, use HTTPS. `SigningKeySecret` is critical.
-    *   **Usage Example (curl)**:
-        ```bash
-        curl -X POST "https://localhost:5001/auth/login" \
-          -H "Content-Type: application/json" \
-          -d '{"email": "user@example.com", "password": "YourSecurePassword123!"}'
-        ```
-
-*   `POST /auth/token` (grant_type=refresh_token) (or configured path): Exchange a valid refresh token for new tokens.
-    *   **Request Body (form-urlencoded)**: `grant_type=refresh_token&refresh_token=abcdef123456...`
-    *   **Response Body**: (Same as login, potentially without refresh token depending on config/flow)
-    *   **Security**: Implements refresh token rotation and **token theft detection** (family tracking & revocation) by default. You can opt-out via `CoreIdentOptions.TokenSecurity.EnableTokenFamilyTracking = false`.
-
-**OAuth 2.0 / OIDC Endpoints (Phase 3):**
-
-*   `GET /auth/authorize` (or configured path): Initiates the Authorization Code flow.
-    *   Required parameters: `client_id`, `redirect_uri`, `response_type=code`, `scope`
-    *   Recommended parameters: `state`, `nonce`
-    *   PKCE parameters: `code_challenge`, `code_challenge_method=S256`
-    *   Example: `/auth/authorize?client_id=my-client&response_type=code&redirect_uri=https://my-app.com/callback&scope=openid%20profile&state=abc123&code_challenge=<challenge>&code_challenge_method=S256`
-*   `POST /auth/token` (grant_type=authorization_code) (or configured path): Exchanges an authorization code for tokens.
-    *   Required parameters (form-encoded): `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, `code_verifier` (for PKCE)
-    *   Confidential clients also require authentication (Basic Auth or request body).
-    *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "refresh_token": "...", "id_token": "..." }`
-*   `POST /auth/token` (grant_type=client_credentials) (or configured path): Issues an access token directly to a confidential client.
-    *   Required parameters (form-encoded): `grant_type=client_credentials`, `scope` (optional)
-    *   Requires client authentication (Basic Auth header OR `client_id`/`client_secret` in request body).
-    *   Returns: `{ "access_token": "...", "token_type": "Bearer", "expires_in": 900, "scope": "..." }` (No refresh token)
-
-**Storage:**
-*   **EF Core:** Provides persistence for users, refresh tokens, clients, scopes, **and authorization codes**. Requires `CoreIdent.Storage.EntityFrameworkCore` and DB migrations. **Expired authorization codes are cleaned up automatically by a background service.**
-*   **Delegated:** Adapts user operations (`IUserStore`) to your existing system via `CoreIdent.Adapters.DelegatedUserStore`. **Requires** separate persistent stores (like EF Core) for refresh tokens, auth codes, clients, and scopes.
-*   **Refresh Tokens:** Persisted (usually via EF Core) with the raw handle stored as the primary key and a **securely hashed handle (salted SHA-256)** stored separately. Tokens are rotated upon use, and token theft detection is enabled by default (`EnableTokenFamilyTracking: true`).
-
-## Client Authentication at the /token Endpoint
-
-The `/token` endpoint supports two standard methods for client authentication, as recommended by OAuth 2.0 (RFC 6749 Section 2.3.1):
-
-1. **HTTP Basic Authentication Header**
-   - The client sends its `client_id` and `client_secret` in the `Authorization` header using the `Basic` scheme.
-   - Example header: `Authorization: Basic base64(client_id:client_secret)`
-   - This is the most secure method for confidential clients (e.g., server-side web apps).
-
-2. **Request Body Parameters**
-   - The client includes `client_id` and `client_secret` as form fields in the POST body (content type: `application/x-www-form-urlencoded`).
-   - Example fields: `client_id=my-client&client_secret=supersecret`
-   - This method is supported for compatibility, but Basic Auth is preferred for confidential clients.
-
-**How Confidential vs. Public Clients Are Determined**
-- If a client has one or more registered secrets (`ClientSecrets`), it is treated as a confidential client and must authenticate using one of the above methods.
-- Public clients (e.g., SPAs, mobile apps) must not use secrets and are authenticated only by their `client_id`.
-
-**Secret Verification and Security**
-- Client secrets are securely hashed and stored in the database. Verification uses the same password hasher as user passwords.
-- Only confidential clients should use secrets. Never embed secrets in public client code.
-- If authentication fails (missing or invalid secret), the endpoint returns an `invalid_client` error.
-
-**Example: Basic Auth**
-```
-POST /auth/token
-Authorization: Basic base64(my-client:supersecret)
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=authorization_code&code=...&redirect_uri=...
-```
-
-**Example: Request Body**
-```
-POST /auth/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&client_secret=supersecret
-```
-
-**Error Responses**
-- If client authentication fails, the response will be:
-  ```json
-  { "error": "invalid_client", "error_description": "Client authentication failed (client_id missing)." }
-  ```
-- Or for invalid secret:
-  ```json
-  { "error": "invalid_client", "error_description": "Invalid client secret." }
-  ```
-
-## Running / Testing
-
-1.  Ensure you have the .NET SDK (9+) installed.
-2.  Clone the repository: `git clone https://github.com/stimpy77/CoreIdent.git`
-3.  Navigate to the test directory: `cd CoreIdent/tests`
-4.  Run tests: `dotnet test`
-    *   *(Note: Integration tests require database setup/migrations. The test projects typically configure their own in-memory SQLite databases.)*
-
-## License
-
-CoreIdent is licensed under the [MIT License](LICENSE).
-
-## Contributing
-
-⭐ **Star this repo if you believe in the mission!** ⭐
-
-Contributions, feedback, and ideas are highly welcome! Please refer to the (upcoming) contribution guidelines or open an issue to discuss. Let's build the future of .NET identity together.
-
-## Troubleshooting & FAQ: DI Registration and EF Core Migrations
-
-### Why does the DI registration order matter?
-**Order is critical** because:
-- `

@@ -1,8 +1,0 @@
-Review @Project_Overview.md @Technical_Plan.md @README.md @LLMINDEX.md @DEVPLAN.md 
-
-Then let's implement the next unimplemented feature in the DEVPLAN checklist.  
-- If you are going to create new files, do not presume the LLMINDEX.md is up-to-date, meaning always scan the project for similar looking files or for files that contain multiple classes that might have what you might be otherwise creating.
-- Always create unit or integration tests for every new feature.
-- Always run `dotnet test` and debug the tests before calling the feature completed
-- Clean up any lingering build warnings
-- The feature isn't done until the checklist item(s) in DEVPLAN.md is checked (edit the file)
