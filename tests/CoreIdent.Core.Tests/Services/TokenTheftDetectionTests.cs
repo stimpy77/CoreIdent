@@ -58,7 +58,8 @@ public class TokenTheftDetectionTests
             _mockUserStore.Object,
             _mockRefreshTokenStore.Object,
             _mockScopeStore.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            new List<ICustomClaimsProvider>() // Pass empty list for custom claims providers
         );
     }
 

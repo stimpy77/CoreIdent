@@ -17,9 +17,20 @@
 *   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
 *   **Phase 3 (Completed):** Core OAuth 2.0 / OIDC Server Mechanics
     *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints, Client Credentials Flow.
-*   **Phase 4:** User Interaction & External Integrations (Consent, UI, MFA, Passwordless).
-*   **Phase 5:** Advanced Features & Polish (More Flows, Extensibility, Templates).
-*   **Phase 6:** Client Libraries for Mobile & Desktop Applications.
+*   **Phase 4:** User Consent & Scope Management
+    *   User consent UI and logic, consent storage, per-client/scope consent policies.
+*   **Phase 5:** Token Revocation, Introspection, Lifetime & Security
+    *   Token revocation and introspection endpoints, per-client/scope token lifetimes, key rotation, multiple signing keys.
+*   **Phase 6:** Dynamic Client Registration
+    *   OIDC Dynamic Client Registration endpoint and workflows.
+*   **Phase 7:** Basic Web UI (`CoreIdent.UI.Web`)
+    *   Login, registration, consent, and error pages; UI services and configuration.
+*   **Phase 8:** MFA & External/Passwordless Login
+    *   MFA (TOTP, SMS), external login providers (Google, Facebook, GitHub), passwordless flows.
+*   **Phase 9:** Developer Training Guide & Templates
+    *   Comprehensive guides, documentation website, project templates, example apps.
+*   **Phase 10:** Advanced Features
+    *   DPoP, Device Code, CIBA, PAR, additional research and extensibility.
 
 ## Why CoreIdent?
 
@@ -85,6 +96,44 @@ CoreIdent issues an **ID Token** as part of the OpenID Connect Authorization Cod
 - The token is signed using the configured signing key.
 
 See the [DEVPLAN.md](./DEVPLAN.md) for test coverage and implementation status.
+
+## Custom Claims Extensibility
+
+CoreIdent supports extensible, per-client, per-scope, and per-request custom claims injection into issued tokens. This is achieved via the `ICustomClaimsProvider` interface.
+
+### How It Works
+- Implement `ICustomClaimsProvider` and register it with DI.
+- All registered providers are called during token issuance. You receive a `TokenRequestContext` (user, client, scopes, token type).
+- You can add, filter, or transform claims based on any context (user, client, scopes, etc).
+- Multiple providers are supported (all are called).
+
+### Example: Adding Custom Claims
+```csharp
+public class MyCustomClaimsProvider : ICustomClaimsProvider
+{
+    public Task<IEnumerable<Claim>> GetCustomClaimsAsync(TokenRequestContext context, CancellationToken cancellationToken)
+    {
+        var claims = new List<Claim>();
+        if (context.User != null && context.Scopes?.Contains("roles") == true)
+        {
+            claims.Add(new Claim("role", "admin")); // Example: add role claim
+        }
+        return Task.FromResult<IEnumerable<Claim>>(claims);
+    }
+}
+```
+
+Register your provider **after** calling `AddCoreIdent`:
+```csharp
+services.AddScoped<ICustomClaimsProvider, MyCustomClaimsProvider>();
+```
+
+### Use Cases
+- Add roles, tenant_id, or app-specific claims.
+- Implement per-client or per-scope claim logic.
+- Filter or transform claims before token issuance.
+
+See `TokenRequestContext` for available context fields.
 
 ## Getting Started
 

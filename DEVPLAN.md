@@ -76,6 +76,8 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /register` with an existing email returns 409.
     - [x] `POST /register` with invalid input (e.g., weak password, invalid email) returns 400.
 - [x] **Update README.md** with registration endpoint details and usage examples.
+- [x] **Update Developer Training Guide** with registration endpoint details and usage examples.
+
 ---
 
 ### Feature: User Login & Token Issuance
@@ -95,10 +97,12 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Implement `JwtTokenService`.
         *   *Guidance:* Use `System.IdentityModel.Tokens.Jwt`. 
             Read configuration (`Issuer`, `Audience`, `SigningKeySecret`, `AccessTokenLifetime`) from `CoreIdentOptions`.
-        *   *Guidance:* Include standard claims 
-          (`sub`, `iss`, `aud`, `exp`, `iat`, `jti`). 
-            Add user-specific claims (e.g., `name`, `email`) retrieved from `IUserStore`.
-        *   *Guidance:* Implement basic refresh token generation (e.g., secure random string).
+        *   *Guidance:* 
+            * Include standard claims 
+              (`sub`, `iss`, `aud`, `exp`, `iat`, `jti`). 
+            * Add user-specific claims (e.g., `name`, `email`) retrieved from `IUserStore`.
+        *   *Guidance:* 
+            * Implement basic refresh token generation (e.g., secure random string).
     - [x] Register `JwtTokenService` as the default `ITokenService`.
 *   **Test Case (Unit):**
     - [x] `JwtTokenService` generates valid JWTs with correct claims, 
@@ -109,6 +113,8 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `POST /login` with valid username but invalid password returns 401.
     - [x] Access token can be validated using standard JWT middleware (`AddJwtBearer`).
 - [x] **Update README.md** with login endpoint details, token structure, and configuration notes.
+- [x] **Update Developer Training Guide** with login endpoint details, token structure, and configuration notes.
+
 ---
 
 ### Feature: Basic Refresh Token Flow (Optional in MVP)
@@ -131,6 +137,8 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Verify automatic cleanup successfully removes expired tokens.
     - [ ] Verify hashed token storage protects token values while maintaining functionality.
 - [x] **Update README.md** with details on persistent refresh token handling.
+- [x] **Update Developer Training Guide** with details on persistent refresh token handling.
+
 ---
 
 ### Feature: Basic Documentation & Testing
@@ -225,6 +233,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Register EF Core services (`AddDbContext`, Store implementations) in DI.
     - [x] Add EF Core Migrations and update database.
 - [x] **Update README.md** with EF Core setup instructions and configuration.
+- [x] **Update Developer Training Guide** with EF Core setup instructions and configuration.
     *   *Decision:* Use **SQLite** as the initial database provider (`Microsoft.EntityFrameworkCore.Sqlite`) for ease of development and testing.
 
 ---
@@ -274,6 +283,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Verify automatic cleanup successfully removes expired tokens.
     - [ ] Verify hashed token storage protects token values while maintaining functionality.
 - [x] **Update README.md** with details on persistent refresh token handling.
+- [x] **Update Developer Training Guide** with details on persistent refresh token handling.
 
 ---
 
@@ -305,6 +315,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Verify token issuance uses user data returned by the 
           `findUserByIdDelegate` or `findUserByUsernameDelegate`.
 - [x] **Update README.md** with Delegated User Store setup instructions and configuration.
+- [x] **Update Developer Training Guide** with Delegated User Store setup instructions and configuration.
 
 ### Feature: Developer Training Guide (Phase 2 Update)
 
@@ -419,6 +430,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] Request fails if requested scopes are not allowed for the client.
     - [x] Client authentication works with both Basic Auth header and request body parameters.
 - [x] **Update README.md** with details on `/token` endpoint for `client_credentials` grant type.
+- [x] **Update Developer Training Guide** with details on `/token` endpoint for `client_credentials` grant type.
 
 ---
 
@@ -446,6 +458,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] `GET /.well-known/jwks.json` returns a valid JWKS document. 
           Public key can be used to validate tokens issued by the server (if using asymmetric keys).
 - [x] **Update README.md** with details on discovery and JWKS endpoints.
+- [x] **Update Developer Training Guide** with details on discovery and JWKS endpoints.
 
 ---
 
@@ -468,6 +481,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [x] User claims included in ID Token match requested scopes.
     - [x] `nonce` claim matches the value from the authorization request.
 - [x] **Update README.md** with information on ID Tokens and relevant claims.
+- [x] **Update Developer Training Guide** with information on ID Tokens and relevant claims.
 
 ### Feature: Developer Training Guide (Phase 3 Update)
 
@@ -478,51 +492,11 @@ This document provides a detailed breakdown of tasks, components, features, test
 
 ---
 
-## Phase 3: Real-World Implementation Gaps & Checklist
+## Phase 4: User Consent & Scope Management
 
-> These items reflect areas where CoreIdent currently adheres to the letter of the OAuth2/OIDC specs, but in real-world usage may result in developer frustration, security gaps, or limited extensibility. Addressing these will improve practical usability and adoption.
+**Goal:** Implement user consent and scope management features.
 
-- [ ] **Custom Claims Extensibility:**
-    - Provide a documented, configurable way to add custom claims (e.g., roles, tenant_id, app-specific claims) to tokens, including per-client or per-scope mappings.
-    - Allow claim transformation/filtering per client or request.
-- [ ] **Consent & Scope Management:**
-    - Implement user-facing consent UI for scope approval, with per-client consent policies.
-    - Support dynamic scope registration and client-specific scope policies.
-- [ ] **Token Revocation & Introspection:**
-    - Add `/revoke` and `/introspect` endpoints for access and refresh tokens.
-    - Allow resource servers to validate token status securely.
-- [ ] **Dynamic Client Registration:**
-    - Support OIDC Dynamic Client Registration endpoint and workflows.
-    - Allow public (PKCE-only) and confidential clients with proper security controls.
-- [ ] **Token Lifetime & Security:**
-    - Support per-client and per-scope token lifetimes.
-    - Add support for key rotation and multiple signing keys (JWKS).
-- [ ] **UI/UX & Developer Experience:**
-    - Provide a minimal, extensible UI package for login, consent, error, and registration screens.
-    - Improve error diagnostics and user/developer-friendly error messages.
-- [ ] **Session & Logout Management:**
-    - Implement OIDC session endpoints (`/check_session`, `/logout`, backchannel/frontchannel logout).
-- [ ] **Testing & Interop:**
-    - Add automated tests with real OIDC/OAuth2 clients (interop tests).
-    - Add negative/edge-case and security tests for endpoints and token flows.
-- [ ] **Discovery & Metadata:**
-    - Support per-client or per-tenant discovery documents for multi-tenant SaaS.
-    - Document and implement dynamic JWKS key rotation.
-- [ ] **Advanced Flows & Features:**
-    - Add support for Device Code, CIBA, PAR, and other advanced OAuth2/OIDC flows.
-    - Provide hooks for MFA/step-up authentication.
-- [ ] **Research Additional Future-Ready Features:**
-    - Explore additional features and capabilities that could be added in future phases.
-    - Document findings in DEVPLAN.md.        
-    - Findings must exclude what has already been added to future phases, of course.
-
----
-
-## Phase 4: User Interaction & External Integrations
-
-**Goal:** Introduce user-facing elements (consent, UI), MFA framework, and external/passwordless login capabilities.
-
-**Estimated Duration:** 6-9 weeks / 60-90 hours (Parallel work possible)
+**Estimated Duration:** 2-3 weeks / 15-25 hours
 
 ---
 
@@ -553,10 +527,78 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Subsequent `/authorize` requests for the same client/scopes (within consent lifetime) 
           do not require consent again.
 - [ ] **Update README.md** with details on the consent mechanism and related UI.
+- [ ] **Update Developer Training Guide** with details on the consent mechanism and related UI.
 
 ---
 
-### Feature: Basic Web UI (`CoreIdent.UI.Web`)
+## Phase 5: Token Revocation, Introspection, Lifetime & Security
+
+**Goal:** Implement token revocation, introspection, and core security enhancements together for robust token lifecycle management.
+
+**Estimated Duration:** 3-4 weeks / 25-35 hours
+
+---
+
+### Feature: Token Revocation & Introspection
+
+*   **Component:** Token Revocation Endpoint (`/revoke`)
+    - [ ] Add `/revoke` endpoint for access and refresh tokens.
+    - [ ] Allow resource servers and clients to revoke tokens securely.
+*   **Component:** Token Introspection Endpoint (`/introspect`)
+    - [ ] Add `/introspect` endpoint for access and refresh tokens.
+    - [ ] Allow resource servers to validate token status securely.
+*   **Test Case (Integration):**
+    - [ ] Revoked tokens are invalidated and cannot be used.
+    - [ ] Introspection endpoint returns correct token status and claims.
+- [ ] **Update README.md** with details on revocation and introspection endpoints.
+- [ ] **Update Developer Training Guide** with details on revocation and introspection endpoints.
+
+---
+
+### Feature: Token Lifetime & Security Enhancements
+
+*   **Component:** Token Lifetime Configuration
+    - [ ] Support per-client and per-scope token lifetimes.
+*   **Component:** Key Management
+    - [ ] Add support for key rotation and multiple signing keys (JWKS).
+*   **Test Case (Integration):**
+    - [ ] Tokens expire according to per-client/scope configuration.
+    - [ ] Key rotation works without breaking existing tokens.
+- [ ] **Update README.md** with details on security enhancements.
+- [ ] **Update Developer Training Guide** with details on security enhancements.
+
+---
+
+## Phase 6: Dynamic Client Registration
+
+**Goal:** Implement dynamic client registration feature.
+
+**Estimated Duration:** 2-3 weeks / 15-25 hours
+
+---
+
+### Feature: Dynamic Client Registration Endpoint
+
+*   **Component:** Dynamic Client Registration Endpoint
+    - [ ] Support OIDC Dynamic Client Registration endpoint and workflows.
+    - [ ] Allow public (PKCE-only) and confidential clients with proper security controls.
+*   **Test Case (Integration):**
+    - [ ] Clients can register dynamically and receive credentials.
+    - [ ] Security controls prevent unauthorized registrations.
+- [ ] **Update README.md** with details on client registration.
+- [ ] **Update Developer Training Guide** with details on client registration.
+
+---
+
+## Phase 7: Basic Web UI (`CoreIdent.UI.Web`)
+
+**Goal:** Implement basic web UI for user interaction.
+
+**Estimated Duration:** 3-4 weeks / 25-35 hours
+
+---
+
+### Feature: `CoreIdent.UI.Web` NuGet Package Project
 
 *   **Component:** `CoreIdent.UI.Web` NuGet Package Project
     - [ ] Create `.csproj` file. Choose UI technology 
@@ -581,6 +623,15 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] Consent flow works correctly with UI.
     - [ ] Error handling works correctly with UI.
 - [ ] **Update README.md** with UI setup instructions and configuration.
+- [ ] **Update Developer Training Guide** with UI setup instructions and configuration.
+
+---
+
+## Phase 8: MFA & External/Passwordless Login
+
+**Goal:** Implement MFA and external/passwordless login features for enhanced security and user experience.
+
+**Estimated Duration:** 3-4 weeks / 25-35 hours
 
 ---
 
@@ -602,6 +653,7 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] MFA verification works correctly.
     - [ ] MFA validation works correctly.
 - [ ] **Update README.md** with MFA setup instructions and configuration.
+- [ ] **Update Developer Training Guide** with MFA setup instructions and configuration.
 
 ---
 
@@ -623,187 +675,52 @@ This document provides a detailed breakdown of tasks, components, features, test
     - [ ] External login verification works correctly.
     - [ ] External login validation works correctly.
 - [ ] **Update README.md** with external login setup instructions and configuration.
+- [ ] **Update Developer Training Guide** with external login setup instructions and configuration.
 
 ---
 
-### Feature: Developer Training Guide (Phase 4)
+## Phase 9: Developer Training Guide & Templates
 
-*   **Goal:** Explain user interaction and external integration concepts.
+**Goal:** Create developer training guide and templates for easy adoption.
+
+**Estimated Duration:** 2-3 weeks / 15-25 hours
+
+---
+
+### Feature: Training Document
+
 *   **Component:** Training Document
-    - [ ] Update Developer Training Guide with Phase 4 concepts (User Consent, UI, MFA, External/Passwordless Login).
-    - [ ] Perform code-level verification against Phase 4 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
-
----
-
-## Phase 5: Community, Documentation & Tooling (Ongoing / Estimated: 4+ weeks after Phase 3 starts)
-
-*   **Goal:** Make CoreIdent easy to adopt, use, and contribute to.
+    - [ ] Update Developer Training Guide with Phase 4+ concepts (UI, MFA, external login, advanced flows).
+    - [ ] Perform code-level verification against documentation to ensure implementation aligns with intent.
 *   **Deliverables:**
     *   Dedicated documentation website (e.g., `docs.coreident.net`).
     *   Comprehensive guides (Getting Started, Configuration, API Reference, Providers, MFA Setup).
     *   `dotnet new` project templates (`coreident-server`, `coreident-api`).
     *   Example applications showcasing integration.
-    *   CI/CD pipeline for automated builds, testing, and NuGet publishing.
-    *   Contribution guidelines and community setup (e.g., GitHub Discussions).
-*   **Focus:** User adoption, developer support, community building, polish.
-
-## Phase 6: Client Libraries for Mobile & Desktop Applications
-
-**Goal:** Develop client libraries to simplify integration with CoreIdent for mobile and desktop application developers.
-
-**Estimated Duration:** 4-5 weeks / 30-40 hours
 
 ---
 
-### Feature: Core Client Library
+## Phase 10: Advanced Features
 
-*   **Component:** `CoreIdent.Client` NuGet Package Project
-    - [ ] Create initial `.csproj` file targeting .NET Standard 2.0 for broad compatibility.
-    - [ ] Define core namespaces and abstractions.
-*   **Component:** Authentication Manager
-    - [ ] Implement `CoreIdentAuthManager` class.
-        *   *Guidance:* Provide methods for login, logout, token refresh, and status checking.
-        *   *Guidance:* Support Authorization Code flow with PKCE.
-        *   *Guidance:* Handle redirect URI interception for OAuth flow completion.
-        *   *Guidance:* Implement token caching and automatic refresh.
-*   **Component:** Configuration (`CoreIdentClientOptions`)
-    - [ ] Define `CoreIdentClientOptions` class.
-        *   *Guidance:* Include properties for `Authority`, `ClientId`, `RedirectUri`, `Scopes`.
-        *   *Guidance:* Configuration for automatic token refresh.
-*   **Component:** Secure Token Storage
-    - [ ] Define `ITokenStorage` interface.
-    - [ ] Implement `MemoryTokenStorage` (for testing).
-    - [ ] Implement `SecureTokenStorage` using platform-appropriate secure storage.
-*   **Test Case (Unit):**
-    - [ ] `CoreIdentAuthManager` correctly generates PKCE challenge/verifier pairs.
-    - [ ] Authentication flow construction generates correct URLs and parameters.
-    - [ ] Token refresh logic works correctly.
+**Goal:** Implement advanced features for enhanced security and functionality.
+
+**Estimated Duration:** 4-6 weeks / 40-60 hours
 
 ---
 
-### Feature: Platform-Specific Implementations
+### Feature: (Conditional) DPoP Implementation
 
-*   **Component:** `CoreIdent.Client.Maui` NuGet Package
-    - [ ] Create package for .NET MAUI applications.
-    - [ ] Implement MAUI-specific browser launcher and redirect interceptor.
-    - [ ] Implement secure storage using MAUI Essentials.
-*   **Component:** `CoreIdent.Client.Wpf` NuGet Package
-    - [ ] Create package for WPF desktop applications.
-    - [ ] Implement embedded browser or system browser launching.
-    - [ ] Implement local HTTP listener for redirect URI interception.
-    - [ ] Implement Windows-specific secure storage.
-*   **Component:** Other Platform Packages (as needed)
-    - [ ] Consider additional platforms (Xamarin.iOS, Xamarin.Android legacy support, WinUI, etc.)
-*   **Test Case (Integration):**
-    - [ ] End-to-end authentication flow works on each supported platform.
-    - [ ] Token refresh works correctly on each platform.
-    - [ ] Tokens are securely stored and retrieved on each platform.
-
----
-
-### Feature: Sample Applications
-
-*   **Component:** Sample MAUI Application
-    - [ ] Create sample application demonstrating authentication flow.
-    - [ ] Show user profile retrieval using tokens.
-    - [ ] Demonstrate token refresh.
-*   **Component:** Sample WPF Application
-    - [ ] Create sample application demonstrating desktop authentication.
-    - [ ] Show appropriate UI patterns for desktop auth flows.
-*   **Component:** Documentation and Guides
-    - [ ] Create step-by-step integration guides for each platform.
-    - [ ] Document advanced scenarios (offline auth, MFA handling, etc.)
-
----
-
-### Feature: Offline Authentication Support
-
-*   **Component:** Offline Authentication Logic
-    - [ ] Implement offline authentication capabilities.
-        *   *Guidance:* Cache necessary user information for offline usage.
-        *   *Guidance:* Handle reconnection and token refresh upon network availability.
-        *   *Guidance:* Provide clear API for checking online/offline status.
-*   **Test Case (Integration):**
-    - [ ] Application works in offline mode after initial authentication.
-    - [ ] Reconnection handling works correctly when network becomes available.
-
----
-
-### Feature: Developer Training Guide (Phase 6)
-
-*   **Goal:** Explain client library concepts and integration patterns.
-*   **Component:** Training Document
-    - [ ] Create Client Libraries section in Developer Training Guide covering
-          client setup, authentication flows, token management, and platform-specific considerations.
-    - [ ] Perform code-level verification against Phase 6 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
-
----
-
-## Phase 7: Advanced Security Enhancements
-
-**Goal:** Enhance token security and interoperability by implementing asymmetric signing and evaluating modern token binding techniques.
-
-**Estimated Duration:** 4-6 weeks / 40-60 hours (Can be run in parallel with other phases if resources allow)
-
----
-
-### Feature: Asymmetric Token Signing (RS256)
-
-*   **Component:** Configuration Options
-    - [ ] Extend `CoreIdentOptions` to support asymmetric key configuration.
-        *   *Guidance:* Add properties for key material (e.g., path to key file, key store identifier), key ID (`kid`), and signing algorithm (e.g., `RS256`).
-        *   *Guidance:* Allow configuration of multiple keys for rotation.
-    - [ ] Update `CoreIdentOptionsValidator` to validate asymmetric key configuration.
-*   **Component:** Key Management Service
-    - [ ] Define `ISigningKeyManager` interface.
-        *   *Guidance:* Methods for retrieving current signing credentials (`SigningCredentials`) and validation keys (`IEnumerable<SecurityKey>`).
-    - [ ] Implement `DefaultSigningKeyManager`.
-        *   *Guidance:* Load key material based on configuration (e.g., from files, certificate store).
-        *   *Guidance:* Handle key rotation logic if multiple keys are configured.
-        *   *Guidance:* Register as a Singleton service.
-*   **Component:** Token Service Enhancement (`JwtTokenService`)
-    - [ ] Modify `JwtTokenService` to use `ISigningKeyManager`.
-        *   *Guidance:* Retrieve signing credentials from the manager instead of using the symmetric secret directly.
-        *   *Guidance:* Set the `alg` and `kid` headers in the JWT based on the key used.
-*   **Component:** JWKS Endpoint Enhancement (`/.well-known/jwks.json`)
-    - [ ] Update JWKS endpoint to retrieve public keys from `ISigningKeyManager`.
-        *   *Guidance:* Generate JWK format based on the public key material.
-        *   *Guidance:* Include `kid`, `use=sig`, and `alg` parameters in the JWK.
-*   **Test Case (Unit):**
-    - [ ] `DefaultSigningKeyManager` correctly loads and provides asymmetric keys.
-    - [ ] `JwtTokenService` generates tokens signed with RS256 and correct headers.
-*   **Test Case (Integration):**
-    - [ ] JWKS endpoint exposes the correct public keys in JWK format.
-    - [ ] Tokens issued can be validated using the public keys exposed via the JWKS endpoint.
-    - [ ] Configuration allows switching between symmetric and asymmetric signing.
-- [ ] **Update README.md** and Developer Training Guide with details on configuring and using asymmetric signing (RS256) and key management.
-
----
-
-### Feature: Enhanced Token Security (Evaluation & Potential Implementation)
-
-*   **Component:** Research & Evaluation
-    - [ ] Research current standards and best practices for sender-constrained tokens.
-        *   *Guidance:* Focus on Demonstrating Proof-of-Possession (DPoP) - RFC 9449.
-        *   *Guidance:* Evaluate Mutual TLS (mTLS) client authentication for token binding.
-        *   *Guidance:* Assess complexity, client/server support, and suitability for CoreIdent's target use cases.
-    - [ ] Document findings and recommend an approach (e.g., implement DPoP, provide guidance for mTLS).
 *   **Component:** (Conditional) DPoP Implementation
     - [ ] Define DPoP proof validation logic.
         *   *Guidance:* Implement validation according to RFC 9449 (checking `htm`, `htu`, `iat`, `jti`, signature).
     - [ ] Modify Token Endpoint (`/token`) to accept and validate DPoP proofs.
         *   *Guidance:* Require DPoP header if client indicates support.
-    - [ ] Modify Token Service (`ITokenService`) to bind tokens to the DPoP key.
-        *   *Guidance:* Include `cnf` (confirmation) claim with `jkt` (JWK thumbprint) in issued access tokens.
-    - [ ] Modify Resource Server validation logic (conceptual - CoreIdent itself might not be the resource server).
-        *   *Guidance:* Document how resource servers protected by CoreIdent should validate incoming DPoP proofs alongside the access token and its `cnf` claim.
-*   **Component:** (Conditional) Configuration & Setup
-    - [ ] Add configuration options to enable/require DPoP.
-    - [ ] Update DI extensions if necessary.
-*   **Test Case (Integration - Conditional):**
-    - [ ] `/token` endpoint successfully issues DPoP-bound tokens when a valid DPoP proof is provided.
-    - [ ] `/token` endpoint rejects requests with invalid or missing DPoP proofs if required.
-    - [ ] Issued access tokens contain the correct `cnf` claim with the DPoP public key thumbprint.
-    - [ ] (Conceptual) Test validation logic demonstrating how a resource server would verify the token and proof.
-- [ ] **Update README.md** and Developer Training Guide with details on the chosen approach (e.g., DPoP configuration and usage, guidance on mTLS setup).
-- [ ] **Phase 7 Final Check:** Perform code-level verification against Phase 7 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+*   **Component:** Device Code, CIBA, PAR, and Advanced Flows
+    - [ ] Add support for Device Code, CIBA, PAR, and other advanced OAuth2/OIDC flows.
+    - [ ] Provide hooks for MFA/step-up authentication.
+*   **Component:** Additional Research
+    - [ ] Explore additional features and capabilities that could be added in future phases.
+    - [ ] Document findings in DEVPLAN.md.        
+    - [ ] Findings must exclude what has already been added to previous phases, of course.
+
+---

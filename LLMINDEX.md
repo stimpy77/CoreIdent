@@ -117,6 +117,8 @@ This is the central library containing the core logic, interfaces, and models.
             *   Enhances `POST /token` endpoint to handle `grant_type=authorization_code` with PKCE validation.
             *   Token refresh endpoint (`POST /token/refresh`) implements token theft detection with configurable behavior.
             *   Added `client_credentials` grant type handling to `/token` endpoint.
+    *   **Custom Claims Extensibility:**
+        - Implemented via ICustomClaimsProvider, allowing injection of claims into tokens per user, client, scope, or request context. See README for usage.
 
 ## 6. EF Core Storage Project Details: `src\CoreIdent.Storage.EntityFrameworkCore`
 
