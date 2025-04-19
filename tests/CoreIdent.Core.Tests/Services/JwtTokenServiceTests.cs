@@ -26,6 +26,7 @@ public class JwtTokenServiceTests
     private readonly Mock<IRefreshTokenStore> _mockRefreshTokenStore;
     private readonly Mock<IScopeStore> _mockScopeStore;
     private readonly Mock<ILogger<JwtTokenService>> _mockLogger;
+    private readonly Mock<ICustomClaimsProvider> _mockCustomClaimsProvider;
     private readonly CoreIdentOptions _options;
     private readonly JwtTokenService _tokenService;
     private readonly CoreIdentUser _testUser;
@@ -64,13 +65,19 @@ public class JwtTokenServiceTests
                        .ReturnsAsync(new List<CoreIdentScope>());
         _mockLogger = new Mock<ILogger<JwtTokenService>>();
 
+        // Mock custom claims provider (default returns no claims)
+        _mockCustomClaimsProvider = new Mock<ICustomClaimsProvider>();
+        _mockCustomClaimsProvider.Setup(p => p.GetCustomClaimsAsync(It.IsAny<TokenRequestContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Claim>());
+
         _tokenService = new JwtTokenService(
             _mockOptions.Object,
             _mockUserStore.Object,
             _mockRefreshTokenStore.Object,
             _mockScopeStore.Object,
-            _mockLogger.Object
-            );
+            _mockLogger.Object,
+            new List<ICustomClaimsProvider> { _mockCustomClaimsProvider.Object }
+        );
     }
 
     [Fact]
@@ -81,14 +88,14 @@ public class JwtTokenServiceTests
         nullOptions.Setup(o => o.Value).Returns((CoreIdentOptions)null!); // Return null options
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new JwtTokenService(nullOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object));
+        Should.Throw<ArgumentNullException>(() => new JwtTokenService(nullOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object, new List<ICustomClaimsProvider>()));
     }
 
     [Fact]
     public void Constructor_Throws_When_UserStore_Null()
     {
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new JwtTokenService(_mockOptions.Object, null!, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object));
+        Should.Throw<ArgumentNullException>(() => new JwtTokenService(_mockOptions.Object, null!, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object, new List<ICustomClaimsProvider>()));
     }
 
     // TODO: Add tests for null RefreshTokenStore, ScopeStore, Logger
@@ -102,7 +109,7 @@ public class JwtTokenServiceTests
         mockInvalidOptions.Setup(o => o.Value).Returns(invalidOptions);
 
         // Act & Assert
-        var ex = Should.Throw<ArgumentException>(() => new JwtTokenService(mockInvalidOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object));
+        var ex = Should.Throw<ArgumentException>(() => new JwtTokenService(mockInvalidOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object, new List<ICustomClaimsProvider>()));
         ex.ParamName.ShouldBe(nameof(CoreIdentOptions.SigningKeySecret));
     }
 
@@ -115,7 +122,7 @@ public class JwtTokenServiceTests
         mockInvalidOptions.Setup(o => o.Value).Returns(invalidOptions);
 
         // Act & Assert
-        var ex = Should.Throw<ArgumentException>(() => new JwtTokenService(mockInvalidOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object));
+        var ex = Should.Throw<ArgumentException>(() => new JwtTokenService(mockInvalidOptions.Object, _mockUserStore.Object, _mockRefreshTokenStore.Object, _mockScopeStore.Object, _mockLogger.Object, new List<ICustomClaimsProvider>()));
         ex.ParamName.ShouldBe(nameof(CoreIdentOptions.SigningKeySecret));
     }
 
@@ -183,6 +190,42 @@ public class JwtTokenServiceTests
         var expectedExpiry = DateTime.UtcNow.Add(_options.AccessTokenLifetime);
         jwtToken.ValidTo.ShouldBeGreaterThan(expectedExpiry.Subtract(TimeSpan.FromSeconds(10)));
         jwtToken.ValidTo.ShouldBeLessThan(expectedExpiry.Add(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task GenerateAccessTokenAsync_IncludesCustomClaimsFromProvider()
+    {
+        // Arrange
+        var user = _testUser;
+        var requestedScopes = new List<string> { "api1" };
+        var customClaims = new List<Claim> { new Claim("custom_ext_claim", "ext_value") };
+        _mockCustomClaimsProvider.Setup(p => p.GetCustomClaimsAsync(It.IsAny<TokenRequestContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(customClaims);
+
+        // Act
+        var token = await _tokenService.GenerateAccessTokenAsync(user, requestedScopes);
+
+        // Assert
+        token.ShouldNotBeNullOrWhiteSpace();
+        var handler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret!)),
+            ValidateIssuer = true,
+            ValidIssuer = _options.Issuer,
+            ValidateAudience = true,
+            ValidAudience = _options.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+        SecurityToken validatedToken;
+        var principal = handler.ValidateToken(token, validationParameters, out validatedToken);
+        principal.ShouldNotBeNull();
+        validatedToken.ShouldNotBeNull();
+        validatedToken.ShouldBeOfType<JwtSecurityToken>();
+        var jwtToken = (JwtSecurityToken)validatedToken;
+        jwtToken.Claims.ShouldContain(c => c.Type == "custom_ext_claim" && c.Value == "ext_value");
     }
 
     // TODO: Add test for GenerateAccessTokenAsync with scopes
@@ -314,7 +357,7 @@ public class JwtTokenServiceTests
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret!)),
             ValidateIssuer = true,
             ValidIssuer = _options.Issuer,
-            ValidateAudience = false,
+            ValidateAudience = false, // Audience claim is not yet set in implementation
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -356,7 +399,7 @@ public class JwtTokenServiceTests
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret!)),
             ValidateIssuer = true,
             ValidIssuer = _options.Issuer,
-            ValidateAudience = false,
+            ValidateAudience = false, // Audience claim is not yet set in implementation
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -401,7 +444,7 @@ public class JwtTokenServiceTests
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret!)),
             ValidateIssuer = true,
             ValidIssuer = _options.Issuer,
-            ValidateAudience = false,
+            ValidateAudience = false, // Audience claim is not yet set in implementation
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -437,7 +480,7 @@ public class JwtTokenServiceTests
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKeySecret!)),
             ValidateIssuer = true,
             ValidIssuer = _options.Issuer,
-            ValidateAudience = false,
+            ValidateAudience = false, // Audience claim is not yet set in implementation
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };

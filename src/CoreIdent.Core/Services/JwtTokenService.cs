@@ -25,6 +25,7 @@ public class JwtTokenService : ITokenService
     private readonly IRefreshTokenStore _refreshTokenStore; // Needed for storing refresh tokens
     private readonly IScopeStore _scopeStore; // Needed to get claims for scopes
     private readonly ILogger<JwtTokenService> _logger;
+    private readonly IEnumerable<ICustomClaimsProvider> _customClaimsProviders;
     private const int MinSigningKeyLengthBytes = 32; // HS256 minimum key size
 
     public JwtTokenService(
@@ -32,7 +33,9 @@ public class JwtTokenService : ITokenService
         IUserStore userStore,
         IRefreshTokenStore refreshTokenStore, // Inject IRefreshTokenStore
         IScopeStore scopeStore, // Inject IScopeStore
-        ILogger<JwtTokenService> logger)
+        ILogger<JwtTokenService> logger,
+        IEnumerable<ICustomClaimsProvider> customClaimsProviders // Inject custom claims providers
+    )
     {
         // Constructor argument validation
         if (options == null) throw new ArgumentNullException(nameof(options));
@@ -41,6 +44,7 @@ public class JwtTokenService : ITokenService
         _refreshTokenStore = refreshTokenStore ?? throw new ArgumentNullException(nameof(refreshTokenStore));
         _scopeStore = scopeStore ?? throw new ArgumentNullException(nameof(scopeStore));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _customClaimsProviders = customClaimsProviders ?? throw new ArgumentNullException(nameof(customClaimsProviders));
 
         // Validate options critical for the service to function
         if (string.IsNullOrWhiteSpace(_options.SigningKeySecret))
@@ -391,6 +395,23 @@ public class JwtTokenService : ITokenService
         {
             claims.Add(new Claim("scope", string.Join(" ", allowedScopes)));
         }
+
+        // === Custom Claims Extensibility ===
+        // Build TokenRequestContext
+        var context = new TokenRequestContext
+        {
+            User = user,
+            Client = null, // If client is available, set here
+            Scopes = allowedScopes,
+            TokenType = "access_token"
+        };
+        foreach (var provider in _customClaimsProviders)
+        {
+            var customClaims = await provider.GetCustomClaimsAsync(context, CancellationToken.None);
+            if (customClaims != null)
+                claims.AddRange(customClaims);
+        }
+        // === End Custom Claims Extensibility ===
 
         return claims;
     }
