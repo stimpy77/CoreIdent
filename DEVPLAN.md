@@ -511,6 +511,10 @@ This document provides a detailed breakdown of tasks, components, features, test
 - [ ] **Advanced Flows & Features:**
     - Add support for Device Code, CIBA, PAR, and other advanced OAuth2/OIDC flows.
     - Provide hooks for MFA/step-up authentication.
+- [ ] **Research Additional Future-Ready Features:**
+    - Explore additional features and capabilities that could be added in future phases.
+    - Document findings in DEVPLAN.md.        
+    - Findings must exclude what has already been added to future phases, of course.
 
 ---
 
