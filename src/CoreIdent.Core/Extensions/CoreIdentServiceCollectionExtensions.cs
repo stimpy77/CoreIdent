@@ -34,6 +34,8 @@ public static class CoreIdentServiceCollectionExtensions
         // Use TryAdd to allow consumers to easily override implementations if needed
         services.TryAddSingleton<IPasswordHasher, DefaultPasswordHasher>();
         services.TryAddScoped<ITokenService, JwtTokenService>();
+        // Ensure JwtTokenService is also registered for direct injection (for endpoints using [FromServices] JwtTokenService)
+        services.TryAddScoped<JwtTokenService, JwtTokenService>();
 
         // Register default IN-MEMORY stores. Consumers can replace these by registering
         // other implementations (like EF Core stores) AFTER calling AddCoreIdent.

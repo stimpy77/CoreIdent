@@ -425,34 +425,34 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: OIDC Discovery & JWKS Endpoints
 
 *   **Component:** Discovery Endpoint (`GET /.well-known/openid-configuration`)
-    - [ ] Implement Minimal API endpoint for discovery.
+    - [x] Implement Minimal API endpoint for discovery.
         *   *Guidance:* 
             * Return JSON document conforming to OIDC Discovery spec. 
             * Include endpoints (`authorization_endpoint`, `token_endpoint`, `jwks_uri`, `userinfo_endpoint` - if implemented), 
               supported scopes, response types, grant types, claims, etc. 
             * Read values from configuration and registered services.
 *   **Component:** JWKS Endpoint (`GET /.well-known/jwks.json`)
-    - [ ] Implement Minimal API endpoint for JWKS.
+    - [x] Implement Minimal API endpoint for JWKS.
         *   *Guidance:* 
             * Return JSON Web Key Set (JWKS) containing the public key(s) used for signing JWTs. 
             * If using asymmetric keys, retrieve public key material. 
-            * If symmetric, this endpoint might not be strictly necessary or could return metadata differently.
+            * Ensure DI registration for JwtTokenService is handled automatically by AddCoreIdent().
         *   *Guidance:* 
             * Key generation/management strategy needs consideration 
               (e.g., load from config, generate on startup, key rotation).
 *   **Test Case (Integration):**
-    - [ ] `GET /.well-known/openid-configuration` returns a valid JSON document 
+    - [x] `GET /.well-known/openid-configuration` returns a valid JSON document 
           with correct endpoint URLs.
-    - [ ] `GET /.well-known/jwks.json` returns a valid JWKS document. 
+    - [x] `GET /.well-known/jwks.json` returns a valid JWKS document. 
           Public key can be used to validate tokens issued by the server (if using asymmetric keys).
-- [ ] **Update README.md** with details on discovery and JWKS endpoints.
+- [x] **Update README.md** with details on discovery and JWKS endpoints.
 
 ---
 
 ### Feature: ID Token Issuance
 
 *   **Component:** Token Service (`ITokenService`) Enhancement
-    - [ ] Update `ITokenService` to generate OIDC ID Tokens.
+    - [x] Update `ITokenService` to generate OIDC ID Tokens.
         *   *Guidance:* 
             * Generate ID Token (JWT) alongside Access Token for relevant flows 
               (Authorization Code, Hybrid - if implemented later).
@@ -462,19 +462,55 @@ This document provides a detailed breakdown of tasks, components, features, test
             * Include user claims based on requested scopes (`profile`, `email`). 
             * Sign the ID Token.
 *   **Test Case (Integration):**
-    - [ ] ID Token is included in the `/token` response for Authorization Code flow.
+    - [x] ID Token is included in the `/token` response for Authorization Code flow.
 *   **Test Case (Unit):**
-    - [ ] Generated ID Token is a valid JWT with required claims and correct signature.
-    - [ ] User claims included in ID Token match requested scopes.
-    - [ ] `nonce` claim matches the value from the authorization request.
-- [ ] **Update README.md** with information on ID Tokens and relevant claims.
+    - [x] Generated ID Token is a valid JWT with required claims and correct signature.
+    - [x] User claims included in ID Token match requested scopes.
+    - [x] `nonce` claim matches the value from the authorization request.
+- [x] **Update README.md** with information on ID Tokens and relevant claims.
 
 ### Feature: Developer Training Guide (Phase 3 Update)
 
 *   **Goal:** Explain core OAuth/OIDC concepts as implemented in CoreIdent.
 *   **Component:** Training Document
-    - [ ] Update Developer Training Guide with Phase 3 concepts (OAuth 2.0 flows - Auth Code+PKCE, Client Credentials; OIDC concepts - ID Tokens, Discovery, JWKS; Client/Scope management basics).
-    - [ ] Perform code-level verification against Phase 3 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+    - [x] Update Developer Training Guide with Phase 3 concepts (OAuth 2.0 flows - Auth Code+PKCE, Client Credentials; OIDC concepts - ID Tokens, Discovery, JWKS; Client/Scope management basics).
+    - [x] Perform code-level verification against Phase 3 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+
+---
+
+## Phase 3: Real-World Implementation Gaps & Checklist
+
+> These items reflect areas where CoreIdent currently adheres to the letter of the OAuth2/OIDC specs, but in real-world usage may result in developer frustration, security gaps, or limited extensibility. Addressing these will improve practical usability and adoption.
+
+- [ ] **Custom Claims Extensibility:**
+    - Provide a documented, configurable way to add custom claims (e.g., roles, tenant_id, app-specific claims) to tokens, including per-client or per-scope mappings.
+    - Allow claim transformation/filtering per client or request.
+- [ ] **Consent & Scope Management:**
+    - Implement user-facing consent UI for scope approval, with per-client consent policies.
+    - Support dynamic scope registration and client-specific scope policies.
+- [ ] **Token Revocation & Introspection:**
+    - Add `/revoke` and `/introspect` endpoints for access and refresh tokens.
+    - Allow resource servers to validate token status securely.
+- [ ] **Dynamic Client Registration:**
+    - Support OIDC Dynamic Client Registration endpoint and workflows.
+    - Allow public (PKCE-only) and confidential clients with proper security controls.
+- [ ] **Token Lifetime & Security:**
+    - Support per-client and per-scope token lifetimes.
+    - Add support for key rotation and multiple signing keys (JWKS).
+- [ ] **UI/UX & Developer Experience:**
+    - Provide a minimal, extensible UI package for login, consent, error, and registration screens.
+    - Improve error diagnostics and user/developer-friendly error messages.
+- [ ] **Session & Logout Management:**
+    - Implement OIDC session endpoints (`/check_session`, `/logout`, backchannel/frontchannel logout).
+- [ ] **Testing & Interop:**
+    - Add automated tests with real OIDC/OAuth2 clients (interop tests).
+    - Add negative/edge-case and security tests for endpoints and token flows.
+- [ ] **Discovery & Metadata:**
+    - Support per-client or per-tenant discovery documents for multi-tenant SaaS.
+    - Document and implement dynamic JWKS key rotation.
+- [ ] **Advanced Flows & Features:**
+    - Add support for Device Code, CIBA, PAR, and other advanced OAuth2/OIDC flows.
+    - Provide hooks for MFA/step-up authentication.
 
 ---
 
@@ -524,9 +560,76 @@ This document provides a detailed breakdown of tasks, components, features, test
           Add necessary ASP.NET Core dependencies.
 *   **Component:** UI Pages/Components
     - [ ] Implement Login Page (`/Account/Login`).
-    - [ ] Implement Registration Page (`
+    - [ ] Implement Registration Page (`/Account/Register`).
+    - [ ] Implement Consent Page (`/Account/Consent`).
+    - [ ] Implement Error Page (`/Account/Error`).
+*   **Component:** UI Services
+    - [ ] Implement `IUserService` for user management.
+    - [ ] Implement `IClientService` for client management.
+*   **Component:** UI Configuration
+    - [ ] Define `CoreIdentUIOptions` class.
+        *   *Guidance:* Include properties for UI customization (e.g., branding, layout).
+    - [ ] Update `CoreIdentOptionsValidator` to validate UI configuration.
+*   **Test Case (Integration):**
+    - [ ] UI components render correctly.
+    - [ ] Login flow works correctly with UI.
+    - [ ] Registration flow works correctly with UI.
+    - [ ] Consent flow works correctly with UI.
+    - [ ] Error handling works correctly with UI.
+- [ ] **Update README.md** with UI setup instructions and configuration.
 
-- [ ] **Phase 4 Final Check:** Perform code-level verification against Phase 4 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+---
+
+### Feature: MFA Framework
+
+*   **Component:** MFA Service (`IMfaService`)
+    - [ ] Define `IMfaService` interface.
+        *   *Guidance:* Methods for MFA setup, verification, and validation.
+    - [ ] Implement `DefaultMfaService`.
+        *   *Guidance:* Use a library like `Microsoft.AspNetCore.Identity.Totp` for TOTP-based MFA.
+        *   *Guidance:* Implement SMS-based MFA using a library like `Twilio`.
+    - [ ] Register `DefaultMfaService` as the default `IMfaService`.
+*   **Component:** MFA Configuration
+    - [ ] Define `MfaOptions` class.
+        *   *Guidance:* Include properties for MFA configuration (e.g., TOTP secret length, SMS provider).
+    - [ ] Update `CoreIdentOptionsValidator` to validate MFA configuration.
+*   **Test Case (Integration):**
+    - [ ] MFA setup works correctly.
+    - [ ] MFA verification works correctly.
+    - [ ] MFA validation works correctly.
+- [ ] **Update README.md** with MFA setup instructions and configuration.
+
+---
+
+### Feature: External/Passwordless Login
+
+*   **Component:** External Login Service (`IExternalLoginService`)
+    - [ ] Define `IExternalLoginService` interface.
+        *   *Guidance:* Methods for external login setup, verification, and validation.
+    - [ ] Implement `DefaultExternalLoginService`.
+        *   *Guidance:* Use a library like `Microsoft.AspNetCore.Authentication.Google` for Google login.
+        *   *Guidance:* Implement other external login providers (e.g., Facebook, GitHub).
+    - [ ] Register `DefaultExternalLoginService` as the default `IExternalLoginService`.
+*   **Component:** External Login Configuration
+    - [ ] Define `ExternalLoginOptions` class.
+        *   *Guidance:* Include properties for external login configuration (e.g., client ID, client secret).
+    - [ ] Update `CoreIdentOptionsValidator` to validate external login configuration.
+*   **Test Case (Integration):**
+    - [ ] External login setup works correctly.
+    - [ ] External login verification works correctly.
+    - [ ] External login validation works correctly.
+- [ ] **Update README.md** with external login setup instructions and configuration.
+
+---
+
+### Feature: Developer Training Guide (Phase 4)
+
+*   **Goal:** Explain user interaction and external integration concepts.
+*   **Component:** Training Document
+    - [ ] Update Developer Training Guide with Phase 4 concepts (User Consent, UI, MFA, External/Passwordless Login).
+    - [ ] Perform code-level verification against Phase 4 documentation (DEVPLAN, Technical Plan, etc.) to ensure implementation aligns with intent.
+
+---
 
 ## Phase 5: Community, Documentation & Tooling (Ongoing / Estimated: 4+ weeks after Phase 3 starts)
 
