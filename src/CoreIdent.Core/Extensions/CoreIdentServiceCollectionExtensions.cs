@@ -45,6 +45,8 @@ public static class CoreIdentServiceCollectionExtensions
         services.TryAddScoped<IScopeStore, InMemoryScopeStore>();           // Add default
         services.TryAddSingleton<IAuthorizationCodeStore, InMemoryAuthorizationCodeStore>(); // Use Singleton for in-memory store
         services.TryAddScoped<ICustomClaimsProvider, CustomClaimsProviderDefault>(); // Register default custom claims provider
+        // Register user grant store for consent mechanism
+        services.TryAddSingleton<IUserGrantStore, InMemoryUserGrantStore>();
 
         // Add other necessary framework services if any.
         // For now, the core services themselves don't have many external dependencies beyond options.

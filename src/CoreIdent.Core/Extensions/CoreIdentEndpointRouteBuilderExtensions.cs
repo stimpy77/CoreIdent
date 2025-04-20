@@ -4,6 +4,7 @@ using CoreIdent.Core.Models.Requests;
 using CoreIdent.Core.Models.Responses;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
+using Microsoft.AspNetCore.Antiforgery; // Added namespace
 using Microsoft.AspNetCore.Builder; // IEndpointRouteBuilder
 using Microsoft.AspNetCore.Http;    // Results, StatusCodes
 using Microsoft.AspNetCore.Mvc;     // FromBody attribute (though often inferred)
@@ -25,6 +26,7 @@ using System.Text; // For Encoding
 using Microsoft.Extensions.Primitives; // For StringValues
 using System.Net.Http.Headers; // For Basic Authentication
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities; // Added for QueryHelpers
 
 namespace CoreIdent.Core.Extensions;
 
@@ -34,11 +36,11 @@ namespace CoreIdent.Core.Extensions;
 public static class CoreIdentEndpointRouteBuilderExtensions
 {
     /// <summary>
-    /// Maps the CoreIdent core authentication and OAuth/OIDC endpoints.
-    /// </summary>
-    /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to add the routes to.</param>
-    /// <param name="configureRoutes">Optional action to configure the default routes.</param>
-    /// <returns>A <see cref="RouteGroupBuilder"/> containing the mapped CoreIdent endpoints.</returns>
+/// Maps the CoreIdent core authentication and OAuth/OIDC endpoints.
+/// </summary>
+/// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to add the routes to.</param>
+/// <param name="configureRoutes">Optional action to configure the default routes.</param>
+/// <returns>A <see cref="RouteGroupBuilder"/> containing the mapped CoreIdent endpoints.</returns>
     public static RouteGroupBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints, Action<CoreIdentRouteOptions>? configureRoutes = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -128,7 +130,6 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .Produces(StatusCodes.Status500InternalServerError)
         .WithSummary("Registers a new user.")
         .WithDescription("Creates a new user account with the provided email and password.");
-
 
         // Endpoint: /login
         routeGroup.MapPost(routeOptions.LoginPath, async (
@@ -295,6 +296,11 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             var logger = loggerFactory.CreateLogger("CoreIdent.Authorize");
             logger.LogInformation("Authorize endpoint hit: {Query}", request.QueryString);
 
+            // Log request headers to check for Cookie
+            var cookieHeader = request.Headers["Cookie"].ToString();
+            logger.LogInformation("[AUTHORIZE DEBUG] Request Cookie Header: {CookieHeader}", 
+                 string.IsNullOrWhiteSpace(cookieHeader) ? "<Not Present>" : cookieHeader);
+
             // 1. Parse and Validate Request Parameters
             // Required parameters for 'code' flow:
             string? clientId = request.Query["client_id"];
@@ -389,20 +395,89 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             // TODO: Check if requested scopes are allowed for the client (client.AllowedScopes). Redirect back with error=invalid_scope?
 
              // 4. Check User Authentication & Consent
-             // This part requires integration with ASP.NET Core authentication middleware (e.g., cookies)
-             // and a consent mechanism (Phase 4).
-             // For now, we'll skip this and assume the user is authenticated and consented.
-             var isAuthenticated = httpContext.User?.Identity?.IsAuthenticated ?? false;
-             if (!isAuthenticated)
-             {
-                // TODO: Redirect to Login Page, passing the authorization request parameters so it can return here.
+            // Log user identity *before* the IsAuthenticated check
+            logger.LogInformation("[AUTHORIZE DEBUG] HttpContext.User.Identity.IsAuthenticated Before Check: {IsAuthenticated}", httpContext.User?.Identity?.IsAuthenticated ?? false);
+            logger.LogInformation("[AUTHORIZE DEBUG] HttpContext.User.Identity.AuthenticationType Before Check: {AuthType}", httpContext.User?.Identity?.AuthenticationType ?? "<null>");
+            var isAuthenticated = httpContext.User?.Identity?.IsAuthenticated ?? false;
+            logger.LogInformation("User authenticated: {IsAuthenticated}, Claims: {Claims}", 
+                isAuthenticated, 
+                string.Join(", ", httpContext.User?.Claims.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>()));
+                
+            if (!isAuthenticated)
+            {
+                // Redirect to CoreIdent login endpoint with ReturnUrl
                 logger.LogInformation("User not authenticated for authorize request. Redirecting to login.");
-                // Example redirect (adapt to your login page path):
-                // return Results.Redirect($"/Account/Login?ReturnUrl={Uri.EscapeDataString(request.GetEncodedUrl())}");
-                return Results.Challenge(); // Returns 401, lets auth middleware handle redirect
-             }
-
-            // TODO: Check for existing consent/grants. If needed, redirect to Consent Page.
+                var returnUrl = Uri.EscapeDataString(request.GetEncodedUrl());
+                var loginUrl = routeOptions.Combine(routeOptions.LoginPath) + "?ReturnUrl=" + returnUrl;
+                return Results.Redirect(loginUrl);
+            }
+            
+            // 4.b. Consent: Redirect to consent page if client requires consent and no existing grant
+            if (isAuthenticated)
+            {
+                bool requireConsent = client.RequireConsent;
+                // Get user identifier - try NameIdentifier claim first, then fall back to Name if needed
+                var subject = httpContext.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) 
+                    ?? httpContext.User?.FindFirstValue(System.Security.Claims.ClaimTypes.Name)
+                    ?? httpContext.User?.Identity?.Name;
+                    
+                if (string.IsNullOrEmpty(subject))
+                {
+                    logger.LogWarning("Authenticated user has no subject identifier (NameIdentifier or Name)");
+                    return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
+                }
+                
+                var userGrantStore = httpContext.RequestServices.GetRequiredService<IUserGrantStore>();
+                var existingGrant = await userGrantStore.FindAsync(subject, clientId, cancellationToken);
+                
+                logger.LogInformation("[AUTHORIZE DEBUG] Consent lookup subject: {Subject}", subject);
+                if (existingGrant != null)
+                {
+                    logger.LogInformation("[AUTHORIZE DEBUG] Existing grant found: {Grant}", System.Text.Json.JsonSerializer.Serialize(existingGrant));
+                }
+                else
+                {
+                    logger.LogInformation("[AUTHORIZE DEBUG] No existing grant found for subject {Subject} and client {ClientId}", subject, clientId);
+                }
+                
+                logger.LogInformation("Checking consent for subject {Subject}, client {ClientId}, requires consent: {RequiresConsent}, existing grant: {HasGrant}", 
+                    subject, clientId, requireConsent, existingGrant != null);
+                
+                if (requireConsent)
+                {
+                    bool hasConsent = false;
+                    
+                    // First check if there's an existing grant that covers all requested scopes
+                    if (existingGrant != null)
+                    {
+                        hasConsent = requestedScopes.All(s => existingGrant.GrantedScopes.Contains(s));
+                        logger.LogInformation("Existing grant found, has consent for all requested scopes: {HasConsent}", hasConsent);
+                    }
+                    
+                    // If no grant found by FindAsync, try the more generic HasUserGrantedConsentAsync method
+                    // which might check both SubjectId and UserId
+                    if (!hasConsent)
+                    {
+                        hasConsent = await userGrantStore.HasUserGrantedConsentAsync(subject, clientId, requestedScopes, cancellationToken);
+                        logger.LogInformation("HasUserGrantedConsentAsync result: {HasConsent}", hasConsent);
+                    }
+                    
+                    if (!hasConsent)
+                    {
+                        logger.LogInformation("Redirecting to consent page for subject {Subject}, client {ClientId}", subject, clientId);
+                        var consentUrl = routeOptions.Combine(routeOptions.ConsentPath) + request.QueryString;
+                        return Results.Redirect(consentUrl);
+                    }
+                    
+                    logger.LogInformation("Consent already granted for all requested scopes");
+                }
+            }
+            else
+            {
+                var returnUrl = Uri.EscapeDataString(request.GetEncodedUrl());
+                var loginUrl = routeOptions.Combine(routeOptions.LoginPath) + "?ReturnUrl=" + returnUrl;
+                return Results.Redirect(loginUrl);
+            }
 
             // --- If authenticated and consented (or consent not required) ---
 
@@ -439,7 +514,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
 
                 // Construct the code object to store
                 var codeLifetime = TimeSpan.FromMinutes(5); // Example lifetime
-                var subjectId = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var subjectId = httpContext.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (string.IsNullOrWhiteSpace(subjectId))
                 {
                     logger.LogError("Authenticated user is missing Subject ID (sub) claim.");
@@ -525,6 +600,165 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
         .WithSummary("Starts the OAuth 2.0 Authorization Code flow.")
         .WithDescription("Validates the client request and redirects the user agent back to the client with an authorization code.");
+
+        // Endpoint: GET /consent
+        routeGroup.MapGet(routeOptions.ConsentPath, (
+            HttpRequest request,
+            HttpContext httpContext,
+            IAntiforgery antiforgery) =>
+        {
+            // Generate antiforgery tokens and store cookie
+            var tokens = antiforgery.GetAndStoreTokens(httpContext);
+            // Compute ReturnUrl back to authorization endpoint preserving full query string
+            var returnUrl = routeOptions.Combine(routeOptions.AuthorizePath) + request.QueryString;
+            var clientId = request.Query["client_id"];
+            var redirectUri = request.Query["redirect_uri"];
+            var scope = request.Query["scope"];
+            var state = request.Query["state"];
+            // Simple HTML consent form
+            var html = $@"<html><body>
+<form method=""post"" action=""{request.Path}"">
+<input name=""__RequestVerificationToken"" type=""hidden"" value=""{tokens.RequestToken}"" />
+<input name=""ReturnUrl"" type=""hidden"" value=""{returnUrl}"" />
+<input name=""ClientId"" type=""hidden"" value=""{clientId}"" />
+<input name=""RedirectUri"" type=""hidden"" value=""{redirectUri}"" />
+<input name=""Scope"" type=""hidden"" value=""{scope}"" />
+<input name=""State"" type=""hidden"" value=""{state}"" />
+<button type=""submit"" name=""Allow"" value=""true"">Allow</button>
+<button type=""submit"" name=""Allow"" value=""false"">Deny</button>
+</form>
+</body></html>";
+            return Results.Content(html, "text/html");
+        })
+        .WithName("ConsentPage")
+        .WithTags("CoreIdent")
+        .Produces(StatusCodes.Status200OK, typeof(void), "text/html")
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+        .Produces<ProblemDetails>(StatusCodes.Status401Unauthorized)
+        .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
+
+        // Endpoint: POST /consent
+        routeGroup.MapPost(routeOptions.ConsentPath, async (
+            [FromForm] ConsentRequest request,
+            HttpContext httpContext,
+            IAntiforgery antiforgery,
+            IUserGrantStore userGrantStore,
+            ILoggerFactory loggerFactory,
+            CancellationToken cancellationToken) =>
+        {
+            var logger = loggerFactory.CreateLogger("CoreIdent.Consent");
+            
+            // Get user identifier from multiple possible sources
+            var subject = httpContext.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier) 
+                ?? httpContext.User?.FindFirstValue(System.Security.Claims.ClaimTypes.Name)
+                ?? httpContext.User?.Identity?.Name;
+                
+            if (string.IsNullOrWhiteSpace(subject))
+            {
+                logger.LogWarning("No subject identifier found in authenticated user for consent");
+                return Results.Unauthorized();
+            }
+            
+            logger.LogInformation("POST Consent: Subject: {Subject}, Allow: {Allow}, ReturnUrl: {ReturnUrl}", 
+                subject, request.Allow, request.ReturnUrl);
+                
+            // Validate antiforgery token
+            try 
+            {
+                await antiforgery.ValidateRequestAsync(httpContext);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Antiforgery validation failed in consent endpoint");
+                return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid request token." });
+            }
+            
+            if (!request.Allow)
+            {
+                // Deny: parse ReturnUrl for redirect_uri and state
+                var queryString = request.ReturnUrl.Contains('?') ? request.ReturnUrl.Substring(request.ReturnUrl.IndexOf('?')) : string.Empty;
+                var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString);
+                
+                // Extract redirect URI - if not found, this is an invalid request
+                if (!query.TryGetValue("redirect_uri", out var redirectUriValues) || string.IsNullOrEmpty(redirectUriValues))
+                {
+                    logger.LogWarning("Missing redirect_uri in consent returnUrl: {ReturnUrl}", request.ReturnUrl);
+                    return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid return URL." });
+                }
+                var redirectUri = redirectUriValues.ToString();
+                
+                // Extract state if it exists
+                string? state = null;
+                if (query.TryGetValue("state", out var stateValues) && !string.IsNullOrEmpty(stateValues))
+                {
+                    state = stateValues.ToString();
+                }
+                
+                // Construct the error redirect URL
+                var denyUrl = redirectUri + (redirectUri.Contains('?') ? '&' : '?') + "error=access_denied";
+                if (!string.IsNullOrEmpty(state))
+                    denyUrl += "&state=" + Uri.EscapeDataString(state);
+                
+                logger.LogInformation("Consent denied, redirecting to: {DenyUrl}", denyUrl);
+                return Results.Redirect(denyUrl);
+            }
+            
+            // Allow: parse ReturnUrl for clientId and scopes
+            var qsString = request.ReturnUrl.Contains('?') ? request.ReturnUrl.Substring(request.ReturnUrl.IndexOf('?')) : string.Empty;
+            var qs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(qsString);
+            
+            // Extract required parameters
+            if (!qs.TryGetValue("client_id", out var clientIdValues) || string.IsNullOrEmpty(clientIdValues))
+            {
+                logger.LogWarning("Missing client_id in consent returnUrl: {ReturnUrl}", request.ReturnUrl);
+                return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid client ID." });
+            }
+            var clientId = clientIdValues.ToString();
+            
+            if (!qs.TryGetValue("scope", out var scopeValues) || string.IsNullOrEmpty(scopeValues))
+            {
+                logger.LogWarning("Missing scope in consent returnUrl: {ReturnUrl}", request.ReturnUrl);
+                return Results.BadRequest(new { error = "invalid_request", error_description = "Invalid scope." });
+            }
+            var scope = scopeValues.ToString();
+            var grantedScopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+            
+            // Create and save the user grant
+            var grant = new UserGrant
+            {
+                SubjectId = subject,
+                UserId = subject, // Set both fields for consistency
+                ClientId = clientId,
+                GrantedScopes = grantedScopes,
+                Scopes = grantedScopes.ToList(), // Set both for backward compatibility
+                CreatedAt = DateTime.UtcNow,
+                GrantedAt = DateTime.UtcNow
+            };
+            
+            try
+            {
+                logger.LogInformation("Saving consent grant for subject {Subject}, client {ClientId}, scopes: {Scopes}", 
+                    subject, clientId, string.Join(" ", grantedScopes));
+                await userGrantStore.SaveAsync(grant, cancellationToken);
+                logger.LogInformation("Grant saved successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error saving consent grant");
+                return Results.Problem("An error occurred while processing your consent.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+            
+            // Redirect back to the original authorize URL for code generation
+            logger.LogInformation("Consent granted, redirecting to: {ReturnUrl}", request.ReturnUrl);
+            return Results.Redirect(request.ReturnUrl);
+        })
+        .WithName("Consent")
+        .WithTags("CoreIdent")
+        .Produces(StatusCodes.Status302Found)
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+        .Produces<ProblemDetails>(StatusCodes.Status401Unauthorized)
+        .WithSummary("Handles user consent decisions.")
+        .WithDescription("Stores user grants and redirects based on user decision.");
 
         // Endpoint: POST /token
         // Handles various grant types for token issuance.
@@ -1041,7 +1275,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
         .WithTags("CoreIdent")
         // TODO: Define Produces accurately
         .Produces<TokenResponse>(StatusCodes.Status200OK)
-        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest) // invalid_request, invalid_grant, invalid_client, unsupported_grant_type
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
         .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError)
         .WithSummary("Exchanges various grants for access tokens.")
         .WithDescription("Handles token issuance based on grant types like authorization_code, client_credentials, etc.");

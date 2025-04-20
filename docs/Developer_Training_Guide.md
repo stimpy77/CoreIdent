@@ -897,3 +897,42 @@ grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&clie
 - **Testing:**
     - Unit tests verify claim presence and signature.
     - Integration tests verify issuance during the Authorization Code flow and round-trip of the nonce value.
+```
+
+## Phase 4: User Consent & Scope Management
+
+### 1. Consent Flow Overview
+
+CoreIdent implements a user consent flow for OAuth 2.0 and OIDC authorization. When a client requests access to user resources, the user is prompted to approve or deny the requested scopes via a consent UI.
+
+**Key Steps:**
+1. **Authorization Request:** Client initiates `/auth/authorize` with required scopes.
+2. **Consent Check:** CoreIdent checks if the user has already granted consent for this client and scopes.
+3. **Consent UI:** If not, the user is redirected to a consent page listing the client and requested permissions.
+4. **User Decision:** The user can allow or deny. On allow, the grant is stored. On deny, the client is redirected with `error=access_denied`.
+5. **Subsequent Requests:** Consent is not required again for the same client/scopes unless revoked.
+
+### 2. Endpoints and Storage
+- `GET /auth/authorize`: Triggers consent check and redirect.
+- `GET /auth/consent`: Shows the consent UI (Razor page).
+- `POST /auth/consent`: Handles user decision and updates grants.
+- **Storage:** Grants are stored via the `IUserGrantStore` interface. The default implementation is in-memory; an EF Core store is available for persistence.
+
+### 3. Customizing Consent
+- Replace the Razor page in the sample UI for custom branding or UX.
+- Implement a custom `IUserGrantStore` for advanced grant management (e.g., expiration, auditing).
+
+### 4. Sample UI Integration
+The sample project demonstrates the consent flow with a simple Razor UI. It can be extended for production scenarios.
+
+### 5. Testing Consent Flows
+- Integration tests cover all consent scenarios: redirect, allow, deny, and repeated requests.
+- See `ConsentFlowTests` in the integration test project for examples.
+
+### 6. Troubleshooting
+If consent is not prompted as expected, verify:
+- The client is configured to require consent.
+- The requested scopes are registered and enabled.
+- The grant store is properly registered (in-memory or EF Core).
+
+For further details, see the [README.md](../README.md) and the `DEVPLAN.md` for implementation status.

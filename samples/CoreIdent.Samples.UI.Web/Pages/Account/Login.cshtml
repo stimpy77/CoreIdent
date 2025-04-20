@@ -1,0 +1,33 @@
+@page "/Account/Login"
+@{
+    Layout = null;
+}
+<h1>Login</h1>
+<form id="loginForm">
+    <input id="email" name="email" type="email" placeholder="Email" />
+    <input id="password" name="password" type="password" placeholder="Password" />
+    <button type="submit">Login</button>
+</form>
+<pre id="result"></pre>
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+        };
+        const resp = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            redirect: 'manual'
+        });
+        if (resp.ok) {
+            const json = await resp.json();
+            document.getElementById('result').textContent = JSON.stringify(json, null, 2);
+        } else {
+            const err = await resp.text();
+            document.getElementById('result').textContent = err;
+        }
+    });
+</script>
