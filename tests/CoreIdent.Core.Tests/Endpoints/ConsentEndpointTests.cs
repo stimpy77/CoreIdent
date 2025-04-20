@@ -11,7 +11,7 @@ namespace CoreIdent.Core.Tests.Endpoints
     public class ConsentEndpointTests
     {
         [Fact]
-        public async Task Consent_Allow_Stores_Grant_And_Redirects()
+        public Task Consent_Allow_Stores_Grant_And_Redirects()
         {
             // Arrange
             var consentStore = new Mock<IUserGrantStore>();
@@ -25,11 +25,12 @@ namespace CoreIdent.Core.Tests.Endpoints
             consentStore.Setup(x => x.StoreUserGrantAsync("user1", "client1", It.IsAny<IEnumerable<string>>(), default)).Returns(Task.CompletedTask);
 
             // Act
-            await consentStore.Object.StoreUserGrantAsync("user1", request.ClientId, new[] { request.Scope }, default);
+            consentStore.Object.StoreUserGrantAsync("user1", request.ClientId, new[] { request.Scope }, default).GetAwaiter().GetResult();
 
             // Assert
             consentStore.Verify(x => x.StoreUserGrantAsync("user1", "client1", It.IsAny<IEnumerable<string>>(), default), Times.Once);
             // (In real endpoint, would redirect to redirect_uri)
+            return Task.CompletedTask;
         }
 
         [Fact]

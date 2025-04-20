@@ -15,7 +15,7 @@ namespace CoreIdent.Core.Tests.Services
         {
             // Arrange
             var tokenService = new Mock<ITokenService>();
-            tokenService.Setup(x => x.GenerateAccessTokenAsync(It.IsAny<CoreIdentUser>(), null)).ReturnsAsync("access-token-xyz");
+            tokenService.Setup(x => x.GenerateAccessTokenAsync(It.IsAny<CoreIdentUser>(), It.IsAny<IEnumerable<string>?>())).ReturnsAsync("access-token-xyz");
 
             // Act
             var token = await tokenService.Object.GenerateAccessTokenAsync(new CoreIdentUser { Id = "user1" });
@@ -29,10 +29,12 @@ namespace CoreIdent.Core.Tests.Services
         {
             // Arrange
             var tokenService = new Mock<ITokenService>();
-            tokenService.Setup(x => x.GenerateAndStoreRefreshTokenAsync(It.IsAny<CoreIdentUser>(), "client1", null)).ReturnsAsync("refresh-token-abc");
+            tokenService.Setup(x => x.GenerateAndStoreRefreshTokenAsync(It.IsAny<CoreIdentUser>(), "client1", It.IsAny<CoreIdentRefreshToken>())).ReturnsAsync("refresh-token-abc");
 
             // Act
-            var refreshToken = await tokenService.Object.GenerateAndStoreRefreshTokenAsync(new CoreIdentUser { Id = "user1" }, "client1", null);
+#pragma warning disable CS8625
+            var refreshToken = await tokenService.Object.GenerateAndStoreRefreshTokenAsync(new CoreIdentUser { Id = "user1" }, "client1", (CoreIdentRefreshToken?)null);
+#pragma warning restore CS8625
 
             // Assert
             refreshToken.ShouldBe("refresh-token-abc");
