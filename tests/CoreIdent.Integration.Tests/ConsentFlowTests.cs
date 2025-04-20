@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authentication;
 using CoreIdent.Core.Stores;
 using Microsoft.Extensions.Logging;
 using CoreIdent.Integration.Tests;
+using CoreIdent.Storage.EntityFrameworkCore;
 
 namespace CoreIdent.Integration.Tests
 {
@@ -48,6 +49,13 @@ namespace CoreIdent.Integration.Tests
 
                     builder.ConfigureServices(services =>
                     {
+                        // Enable consent requirement for consent flow tests
+                        var sp = services.BuildServiceProvider();
+                        using var scope = sp.CreateScope();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
+                        var client = dbContext.Clients.First(c => c.ClientId == ClientId);
+                        client.RequireConsent = true;
+                        dbContext.SaveChanges();
                     });
                 });
             }
