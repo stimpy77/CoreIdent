@@ -1,33 +1,33 @@
 @page "/Account/Login"
+@model CoreIdent.Samples.UI.Web.Pages.Account.LoginModel
 @{
-    Layout = null;
+    Layout = null; // Or your app's layout
+    ViewData["Title"] = "Log in";
 }
-<h1>Login</h1>
-<form id="loginForm">
-    <input id="email" name="email" type="email" placeholder="Email" />
-    <input id="password" name="password" type="password" placeholder="Password" />
-    <button type="submit">Login</button>
-</form>
-<pre id="result"></pre>
-<script>
-    document.getElementById('loginForm').addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = {
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value
-        };
-        const resp = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-            redirect: 'manual'
-        });
-        if (resp.ok) {
-            const json = await resp.json();
-            document.getElementById('result').textContent = JSON.stringify(json, null, 2);
-        } else {
-            const err = await resp.text();
-            document.getElementById('result').textContent = err;
-        }
-    });
-</script>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewData["Title"] - CoreIdent Sample</title>
+    <!-- Add basic styling if desired -->
+</head>
+<body>
+    <h1>@ViewData["Title"]</h1>
+    <p>Redirecting to CoreIdent for authentication...</p>
+
+    <!-- 
+    OLD FORM - REMOVED
+    <form method="post">
+        <div>
+            <label for="email">Email</label>
+            <input type="email" id="email" name="Email" required />
+        </div>
+        <div>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="Password" required />
+        </div>
+        <button type="submit">Log in</button>
+    </form>
+    -->
+</body>
+</html>
