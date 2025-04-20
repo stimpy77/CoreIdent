@@ -28,6 +28,11 @@ things are or how they were supposed to work.
 ## 3. Current Status & Development Plan
 
 *   **Current Status:** Phase 3 in progress. Authorization Code Flow with PKCE, ID Token generation, and token theft detection are complete. The EF Core implementation of `IAuthorizationCodeStore` (including cleanup and concurrency handling) is also complete.
+*   **Recent Integration Test Focus:**
+    * Integration tests now require cookie-based authentication to be exercised and verified (header-based test auth was reverted as it did not work for the test scenarios).
+    * `/test-login` endpoint and `TestAuthHandler` are used for test authentication, setting cookies for test users.
+    * The `/authorize` endpoint and consent flow logic are restored to require cookie-based authentication and proper consent checks, matching production-like scenarios.
+    * Ongoing work focuses on ensuring that integration tests for the full authentication and consent flows pass using cookies, not test headers.
 *   **Development Phases (Summary - see `DEVPLAN.md` for details):**
     *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
         *   Features: `/register`, `/login`, `/token/refresh` endpoints. Core services (`IPasswordHasher`, `ITokenService`), models (`CoreIdentUser`), configuration (`CoreIdentOptions`). Defined core store interfaces (`IUserStore`, `IClientStore`, `IScopeStore`, `IRefreshTokenStore`).

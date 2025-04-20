@@ -503,31 +503,31 @@ This document provides a detailed breakdown of tasks, components, features, test
 ### Feature: User Consent Mechanism
 
 *   **Component:** Consent Logic
-    - [ ] Modify `/authorize` endpoint logic.
+    - [x] Modify `/authorize` endpoint logic.
         *   *Guidance:* 
             * After user authentication, check if consent is required for the client/scopes. 
             * Check stored grants/consent for the user/client combination.
         *   *Guidance:* 
             * If consent needed, redirect user to the Consent Page URL, passing request details.
-    - [ ] Implement Consent Decision Endpoint (`POST /consent`).
+    - [x] Implement Consent Decision Endpoint (`POST /consent`).
         *   *Guidance:* 
             * Accepts user decision (allow/deny) and original request context. 
             * If allowed, store the consent/grant (scopes granted) for the user/client. 
             * Redirect back to `/authorize` logic to complete the flow and issue the code. 
             * If denied, redirect back to client with `error=access_denied`.
 *   **Component:** Consent Storage (Extend existing stores or new store)
-    - [ ] Design storage for user consents/grants 
+    - [x] Design storage for user consents/grants 
           (e.g., `UserGrant` entity: UserId, ClientId, Scopes, Expiration).
-    - [ ] Update EF Core DbContext and create `EfGrantStore` 
+    - [x] Update EF Core DbContext and create `EfGrantStore` 
           or extend `EfUserStore`/`EfClientStore`.
 *   **Test Case (Integration):**
-    - [ ] `/authorize` flow redirects to consent page if new scopes are requested for a client.
-    - [ ] Submitting consent 'allow' results in code issuance.
-    - [ ] Submitting consent 'deny' results in error redirect to client.
-    - [ ] Subsequent `/authorize` requests for the same client/scopes (within consent lifetime) 
+    - [x] `/authorize` flow redirects to consent page if new scopes are requested for a client.
+    - [x] Submitting consent 'allow' results in code issuance.
+    - [x] Submitting consent 'deny' results in error redirect to client.
+    - [x] Subsequent `/authorize` requests for the same client/scopes (within consent lifetime) 
           do not require consent again.
-- [ ] **Update README.md** with details on the consent mechanism and related UI.
-- [ ] **Update Developer Training Guide** with details on the consent mechanism and related UI.
+- [x] **Update README.md** with details on the consent mechanism and related UI.
+- [x] **Update Developer Training Guide** with details on the consent mechanism and related UI.
 
 ---
 

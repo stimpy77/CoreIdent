@@ -135,6 +135,34 @@ services.AddScoped<ICustomClaimsProvider, MyCustomClaimsProvider>();
 
 See `TokenRequestContext` for available context fields.
 
+## User Consent Flow (Phase 4)
+
+CoreIdent supports a standards-based user consent mechanism for OAuth 2.0/OIDC authorization flows. When a client requests access to protected resources or scopes, the user is prompted to review and approve (or deny) the requested permissions via a consent UI. This ensures explicit user consent for delegated access.
+
+### How Consent Works
+- **Authorization Request:** When a client initiates an authorization code flow, CoreIdent checks if consent is required for the requested scopes and client.
+- **Consent UI:** If consent is needed, the user is redirected to a consent page (Razor UI in the sample project) listing the client and requested scopes.
+- **User Decision:** The user can approve (allow) or deny the request.
+- **Grant Storage:** If allowed, the granted scopes are stored (in-memory or EF Core, depending on configuration) for the user/client combination. Consent is not required again for the same scopes unless revoked or expired.
+- **Deny:** If denied, the user is redirected back to the client with an `access_denied` error.
+
+### Endpoints
+- `GET /auth/authorize` – Initiates the flow; redirects to consent if required.
+- `GET /auth/consent` – Displays the consent UI (Razor page in sample UI).
+- `POST /auth/consent` – Handles user decision (allow/deny) and updates grants.
+
+### Sample UI
+The sample project (`CoreIdent.Samples.UI.Web`) provides a basic consent page implementation. You can customize the UI or extend the consent storage logic as needed.
+
+### Customization
+- Implement your own consent UI by replacing the Razor page.
+- Use the `IUserGrantStore` interface to extend or replace consent storage (e.g., with expiration, auditing, or per-scope policies).
+
+### Example Consent Page
+![Consent UI Example](docs/images/consent-ui-example.png)
+
+For more details and advanced scenarios, see the [Developer Training Guide](docs/Developer_Training_Guide.md).
+
 ## Getting Started
 
 This guide covers the setup for the core functionality available after Phase 3.
