@@ -36,11 +36,11 @@ namespace CoreIdent.Core.Extensions;
 public static class CoreIdentEndpointRouteBuilderExtensions
 {
     /// <summary>
-/// Maps the CoreIdent core authentication and OAuth/OIDC endpoints.
-/// </summary>
-/// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to add the routes to.</param>
-/// <param name="configureRoutes">Optional action to configure the default routes.</param>
-/// <returns>A <see cref="RouteGroupBuilder"/> containing the mapped CoreIdent endpoints.</returns>
+    /// Maps the CoreIdent core authentication and OAuth/OIDC endpoints.
+    /// </summary>
+    /// <param name="endpoints">The <see cref="IEndpointRouteBuilder"/> to add the routes to.</param>
+    /// <param name="configureRoutes">Optional action to configure the default routes.</param>
+    /// <returns>A <see cref="RouteGroupBuilder"/> containing the mapped CoreIdent endpoints.</returns>
     public static RouteGroupBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints, Action<CoreIdentRouteOptions>? configureRoutes = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -402,7 +402,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
             logger.LogInformation("User authenticated: {IsAuthenticated}, Claims: {Claims}", 
                 isAuthenticated, 
                 string.Join(", ", httpContext.User?.Claims.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>()));
-                
+
             if (!isAuthenticated)
             {
                 // Redirect to CoreIdent login endpoint with ReturnUrl
@@ -424,7 +424,7 @@ public static class CoreIdentEndpointRouteBuilderExtensions
                 if (string.IsNullOrEmpty(subject))
                 {
                     logger.LogWarning("Authenticated user has no subject identifier (NameIdentifier or Name)");
-                    return Results.Problem("User identifier missing.", statusCode: StatusCodes.Status500InternalServerError);
+                    return Results.Unauthorized();
                 }
                 
                 var userGrantStore = httpContext.RequestServices.GetRequiredService<IUserGrantStore>();
