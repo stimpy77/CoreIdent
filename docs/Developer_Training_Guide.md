@@ -790,149 +790,219 @@ The Authorization Code Flow is the primary and most secure OAuth 2.0 flow, suita
 
 1.  **Initiation:** The user clicks a "Login with CoreIdent" button in the Client Application.
 2.  **Redirect to Authorize:** The Client App redirects the user's browser to CoreIdent's `/authorize` endpoint, including parameters like its `client_id`, requested `scope`s, a `redirect_uri`, and PKCE parameters (`code_challenge`, `code_challenge_method`).
-3.  **User Authentication & Consent:** CoreIdent authenticates the user (if not already logged in) and potentially prompts for consent to grant the Client App the requested permissions (`scope`s). (Consent UI is planned for Phase 4).
-4.  **Code Issuance:** Upon successful authentication and consent, CoreIdent generates a short-lived, single-use **authorization code** and redirects the user's browser back to the Client App's registered `redirect_uri`, including the `code` and the original `state` parameter (if provided).
-5.  **Token Exchange:** The Client App's backend receives the authorization code. It then makes a direct, backend POST request to CoreIdent's `/token` endpoint, sending the `code`, its `client_id`, its `client_secret` (for confidential clients), the `redirect_uri`, and the PKCE `code_verifier`.
-6.  **Token Issuance:** CoreIdent validates the request (including the code, client credentials/PKCE verifier, redirect URI). If valid, it consumes the code and issues an `access_token`, a `refresh_token` (if `offline_access` scope was granted), and an `id_token` (if `openid` scope was granted).
+3.  **User Authentication & Consent:** CoreIdent authenticates the user (if not already logged in) and potentially prompts for consent to grant the Client App the requested permissions (`scope`s). (Consent is handled in Phase 4).
+4.  **Code Issuance:** Upon successful authentication and consent, CoreIdent generates a short-lived, single-use **authorization code**. The code details (client ID, user ID, scopes, PKCE challenge, etc.) are persisted using `IAuthorizationCodeStore`. CoreIdent then redirects the user's browser back to the Client App's registered `redirect_uri`, including the `code` handle and the original `state` parameter.
+5.  **Token Exchange:** The Client App's backend receives the authorization code handle. It then makes a direct, backend POST request to CoreIdent's `/token` endpoint, sending the `code` handle, its `client_id`, its `client_secret` (for confidential clients), the `redirect_uri`, and the PKCE `code_verifier`.
+6.  **Token Issuance:** CoreIdent retrieves the code details using `IAuthorizationCodeStore`, validates the request (including the code handle, client credentials/PKCE verifier, redirect URI). If valid, it consumes the code (removes it from the store) and issues an `access_token`, a `refresh_token` (if `offline_access` scope was granted), and an `id_token` (if `openid` scope was granted).
 7.  **Client Usage:** The Client App receives the tokens and can now use the `access_token` to make requests to protected APIs on behalf of the user. It uses the `id_token` to get user identity information.
 
 **CoreIdent Endpoints Involved:**
 
-*   **`GET /auth/authorize` (Example Base Path: `/auth`)**
-    *   **Purpose:** Initiates the flow, handles user authentication/consent, and issues the authorization code.
-    *   **Key Request Parameters:**
-        *   `client_id`: Identifier of the client application requesting authorization.
-        *   `response_type=code`: Specifies the Authorization Code flow.
-        *   `redirect_uri`: Where CoreIdent redirects the user back after authorization. Must match one of the URIs registered for the client.
-        *   `scope`: Space-separated list of permissions requested (e.g., `openid profile email offline_access`). `openid` is required for OIDC flows and ID Tokens.
-        *   `state`: An opaque value used by the client to maintain state between the request and callback. CoreIdent echoes it back in the redirect. (Recommended for CSRF protection).
-        *   `nonce`: String value used to associate a client session with an ID Token and mitigate replay attacks. Required for OIDC implicit flow, optional but recommended for code flow ID Tokens.
-        *   `code_challenge`: The PKCE code challenge (Base64Url-encoded SHA256 hash of the `code_verifier`).
-        *   `code_challenge_method=S256`: Specifies the hashing method used for the PKCE challenge (CoreIdent supports `S256`).
-    *   **Validation:** CoreIdent validates the `client_id`, checks if the `redirect_uri` is registered for that client, and verifies requested `scope`s are allowed.
-    *   **Response:** Redirects to the client's `redirect_uri` with `code` and `state` (and potentially `error` parameters if something goes wrong).
+*   **`GET /auth/authorize`**
+    *   **Purpose:** Initiates the flow, handles user authentication/consent, persists authorization code details, and issues the code handle.
+    *   **Key Request Parameters:** `client_id`, `response_type=code`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge`, `code_challenge_method=S256`.
+    *   **Validation:** CoreIdent validates the `client_id`, checks if the `redirect_uri` is registered, verifies `scope`s, and ensures PKCE parameters are present and valid.
+    *   **Response:** Redirects to the client's `redirect_uri` with `code` (handle) and `state` (or `error` parameters).
 
 *   **`POST /auth/token` (Grant Type: `authorization_code`)**
-    *   **Purpose:** Exchanges the authorization code for tokens. This request MUST come from the client's backend (or securely handled in the frontend for public clients using PKCE).
+    *   **Purpose:** Exchanges the authorization code handle for tokens.
+    *   **Request Body (Form-encoded):** `grant_type=authorization_code`, `code` (handle), `redirect_uri`, `client_id`, `code_verifier`, and `client_secret` (for confidential clients).
+    *   **Validation:** Retrieves code details via `IAuthorizationCodeStore`, validates `client_id`, `redirect_uri`, checks code expiry, performs PKCE verification by hashing the `code_verifier` and comparing it to the stored `code_challenge`.
+    *   **Action:** Consumes the code (removes from `IAuthorizationCodeStore`), generates tokens using `ITokenService`.
+    *   **Response:** JSON containing `access_token`, `refresh_token`, `id_token`, `expires_in`, `token_type`. Returns `invalid_grant` error if code is invalid/expired/consumed or PKCE fails.
+
+**Persistence and Cleanup (`IAuthorizationCodeStore`, `EfAuthorizationCodeStore`, `AuthorizationCodeCleanupService`):**
+
+*   Authorization codes are persisted to allow validation during the `/token` exchange.
+*   The `EfAuthorizationCodeStore` uses the `CoreIdentDbContext`.
+*   A background service (`AuthorizationCodeCleanupService`) automatically removes expired codes from the database, preventing the store from growing indefinitely. This service is registered by default when using `AddCoreIdentEntityFrameworkStores`.
+*   The store implementation includes robust concurrency handling.
+
+**Testing:**
+
+*   `AuthorizationCodeFlowTests.cs` provides comprehensive integration tests covering the happy path, various error conditions (invalid code, PKCE failure, client validation), and interaction with the persistence layer.
+
+### 3. Client Credentials Flow
+
+This flow is designed for machine-to-machine (M2M) communication where a client application (e.g., a backend service, a CLI tool) needs to access protected resources on its own behalf, without a user being involved.
+
+**Conceptual Flow:**
+
+1.  **Client Request:** The client application makes a direct POST request to the `/token` endpoint.
+2.  **Authentication:** The client authenticates itself using its `client_id` and `client_secret` (either via HTTP Basic Authentication header or in the request body).
+3.  **Token Issuance:** CoreIdent validates the client credentials using `IClientStore` and `IPasswordHasher`. If valid, it checks the requested `scope`s against the client's allowed scopes. It then issues an `access_token` representing the client itself (typically, the `sub` claim is the `client_id`). Refresh tokens are usually not issued for this flow.
+
+**CoreIdent Endpoint Involved:**
+
+*   **`POST /auth/token` (Grant Type: `client_credentials`)**
+    *   **Purpose:** Issues an access token directly to a confidential client.
     *   **Request Body (Form-encoded):**
-        *   `grant_type=authorization_code`: Specifies the grant type.
-        *   `code`: The authorization code received from the `/authorize` redirect.
-        *   `redirect_uri`: Must match the `redirect_uri` used in the initial `/authorize` request.
-        *   `client_id`: The client application's identifier.
-        *   `code_verifier`: The PKCE code verifier (the original secret that was hashed to create the `code_challenge`).
-        *   *(Confidential Clients Only):* `
+        *   `grant_type=client_credentials`
+        *   `scope` (optional): Space-separated list of scopes requested.
+    *   **Authentication:** Requires client authentication via `Authorization: Basic` header OR `client_id` & `client_secret` in the request body.
+    *   **Validation:** Uses `IClientStore` to find the client, `IPasswordHasher` to verify the secret, and `IScopeStore` to validate requested scopes against `client.AllowedScopes`.
+    *   **Response:** JSON containing `access_token`, `expires_in`, `token_type`. Returns `invalid_client` if authentication fails or `invalid_scope` if scopes are not allowed.
 
-### Authorization Code Flow: Persistence and Cleanup
+**Client Authentication:**
 
-When using EF Core storage, authorization codes issued by the `/auth/authorize` endpoint are persisted in the database via `EfAuthorizationCodeStore`. This ensures:
-- Codes are durable and can be validated/redeemed even if the server restarts.
-- Expired codes are automatically removed by the `AuthorizationCodeCleanupService` background service.
-- The store implementation is concurrency-safe, so multiple simultaneous attempts to redeem or clean up a code are handled correctly.
+*   CoreIdent supports standard client authentication methods for the `/token` endpoint:
+    1.  **HTTP Basic Authentication Header:** `Authorization: Basic base64(client_id:client_secret)` (Preferred for confidential clients).
+    2.  **Request Body Parameters:** Including `client_id` and `client_secret` in the form-encoded body.
+*   Client secrets are hashed before being stored via `IClientStore`.
 
-**Troubleshooting:**
-- If you receive an error that an authorization code is invalid or expired, it may have already been redeemed or cleaned up by the background service. Codes are single-use and short-lived by design.
+**Testing:**
 
-## Client Authentication at the /token Endpoint
+*   Integration tests verify token issuance with valid credentials, client authentication failures, and scope validation errors for the Client Credentials flow.
 
-The `/token` endpoint supports two standard methods for client authentication, as recommended by OAuth 2.0 (RFC 6749 Section 2.3.1):
+### 4. OpenID Connect ID Token
 
-1. **HTTP Basic Authentication Header**
-   - The client sends its `client_id` and `client_secret` in the `Authorization` header using the `Basic` scheme.
-   - Example header: `Authorization: Basic base64(client_id:client_secret)`
-   - This is the most secure method for confidential clients (e.g., server-side web apps).
+When the `openid` scope is included in an authorization request (like the Authorization Code Flow), CoreIdent issues an **ID Token** alongside the access token. This JWT provides verifiable information about the user's authentication event.
 
-2. **Request Body Parameters**
-   - The client includes `client_id` and `client_secret` as form fields in the POST body (content type: `application/x-www-form-urlencoded`).
-   - Example fields: `client_id=my-client&client_secret=supersecret`
-   - This method is supported for compatibility, but Basic Auth is preferred for confidential clients.
+**Purpose:** Allows the client application to confirm the identity of the user who logged in without needing to call a separate `/userinfo` endpoint (though that endpoint might be added later).
 
-**How Confidential vs. Public Clients Are Determined**
-- If a client has one or more registered secrets (`ClientSecrets`), it is treated as a confidential client and must authenticate using one of the above methods.
-- Public clients (e.g., SPAs, mobile apps) must not use secrets and are authenticated only by their `client_id`.
+**Claims:** The ID Token includes standard OIDC claims:
 
-**Secret Verification and Security**
-- Client secrets are securely hashed and stored in the database. Verification uses the same password hasher as user passwords.
-- Only confidential clients should use secrets. Never embed secrets in public client code.
-- If authentication fails (missing or invalid secret), the endpoint returns an `invalid_client` error.
+| Claim      | Description                                      | Source                                          |
+| :--------- | :----------------------------------------------- | :---------------------------------------------- |
+| `iss`      | Issuer Identifier (CoreIdent server)             | `CoreIdentOptions.Issuer`                       |
+| `sub`      | Subject Identifier (End-User's unique ID)        | `CoreIdentUser.Id`                              |
+| `aud`      | Audience (Client ID of the relying party)        | `client_id` from the request                    |
+| `exp`      | Expiration Time (Unix timestamp)                 | Based on Access Token Lifetime + current time   |
+| `iat`      | Issued At Time (Unix timestamp)                  | Current time when token is generated            |
+| `nonce`    | Value passed in `/authorize` request (if any)    | Original `nonce` parameter                      |
+| `name`     | User's display name (if `profile` scope requested) | `CoreIdentUser.UserName` (or custom claim)    |
+| `email`    | User's email (if `email` scope requested)      | `CoreIdentUser.Email` (or custom claim)       |
+| *custom* | Other claims based on scopes/`ICustomClaimsProvider` | `IUserStore` or `ICustomClaimsProvider`       |
 
-**Example: Basic Auth**
-```
-POST /auth/token
-Authorization: Basic base64(my-client:supersecret)
-Content-Type: application/x-www-form-urlencoded
+**Generation (`JwtTokenService`):**
 
-grant_type=authorization_code&code=...&redirect_uri=...
-```
+*   The `JwtTokenService` includes logic to generate the ID Token when the `openid` scope is present.
+*   It populates claims based on the authenticated user, the client ID, the nonce provided in the original authorization request, and other requested scopes.
+*   The ID Token is signed using the same signing key as the access token.
 
-**Example: Request Body**
-```
-POST /auth/token
-Content-Type: application/x-www-form-urlencoded
+**Validation (Client-Side):**
 
-grant_type=authorization_code&code=...&redirect_uri=...&client_id=my-client&client_secret=supersecret
-```
+*   Client applications receiving an ID Token **MUST** validate it:
+    1.  Verify the signature using CoreIdent's public key (obtained via the JWKS endpoint).
+    2.  Validate the `iss` (issuer) claim matches CoreIdent's issuer identifier.
+    3.  Validate the `aud` (audience) claim contains the client's own `client_id`.
+    4.  Validate the `exp` (expiration) claim to ensure the token is not expired.
+    5.  Validate the `iat` (issued at) claim (optional, check against clock skew).
+    6.  Validate the `nonce` claim against the value the client originally sent in the `/authorize` request to prevent replay attacks.
+*   Libraries like `Microsoft.AspNetCore.Authentication.OpenIdConnect` (for server-side web apps) or `oidc-client-ts` (for SPAs) handle this validation automatically.
 
-**Error Responses**
-- If client authentication fails, the response will be:
-  ```json
-  { "error": "invalid_client", "error_description": "Client authentication failed (client_id missing)." }
-  ```
-- Or for invalid secret:
-  ```json
-  { "error": "invalid_client", "error_description": "Invalid client secret." }
-  ```
-### OpenID Connect: ID Token
+**Testing:**
 
-- The **ID Token** is a JWT issued as part of the OIDC flow (e.g., Authorization Code).
-- Contains claims about the authenticated user and session:
-    - `iss`: Issuer
-    - `sub`: User ID (subject)
-    - `aud`: Audience (client ID)
-    - `exp`: Expiration
-    - `iat`: Issued-at
-    - `nonce`: Nonce from the original request (prevents replay)
-    - `name`, `email`: User claims if requested via scopes
-- Returned in the `id_token` property of the `/token` endpoint response.
-- Signed using the server's signing key (see [README.md](../README.md)).
-- **Testing:**
-    - Unit tests verify claim presence and signature.
-    - Integration tests verify issuance during the Authorization Code flow and round-trip of the nonce value.
-```
+*   Unit tests in `JwtTokenServiceTests.cs` verify the correct generation of ID Tokens and claims.
+*   Integration tests in `AuthorizationCodeFlowTests.cs` confirm that an ID Token is returned in the `/token` response when `openid` scope is requested and that the `nonce` value is correctly included.
+
+### 5. OIDC Discovery & JWKS Endpoints
+
+To allow clients and APIs to dynamically configure themselves and validate tokens, OIDC defines standard discovery endpoints.
+
+*   **Discovery Endpoint (`/.well-known/openid-configuration`)**
+    *   **Purpose:** Provides metadata about the CoreIdent server configuration.
+    *   **Implementation:** CoreIdent maps this endpoint automatically via `MapCoreIdentEndpoints`. It dynamically generates the JSON response based on configured `CoreIdentOptions` and `CoreIdentRouteOptions`.
+    *   **Contents:** Includes URLs for authorization (`authorization_endpoint`), token (`token_endpoint`), JWKS (`jwks_uri`), supported scopes (`scopes_supported`), response types (`response_types_supported`), grant types (`grant_types_supported`), signing algorithms (`id_token_signing_alg_values_supported`), etc.
+    *   **Example Snippet:**
+        ```json
+        {
+          "issuer": "https://localhost:7100",
+          "authorization_endpoint": "https://localhost:7100/auth/authorize",
+          "token_endpoint": "https://localhost:7100/auth/token",
+          "jwks_uri": "https://localhost:7100/.well-known/jwks.json",
+          "scopes_supported": ["openid", "profile", "email", "offline_access"],
+          "response_types_supported": ["code"],
+          "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
+          "id_token_signing_alg_values_supported": ["HS256"],
+          ...
+        }
+        ```
+
+*   **JWKS Endpoint (`/.well-known/jwks.json`)**
+    *   **Purpose:** Publishes the public key(s) used by CoreIdent to sign JWTs (Access Tokens and ID Tokens). Clients and APIs use this endpoint to retrieve the key needed to verify token signatures.
+    *   **Implementation:** Mapped automatically by `MapCoreIdentEndpoints`. The `JwtTokenService` (specifically its internal `ISigningKeyService`) generates the JSON Web Key Set (JWKS) based on the configured `SigningKeySecret` (for symmetric keys like HS256) or key material (for asymmetric keys like RS256, planned later).
+    *   **Contents:** A JSON object containing an array of keys (`keys`). For HS256, the key itself is not exposed (as it's symmetric), but the endpoint still exists for spec compliance and future asymmetric key support.
+    *   **Example (Conceptual - for HS256, the key value `k` is usually omitted):**
+        ```json
+        {
+          "keys": [
+            {
+              "kty": "oct", // Key Type: Octet sequence (Symmetric)
+              "use": "sig", // Usage: Signature
+              "kid": "default-hs256-key", // Key ID
+              "alg": "HS256"
+              // "k": "..." // The actual secret is NOT exposed here
+            }
+          ]
+        }
+        ```
+
+**Setup:**
+
+*   These endpoints require no special configuration beyond calling `AddCoreIdent()` and `MapCoreIdentEndpoints()`.
+*   Ensure the `Issuer` in `CoreIdentOptions` is correctly set to the publicly accessible base URL of your CoreIdent instance, as this is used to construct the URLs advertised in the discovery document.
+
+**Testing:**
+
+*   Integration tests verify that both endpoints are accessible and return valid, well-formed JSON documents matching the expected configuration.
+
+--- 
 
 ## Phase 4: User Consent & Scope Management
 
+Phase 4 introduces user-facing interactions, starting with the crucial User Consent mechanism.
+
 ### 1. Consent Flow Overview
 
-CoreIdent implements a user consent flow for OAuth 2.0 and OIDC authorization. When a client requests access to user resources, the user is prompted to approve or deny the requested scopes via a consent UI.
+When a client application requests access to resources protected by CoreIdent (represented by specific `scope`s), the user needs to be informed and provide explicit permission. This is the User Consent flow.
 
-**Key Steps:**
-1. **Authorization Request:** Client initiates `/auth/authorize` with required scopes.
-2. **Consent Check:** CoreIdent checks if the user has already granted consent for this client and scopes.
-3. **Consent UI:** If not, the user is redirected to a consent page listing the client and requested permissions.
-4. **User Decision:** The user can allow or deny. On allow, the grant is stored. On deny, the client is redirected with `error=access_denied`.
-5. **Subsequent Requests:** Consent is not required again for the same client/scopes unless revoked.
+**Purpose:** Ensures users understand and control what data or functionality third-party applications can access on their behalf, aligning with privacy principles and regulations.
 
-### 2. Endpoints and Storage
-- `GET /auth/authorize`: Triggers consent check and redirect.
-- `GET /auth/consent`: Shows the consent UI (Razor page).
-- `POST /auth/consent`: Handles user decision and updates grants.
-- **Storage:** Grants are stored via the `IUserGrantStore` interface. The default implementation is in-memory; an EF Core store is available for persistence.
+**Key Steps & Logic:**
 
-### 3. Customizing Consent
-- Replace the Razor page in the sample UI for custom branding or UX.
-- Implement a custom `IUserGrantStore` for advanced grant management (e.g., expiration, auditing).
+1.  **Trigger:** During the `GET /auth/authorize` request processing:
+    *   CoreIdent retrieves the client details using `IClientStore`.
+    *   It checks the `RequireConsent` flag on the `CoreIdentClient` registration. If `false`, consent is skipped entirely for this client.
+    *   If `true`, CoreIdent retrieves the user's authentication details from the current session (e.g., cookie).
+    *   It uses the `IUserGrantStore` to check if a valid, existing grant for this `user_id`, `client_id`, and *all* the requested `scope`s already exists.
+2.  **Redirect to Consent:** If `RequireConsent` is `true` AND no sufficient existing grant is found, the `/authorize` endpoint stops processing and redirects the user's browser to the configured `ConsentPath` (default: `/auth/consent`). The original query string parameters (`client_id`, `scope`, `state`, etc.) are appended to this redirect URL.
+3.  **Consent UI Interaction (`GET /auth/consent`):**
+    *   The endpoint configured at `ConsentPath` is responsible for displaying the consent screen to the user.
+    *   *CoreIdent Default Behaviour:* By default, `MapCoreIdentEndpoints` maps a simple handler that generates basic HTML with Allow/Deny buttons and hidden fields containing the necessary parameters (ClientId, RedirectUri, Scope, State, ReturnUrl, Antiforgery Token). It's **highly recommended** to replace this with a proper UI implementation (e.g., using Razor Pages, MVC, or Blazor) by configuring `CoreIdentRouteOptions.ConsentPath` to point to your custom UI page/endpoint.
+    *   *Sample UI:* The `samples/CoreIdent.Samples.UI.Web` project provides an example `Consent.cshtml` Razor Page that reads the parameters from the query string, displays the client name (optional fetch) and scopes, and presents Allow/Deny buttons within a form that POSTs back to `/auth/consent`.
+4.  **Handling User Decision (`POST /auth/consent`):**
+    *   The user clicks "Allow" or "Deny" on the consent UI, submitting a form POST to `/auth/consent`.
+    *   CoreIdent's handler for this endpoint receives the submitted form data (`ConsentRequest` DTO).
+    *   It validates the antiforgery token to prevent CSRF attacks.
+    *   **If Denied (`Allow=false`):** It constructs a redirect URL back to the client's original `redirect_uri`, appending `error=access_denied` and the original `state` parameter.
+    *   **If Allowed (`Allow=true`):**
+        *   It extracts the `user_id`, `client_id`, and granted `scope`s from the request.
+        *   It creates a `UserGrant` object containing this information.
+        *   It saves this grant using `IUserGrantStore.SaveAsync()`. The `EfUserGrantStore` persists this to the database.
+        *   It redirects the user's browser back to the original `/authorize` endpoint URL (which was passed along in the hidden `ReturnUrl` field during the consent redirect).
+5.  **Completing Authorization:** The browser follows the redirect back to `/authorize`. This time, the check in step 1 finds the newly created grant in `IUserGrantStore`, the consent check passes, and the `/authorize` endpoint proceeds to issue the authorization code and redirect back to the client's `redirect_uri`.
 
-### 4. Sample UI Integration
-The sample project demonstrates the consent flow with a simple Razor UI. It can be extended for production scenarios.
+**Configuration:**
 
-### 5. Testing Consent Flows
-- Integration tests cover all consent scenarios: redirect, allow, deny, and repeated requests.
-- See `ConsentFlowTests` in the integration test project for examples.
+*   **Client:** Set `RequireConsent = true` when registering a `CoreIdentClient` that should prompt for user consent.
+*   **Routes:** The `ConsentPath` can be configured via `CoreIdentRouteOptions` if you want to override the default `/auth/consent` path or point to a custom UI endpoint.
+*   **Storage:** Ensure `IUserGrantStore` is correctly registered (either `InMemoryUserGrantStore` by default or `EfUserGrantStore` via `AddCoreIdentEntityFrameworkStores`).
 
-### 6. Troubleshooting
-If consent is not prompted as expected, verify:
-- The client is configured to require consent.
-- The requested scopes are registered and enabled.
-- The grant store is properly registered (in-memory or EF Core).
+**Storage (`IUserGrantStore`, `EfUserGrantStore`):**
+
+*   The `UserGrant` model stores the `SubjectId`, `ClientId`, a list of `GrantedScopes`, and potentially `ExpirationTime`.
+*   `IUserGrantStore` defines methods like `FindAsync`, `SaveAsync`, `HasUserGrantedConsentAsync`.
+*   `EfUserGrantStore` implements this using EF Core, storing grants in the `UserGrants` table.
+*   *(Future Consideration):* A background service could be added to clean up expired grants, similar to the token/code cleanup services.
+
+**Testing:**
+
+*   `ConsentFlowTests.cs` contains integration tests covering:
+    *   Redirect to consent when required and no grant exists.
+    *   Correct redirect back to client with `error=access_denied` on deny.
+    *   Correct redirect back to `/authorize` on allow, followed by successful code issuance.
+    *   Skipping consent on subsequent requests once a grant exists.
+    *   Skipping consent when `RequireConsent=false` on the client.
 
 For further details, see the [README.md](../README.md) and the `DEVPLAN.md` for implementation status.
