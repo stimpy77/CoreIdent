@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,6 +13,7 @@ namespace CoreIdent.TestHost
     {
         public const string AuthenticationScheme = "TestScheme";
 
+#pragma warning disable CS0618, CS0612
         public TestAuthHandler(
             IOptionsMonitor<AuthenticationSchemeOptions> options,
             ILoggerFactory logger,
@@ -22,6 +22,7 @@ namespace CoreIdent.TestHost
             : base(options, logger, encoder, clock)
         {
         }
+#pragma warning restore CS0618, CS0612
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {

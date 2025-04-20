@@ -13,7 +13,7 @@ namespace CoreIdent.Core.Tests.Endpoints
     public class AuthorizeEndpointTests
     {
         [Fact]
-        public async Task Unauthenticated_User_Is_Redirected_To_Login()
+        public Task Unauthenticated_User_Is_Redirected_To_Login()
         {
             // Arrange
             var clientStore = new Mock<IClientStore>();
@@ -26,15 +26,16 @@ namespace CoreIdent.Core.Tests.Endpoints
             httpContext.User = new System.Security.Claims.ClaimsPrincipal();
 
             // Act: Simulate authorize endpoint logic
-            var isAuthenticated = httpContext.User.Identity?.IsAuthenticated == true;
+            var isAuthenticated = httpContext.User?.Identity?.IsAuthenticated == true;
 
             // Assert
             isAuthenticated.ShouldBeFalse();
             // (In real endpoint, would redirect to /auth/login)
+            return Task.CompletedTask;
         }
 
         [Fact]
-        public async Task Authenticated_User_Without_Consent_Is_Redirected_To_Consent()
+        public Task Authenticated_User_Without_Consent_Is_Redirected_To_Consent()
         {
             // Arrange
             var clientStore = new Mock<IClientStore>();
@@ -52,13 +53,14 @@ namespace CoreIdent.Core.Tests.Endpoints
             consentStore.Setup(x => x.HasUserGrantedConsentAsync("user1", It.IsAny<string>(), It.IsAny<IEnumerable<string>>(), default)).ReturnsAsync(false);
 
             // Act: Simulate authorize endpoint logic
-            var isAuthenticated = httpContext.User.Identity?.IsAuthenticated == true;
-            var hasConsent = await consentStore.Object.HasUserGrantedConsentAsync("user1", "client1", new[] { "openid" }, default);
+            var isAuthenticated = httpContext.User?.Identity?.IsAuthenticated == true;
+            var hasConsent = consentStore.Object.HasUserGrantedConsentAsync("user1", "client1", new[] { "openid" }, default).GetAwaiter().GetResult();
 
             // Assert
             isAuthenticated.ShouldBeTrue();
             hasConsent.ShouldBeFalse();
             // (In real endpoint, would redirect to /auth/consent)
+            return Task.CompletedTask;
         }
     }
 }

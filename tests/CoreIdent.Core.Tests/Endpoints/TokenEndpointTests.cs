@@ -24,7 +24,9 @@ namespace CoreIdent.Core.Tests.Endpoints
                 RedirectUri = "http://localhost/callback"
             };
             codeStore.Setup(x => x.GetAuthorizationCodeAsync("authcode1", default)).ReturnsAsync(code);
-            tokenService.Setup(x => x.GenerateAccessTokenAsync(It.IsAny<CoreIdentUser>(), null)).ReturnsAsync("token123");
+#pragma warning disable CS8600
+            tokenService.Setup(x => x.GenerateAccessTokenAsync(It.IsAny<CoreIdentUser>(), It.IsAny<IEnumerable<string>>())).ReturnsAsync("token123");
+#pragma warning restore CS8600
 
             // Act
             var storedCode = await codeStore.Object.GetAuthorizationCodeAsync("authcode1", default);
