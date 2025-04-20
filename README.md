@@ -10,27 +10,16 @@
 
 **Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
-**Current Status:** Phase 2 (Persistent Storage & Delegated Adapter) is complete. Phase 3 (Core OAuth/OIDC Flows, Token Theft Detection) development is complete, with **Authorization Code Flow + PKCE, ID Token issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints, and Client Credentials Flow now complete**.
+**Current Status:** Phase 3 (Core OAuth/OIDC Flows) is complete. Phase 4 (User Interaction) has begun, with the **User Consent Mechanism** feature now complete.
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
-*   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement.
-*   **Phase 3 (Completed):** Core OAuth 2.0 / OIDC Server Mechanics
-    *   **Completed:** Authorization Code Flow with PKCE, ID Token Issuance, Token Theft Detection, OIDC Discovery & JWKS Endpoints, Client Credentials Flow.
-*   **Phase 4:** User Consent & Scope Management
-    *   User consent UI and logic, consent storage, per-client/scope consent policies.
-*   **Phase 5:** Token Revocation, Introspection, Lifetime & Security
-    *   Token revocation and introspection endpoints, per-client/scope token lifetimes, key rotation, multiple signing keys.
-*   **Phase 6:** Dynamic Client Registration
-    *   OIDC Dynamic Client Registration endpoint and workflows.
-*   **Phase 7:** Basic Web UI (`CoreIdent.UI.Web`)
-    *   Login, registration, consent, and error pages; UI services and configuration.
-*   **Phase 8:** MFA & External/Passwordless Login
-    *   MFA (TOTP, SMS), external login providers (Google, Facebook, GitHub), passwordless flows.
-*   **Phase 9:** Developer Training Guide & Templates
-    *   Comprehensive guides, documentation website, project templates, example apps.
-*   **Phase 10:** Advanced Features
-    *   DPoP, Device Code, CIBA, PAR, additional research and extensibility.
+*   **Phase 2 (Completed):** Persistent Storage (EF Core), Delegated Adapter & Interface Refinement, Refresh Token Rotation & Security.
+*   **Phase 3 (Completed):** Core OAuth 2.0 / OIDC Server Mechanics (Auth Code Flow + PKCE, Client Credentials Flow, Discovery, JWKS, ID Tokens, Authorization Code Storage & Cleanup).
+*   **Phase 4 (In Progress):** User Interaction & External Integrations
+    *   **Completed:** User Consent Mechanism (backend logic, storage, integration tests).
+    *   **Next:** Basic Web UI (`CoreIdent.UI.Web` package), MFA Framework, External/Passwordless Providers.
+*   **Phase 5 (Future):** Advanced Features & Polish (Token Revocation/Introspection, Dynamic Client Registration, More Flows, Extensibility, Templates).
 
 ## Why CoreIdent?
 
@@ -38,29 +27,36 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 *   **Developer Freedom & Experience:** Open-source (MIT) with a focus on minimizing boilerplate and maximizing productivity through conventions and clear APIs. Get secure auth running *fast*.
 *   **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
-*   **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, **token theft detection** using family tracking, **securely hashed token handle storage**), password storage, and endpoint protection.
+*   **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, token theft detection, securely hashed token handle storage), password storage, and endpoint protection. **PKCE is enforced** for the Authorization Code Flow.
 *   **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
-*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints for OIDC metadata and public key discovery. Convention-based, robust error handling, and automatic DI for `JwtTokenService`—no manual registration needed.
+*   **Standards Compliant:** Implements standard OAuth 2.0 flows (Authorization Code + PKCE, Client Credentials) and OIDC features (ID Tokens, Discovery, JWKS).
+*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints for OIDC metadata and public key discovery.
+*   **User Consent:** Provides a standard mechanism for users to grant or deny requested permissions to client applications.
 *   **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
 *   **No Vendor Lock-In:** Own your identity layer.
 
 ## Current State vs. Future Vision
 
-**What CoreIdent provides *today* (Phase 3 Complete):**
+**What CoreIdent provides *today* (Phase 4 - Consent Complete):**
 
-*   **Core Authentication API:** Secure `/auth/register`, `/auth/login`, and `/auth/token/refresh` endpoints (default prefix `/auth`).
+*   **Core Authentication API:** Secure `/auth/register`, `/auth/login`, and `/auth/token/refresh` endpoints.
 *   **JWT Issuance:** Standard access tokens upon login.
-*   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), rotation, **securely hashed token handle storage** (raw handle returned to client, hash stored in DB), and **token theft detection** with family revocation (enabled by default).
-*   **OAuth/OIDC:**
-    *   **Authorization Code Flow with PKCE:** Secure flow for web apps, SPAs, and mobile clients via `/auth/authorize` and `/auth/token` (grant type `authorization_code`). PKCE is enforced.
-    *   **ID Token Issuance:** Standard OIDC ID tokens are generated alongside access tokens for the Authorization Code flow.
+*   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), rotation, securely hashed token handle storage, and token theft detection with family revocation.
+*   **OAuth/OIDC Core Flows:**
+    *   **Authorization Code Flow with PKCE:** Secure flow for web apps, SPAs, and mobile clients via `/auth/authorize` and `/auth/token`. PKCE is enforced.
+    *   **Client Credentials Flow:** Secure flow for machine-to-machine (M2M) authentication via `/auth/token`. Supports Basic Auth and request body client authentication.
+    *   **ID Token Issuance:** Standard OIDC ID tokens generated alongside access tokens for relevant flows (`openid` scope).
+    *   **OIDC Discovery & JWKS:** Standard endpoints (`/.well-known/openid-configuration`, `/.well-known/jwks.json`) for metadata and key discovery.
+*   **User Consent:**
+    *   Standard flow for prompting users to grant or deny permissions (`scope`s) requested by client applications during the Authorization Code flow.
+    *   Persistent storage of user grants via EF Core (`EfUserGrantStore`).
 *   **Password Hashing:** Secure password handling using ASP.NET Core Identity's hasher.
 *   **Pluggable Storage:**
-    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users, refresh tokens, clients, scopes, **and authorization codes** in your database (SQL Server, PostgreSQL, SQLite, etc.).
+    *   `CoreIdent.Storage.EntityFrameworkCore`: Store users, refresh tokens, clients, scopes, authorization codes, and user grants in your database (SQL Server, PostgreSQL, SQLite, etc.). Includes background services for code and token cleanup.
     *   `CoreIdent.Adapters.DelegatedUserStore`: Integrate with your existing user database/authentication logic.
-*   **Core Services:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore` interfaces for customization. **EF Core implementations** (e.g., `EfAuthorizationCodeStore`) are registered automatically when using `AddCoreIdentEntityFrameworkStores`.
-*   **Authorization Code Storage & Cleanup:** Authorization codes issued during OAuth flows are persisted in the database via EF Core (`EfAuthorizationCodeStore`). Expired codes are automatically cleaned up by a background service (`AuthorizationCodeCleanupService`) registered by default. The store implementation includes robust concurrency handling to prevent race conditions during code redemption and cleanup.
-*   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json`.
+*   **Core Services & Interfaces:** `ITokenService`, `IPasswordHasher`, `IUserStore`, `IRefreshTokenStore`, `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore`, `IUserGrantStore` interfaces for customization. EF Core implementations are registered automatically when using `AddCoreIdentEntityFrameworkStores`.
+*   **Custom Claims Extensibility:** Inject custom claims into tokens via the `ICustomClaimsProvider` interface.
+*   **Configuration:** Easy setup via `AddCoreIdent()` and `appsettings.json` with validation.
 
 ## OpenID Connect ID Token Issuance
 
@@ -135,37 +131,34 @@ services.AddScoped<ICustomClaimsProvider, MyCustomClaimsProvider>();
 
 See `TokenRequestContext` for available context fields.
 
-## User Consent Flow (Phase 4)
+## User Consent Flow (Phase 4 Complete)
 
-CoreIdent supports a standards-based user consent mechanism for OAuth 2.0/OIDC authorization flows. When a client requests access to protected resources or scopes, the user is prompted to review and approve (or deny) the requested permissions via a consent UI. This ensures explicit user consent for delegated access.
+CoreIdent now supports a standards-based user consent mechanism for OAuth 2.0/OIDC authorization flows. This ensures users explicitly grant permission when client applications request access to their data or specific functionalities (represented by `scope`s).
 
 ### How Consent Works
-- **Authorization Request:** When a client initiates an authorization code flow, CoreIdent checks if consent is required for the requested scopes and client.
-- **Consent UI:** If consent is needed, the user is redirected to a consent page (Razor UI in the sample project) listing the client and requested scopes.
-- **User Decision:** The user can approve (allow) or deny the request.
-- **Grant Storage:** If allowed, the granted scopes are stored (in-memory or EF Core, depending on configuration) for the user/client combination. Consent is not required again for the same scopes unless revoked or expired.
-- **Deny:** If denied, the user is redirected back to the client with an `access_denied` error.
+1.  **Authorization Request:** A client initiates the Authorization Code flow via `/auth/authorize`, requesting specific `scope`s.
+2.  **Check Requirement & Grant:** CoreIdent checks if the client requires consent (`RequireConsent` flag on the client registration) and if a valid grant for the user/client/scopes already exists in the `IUserGrantStore`.
+3.  **Redirect to Consent UI:** If consent is required and no existing grant covers all requested scopes, CoreIdent redirects the user's browser to the configured consent endpoint (`/auth/consent` by default).
+4.  **User Decision:** The user is presented with the client information and the requested permissions. They can choose to "Allow" or "Deny".
+5.  **Handle Decision (`POST /auth/consent`):**
+    *   **Deny:** CoreIdent redirects the user back to the client's `redirect_uri` with an `error=access_denied` parameter.
+    *   **Allow:** CoreIdent saves the grant (user, client, granted scopes) using `IUserGrantStore` and redirects the user back to the original `/auth/authorize` flow to complete the process and issue the authorization code.
+6.  **Skip Consent:** If consent is not required by the client, or if a valid grant already exists, the consent step is skipped, and the authorization flow proceeds directly.
 
-### Endpoints
-- `GET /auth/authorize` – Initiates the flow; redirects to consent if required.
-- `GET /auth/consent` – Displays the consent UI (Razor page in sample UI).
-- `POST /auth/consent` – Handles user decision (allow/deny) and updates grants.
+### Configuration & Storage
+*   **Client Setting:** The `RequireConsent` boolean property on the `CoreIdentClient` entity controls whether consent is prompted for that specific client.
+*   **Storage:** User grants are persisted using the `IUserGrantStore` interface. The default implementation uses `InMemoryUserGrantStore`. When using `CoreIdent.Storage.EntityFrameworkCore`, the persistent `EfUserGrantStore` is automatically registered.
+*   **Endpoints:** The `/authorize` endpoint handles checking grants and initiating the redirect. The `/consent` endpoint (GET for display, POST for handling decision) manages the user interaction and grant storage.
 
 ### Sample UI
-The sample project (`CoreIdent.Samples.UI.Web`) provides a basic consent page implementation. You can customize the UI or extend the consent storage logic as needed.
+The `samples/CoreIdent.Samples.UI.Web` project demonstrates how a client application interacts with the consent flow. Its `/Account/Consent.cshtml` page is an example of a consent UI that receives the necessary parameters from CoreIdent via query string and POSTs the user's decision back. *(Note: The sample UI acts as a separate client, not hosting CoreIdent).*
 
-### Customization
-- Implement your own consent UI by replacing the Razor page.
-- Use the `IUserGrantStore` interface to extend or replace consent storage (e.g., with expiration, auditing, or per-scope policies).
-
-### Example Consent Page
-![Consent UI Example](docs/images/consent-ui-example.png)
-
-For more details and advanced scenarios, see the [Developer Training Guide](docs/Developer_Training_Guide.md).
+### Testing
+Comprehensive integration tests (`tests/CoreIdent.Integration.Tests/ConsentFlowTests.cs`) verify all aspects of the consent flow, including required redirects, grant storage on 'Allow', error redirects on 'Deny', and skipping consent when appropriate.
 
 ## Getting Started
 
-This guide covers the setup for the core functionality available after Phase 3.
+This guide covers the setup for the core functionality available after Phase 4 (Consent).
 
 ### 1. Installation
 
