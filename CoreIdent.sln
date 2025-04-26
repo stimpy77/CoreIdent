@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreIdent.Adapters.Delegate
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{5D20AA90-6969-D8BD-9DCD-8634F4692FDA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreIdent.Samples.UI.Web", "samples\CoreIdent.Samples.UI.Web\CoreIdent.Samples.UI.Web.csproj", "{DDE4092B-1B82-4708-B564-FB46A1F09336}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreIdent.Samples.UI.Consent.Web", "samples\CoreIdent.Samples.UI.Consent.Web\CoreIdent.Samples.UI.Consent.Web.csproj", "{DDE4092B-1B82-4708-B564-FB46A1F09336}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

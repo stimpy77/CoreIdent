@@ -65,7 +65,7 @@ things are or how they were supposed to work.
         *   `ConsentFlowTests.cs`: Tests for the user consent flow.
     *   `CoreIdent.TestHost`: Shared test hosting setup.
 *   **Samples Directory:** `c:\dev\prj\CoreIdent\samples\`
-    *   `CoreIdent.Samples.UI.Web`: Example Razor Pages client application demonstrating OIDC flow (Login, Callback, Consent interaction).
+    *   `CoreIdent.Samples.UI.Consent.Web`: Example Razor Pages client application demonstrating OIDC flow (Login, Callback, Consent interaction).
 *   **Docs Directory:** `c:\dev\prj\CoreIdent\docs\`
     *   Contains development documentation.
 *   **Root Directory:** `c:\dev\prj\CoreIdent\`
@@ -277,6 +277,12 @@ This appendix lists every class in the CoreIdent codebase (src and tests), with 
 - Setup/TestAuthHandler.cs: TestAuthHandler, TestAuthExtensions
 - Setup/TestSetupFixture.cs: TestSetupFixture
 
---- 
+## 2025-04-26 Updates
+
+- Website deployed at https://coreident.net with accurate feature status and roadmap.
+- Renamed sample project: `CoreIdent.Samples.UI.Web` → `CoreIdent.Samples.UI.Consent.Web`.
+- Status and roadmap on website now reflect what is implemented vs. planned (see DEVPLAN.md for details).
+
+---
 
 **Note:** This appendix is auto-generated for traceability. If you add or remove classes, please update this section accordingly.
