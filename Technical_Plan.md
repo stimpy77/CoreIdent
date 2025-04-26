@@ -164,6 +164,32 @@ A comprehensive testing strategy is essential for reliability and maintainabilit
     *   **Build & Test Pipeline:** CI/CD setup (e.g., GitHub Actions) for builds, tests, NuGet publishing.
     *   **Contribution Guidelines & Community Setup.**
 
+## Protocol & Feature Roadmap
+
+Below is a summary of major protocols and features, their status in CoreIdent, and what's coming next. For implementation details, see [DEVPLAN.md](https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md). For the latest status, see the [Feature Roadmap](https://coreident.net/features.html) on the website.
+
+| Protocol / Feature | Description / Notes | CoreIdent Status |
+|--------------------|--------------------|------------------|
+| OAuth2 Authorization Code Flow (with PKCE) | Secure web-app flow with PKCE for public clients | **Fully implemented** |
+| JWT Access Tokens & Refresh Tokens | Standard issuance of JWTs plus refresh grant for long-lived sessions | **Fully implemented** |
+| External Identity Providers (Social/Enterprise Login) | OIDC/OAuth federation (Google, Facebook, SAML/WS-Fed) | *Planned* |
+| Multi-Factor Authentication (MFA) & Passwordless | 2nd-factor (TOTP/WebAuthn) and passwordless options | *Planned* |
+| Dynamic Client Registration (RFC 7591) | Programmatic registration of OAuth clients | *Planned* |
+| Client-Initiated Backchannel Authentication (CIBA, RFC 9126) | Asynchronous user-approval flow for critical AI actions | *Planned* |
+| Pushed Authorization Requests (PAR, RFC 9121) | Secure “push” of auth requests to avoid leaking request parameters | *Planned* |
+| Device Authorization Flow (RFC 8628) | Grant for devices with limited input (e.g. IoT, consoles) | *Planned* |
+| Token Introspection (RFC 7662) | Endpoint for resource servers to validate token metadata | *Planned* |
+| Token Revocation (RFC 7009) | Endpoint to revoke tokens on logout or compromise | *Planned* |
+| JWKS & Key Rotation | JWKS endpoint and automated key-rotation for signing keys | *Planned* |
+| Consent Screen (OIDC) | User-facing UI to approve scopes/permissions | *Planned* |
+| Audit Logging | Structured logging of login, consent, token events | *Planned* |
+| Fine-Grained Authorization (FGA/RBAC) | Relationship-based or attribute-based access control for per-document/data enforcement | Under consideration |
+| Token Vault / Secrets Management | Secure storage of 3rd-party API tokens (so secrets never go into prompts) | Under consideration |
+| Out-of-Band Approvals for AI Actions | Human-in-the-loop confirmation for high-risk AI requests (beyond CIBA) | Under consideration |
+| AI-Framework SDK Integrations | Turn-key libraries (LangChain, LlamaIndex, Vercel AI SDK, etc.) | Under consideration |
+| Management Dashboard & Admin UI | Web UI to configure connections, policies, guardrails, logs | *Planned* |
+| Anomaly Detection & Alerts | Automated detection of suspicious auth behaviors (brute-force, credential stuffing, etc.) | Under consideration |
+
 ## Security Considerations
 
 *   **Password Hashing:** Use industry-standard algorithms (e.g., Argon2id or PBKDF2 via ASP.NET Core Identity).

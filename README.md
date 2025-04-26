@@ -91,7 +91,7 @@ CoreIdent issues an **ID Token** as part of the OpenID Connect Authorization Cod
 - Claims included depend on the requested scopes and user data.
 - The token is signed using the configured signing key.
 
-See the [DEVPLAN.md](./DEVPLAN.md) for test coverage and implementation status.
+See the [DEVPLAN.md](https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md) for test coverage and implementation status.
 
 ## Custom Claims Extensibility
 
@@ -155,6 +155,32 @@ The `samples/CoreIdent.Samples.UI.Web` project demonstrates how a client applica
 
 ### Testing
 Comprehensive integration tests (`tests/CoreIdent.Integration.Tests/ConsentFlowTests.cs`) verify all aspects of the consent flow, including required redirects, grant storage on 'Allow', error redirects on 'Deny', and skipping consent when appropriate.
+
+## Protocol & Feature Roadmap
+
+The following table summarizes major protocols and features, their status in CoreIdent, and what’s coming next. For full technical details, see [DEVPLAN.md](https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md) and related docs. For the most up-to-date status, see the [Feature Roadmap](https://coreident.net/features.html) on the website.
+
+| Protocol / Feature | Description / Notes | CoreIdent Status |
+|--------------------|--------------------|------------------|
+| OAuth2 Authorization Code Flow (with PKCE) | Secure web-app flow with PKCE for public clients | **Fully implemented** |
+| JWT Access Tokens & Refresh Tokens | Standard issuance of JWTs plus refresh grant for long-lived sessions | **Fully implemented** |
+| External Identity Providers (Social/Enterprise Login) | OIDC/OAuth federation (Google, Facebook, SAML/WS-Fed) | *Planned* |
+| Multi-Factor Authentication (MFA) & Passwordless | 2nd-factor (TOTP/WebAuthn) and passwordless options | *Planned* |
+| Dynamic Client Registration (RFC 7591) | Programmatic registration of OAuth clients | *Planned* |
+| Client-Initiated Backchannel Authentication (CIBA, RFC 9126) | Asynchronous user-approval flow for critical AI actions | *Planned* |
+| Pushed Authorization Requests (PAR, RFC 9121) | Secure “push” of auth requests to avoid leaking request parameters | *Planned* |
+| Device Authorization Flow (RFC 8628) | Grant for devices with limited input (e.g. IoT, consoles) | *Planned* |
+| Token Introspection (RFC 7662) | Endpoint for resource servers to validate token metadata | *Planned* |
+| Token Revocation (RFC 7009) | Endpoint to revoke tokens on logout or compromise | *Planned* |
+| JWKS & Key Rotation | JWKS endpoint and automated key-rotation for signing keys | *Planned* |
+| Consent Screen (OIDC) | User-facing UI to approve scopes/permissions | *Planned* |
+| Audit Logging | Structured logging of login, consent, token events | *Planned* |
+| Fine-Grained Authorization (FGA/RBAC) | Relationship-based or attribute-based access control for per-document/data enforcement | Under consideration |
+| Token Vault / Secrets Management | Secure storage of 3rd-party API tokens (so secrets never go into prompts) | Under consideration |
+| Out-of-Band Approvals for AI Actions | Human-in-the-loop confirmation for high-risk AI requests (beyond CIBA) | Under consideration |
+| AI-Framework SDK Integrations | Turn-key libraries (LangChain, LlamaIndex, Vercel AI SDK, etc.) | Under consideration |
+| Management Dashboard & Admin UI | Web UI to configure connections, policies, guardrails, logs | *Planned* |
+| Anomaly Detection & Alerts | Automated detection of suspicious auth behaviors (brute-force, credential stuffing, etc.) | Under consideration |
 
 ## Getting Started
 
