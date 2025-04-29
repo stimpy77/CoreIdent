@@ -1,13 +1,8 @@
 using CoreIdent.Core.Models;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
-namespace CoreIdent.Core.Stores;
+namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
 /// Simple in-memory store for refresh tokens.
@@ -31,7 +26,7 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
 
         // Use the Handle property as the key, which is now expected to contain the hashed value
         string tokenKey = token.Handle;
-        
+
         // Optional: If HashedHandle is set, use that instead (for future compatibility)
         if (!string.IsNullOrEmpty(token.HashedHandle))
         {
@@ -39,7 +34,7 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
         }
 
         _tokens[tokenKey] = token;
-        _logger.LogDebug("Stored refresh token with hashed handle: {HashedHandle}, Expires: {Expiry}", 
+        _logger.LogDebug("Stored refresh token with hashed handle: {HashedHandle}, Expires: {Expiry}",
             tokenKey.Substring(0, Math.Min(6, tokenKey.Length)), token.ExpirationTime);
 
         // Simple cleanup for expired tokens (run occasionally or on access)
@@ -60,28 +55,28 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
         {
             if (token.ExpirationTime < DateTime.UtcNow)
             {
-                _logger.LogDebug("Attempted to retrieve expired refresh token. Hashed handle: {HashedHandle}", 
+                _logger.LogDebug("Attempted to retrieve expired refresh token. Hashed handle: {HashedHandle}",
                     tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
                 _tokens.TryRemove(tokenHandle, out _); // Remove if expired
                 return Task.FromResult<CoreIdentRefreshToken?>(null);
             }
-            
+
             // Check if consumed (this might be handled by RemoveRefreshTokenAsync primarily)
             if (token.ConsumedTime.HasValue)
             {
-                _logger.LogWarning("Attempted to retrieve already consumed refresh token. Hashed handle: {HashedHandle}", 
+                _logger.LogWarning("Attempted to retrieve already consumed refresh token. Hashed handle: {HashedHandle}",
                     tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
                 // Depending on policy, might return null or keep it for analysis.
                 // Returning null is safer for preventing reuse.
                 return Task.FromResult<CoreIdentRefreshToken?>(null);
             }
 
-            _logger.LogDebug("Retrieved refresh token. Hashed handle: {HashedHandle}", 
+            _logger.LogDebug("Retrieved refresh token. Hashed handle: {HashedHandle}",
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
             return Task.FromResult<CoreIdentRefreshToken?>(token);
         }
 
-        _logger.LogDebug("Refresh token not found. Hashed handle: {HashedHandle}", 
+        _logger.LogDebug("Refresh token not found. Hashed handle: {HashedHandle}",
             tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         return Task.FromResult<CoreIdentRefreshToken?>(null);
     }
@@ -98,12 +93,12 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
             // Mark as consumed instead of removing for audit trail and token theft detection
             token.ConsumedTime = DateTime.UtcNow;
             _tokens[tokenHandle] = token; // Update with consumed state
-            _logger.LogDebug("Marked refresh token as consumed. Hashed handle: {HashedHandle}", 
+            _logger.LogDebug("Marked refresh token as consumed. Hashed handle: {HashedHandle}",
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         }
         else
         {
-            _logger.LogDebug("Attempted to remove non-existent refresh token. Hashed handle: {HashedHandle}", 
+            _logger.LogDebug("Attempted to remove non-existent refresh token. Hashed handle: {HashedHandle}",
                 tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
         }
         return Task.CompletedTask;
@@ -113,20 +108,20 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
     public Task UpdateRefreshTokenAsync(CoreIdentRefreshToken refreshToken, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(refreshToken);
-        
+
         string tokenKey = refreshToken.Handle;
         // If HashedHandle is set, prefer it
         if (!string.IsNullOrEmpty(refreshToken.HashedHandle))
         {
             tokenKey = refreshToken.HashedHandle;
         }
-        
+
         if (!_tokens.ContainsKey(tokenKey))
         {
             // Or throw an exception, depending on desired behavior
-            return Task.CompletedTask; 
+            return Task.CompletedTask;
         }
-        
+
         _tokens[tokenKey] = refreshToken;
         return Task.CompletedTask;
     }
@@ -162,8 +157,8 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
         ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var keysToUpdate = _tokens.Where(kvp => 
-                kvp.Value.FamilyId == familyId && 
+        var keysToUpdate = _tokens.Where(kvp =>
+                kvp.Value.FamilyId == familyId &&
                 !kvp.Value.ConsumedTime.HasValue)
             .Select(kvp => kvp.Key)
             .ToList();
@@ -198,9 +193,9 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
     {
         // Basic cleanup - not highly efficient for large collections.
         // Only remove tokens that are both expired and consumed (for audit trail)
-        var expiredKeys = _tokens.Where(pair => 
-                pair.Value.ExpirationTime < DateTime.UtcNow && 
-                pair.Value.ConsumedTime.HasValue && 
+        var expiredKeys = _tokens.Where(pair =>
+                pair.Value.ExpirationTime < DateTime.UtcNow &&
+                pair.Value.ConsumedTime.HasValue &&
                 pair.Value.ConsumedTime.Value.AddDays(7) < DateTime.UtcNow) // Keep consumed tokens for 7 days
             .Select(pair => pair.Key)
             .ToList();
@@ -209,9 +204,9 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
         {
             if (_tokens.TryRemove(key, out _))
             {
-                _logger.LogDebug("Cleaned up expired and consumed refresh token. Hashed handle: {HashedHandle}", 
+                _logger.LogDebug("Cleaned up expired and consumed refresh token. Hashed handle: {HashedHandle}",
                     key.Substring(0, Math.Min(6, key.Length)));
             }
         }
     }
-} 
+}

@@ -1,35 +1,26 @@
 using CoreIdent.Adapters.DelegatedUserStore.Extensions;
-using CoreIdent.Core.Models;
-using CoreIdent.Core.Models.Responses;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
+using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
+using CoreIdent.Storage.EntityFrameworkCore;
+using CoreIdent.TestHost;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using CoreIdent.Storage.EntityFrameworkCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
-using System.IO;
 using Shouldly;
-using System;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
-using System.Threading.Tasks;
-using CoreIdent.Core.Stores;
-using CoreIdent.Adapters.DelegatedUserStore;
-using CoreIdent.Core.Services;
-using Xunit;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading;
-using System.Text.Json.Serialization;
 using System.Text.Json;
-using CoreIdent.TestHost;
+using System.Text.Json.Serialization;
 
 namespace CoreIdent.Integration.Tests;
 
@@ -79,7 +70,7 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
         // Assert: Check response
         response.EnsureSuccessStatusCode();
         // Use the correct TokenResponse from Core
-        var tokens = await response.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
+        var tokens = await response.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>();
         tokens.ShouldNotBeNull();
         tokens.AccessToken.ShouldNotBeNullOrWhiteSpace();
         tokens.RefreshToken.ShouldNotBeNullOrWhiteSpace();
@@ -111,7 +102,7 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
         var loginResponse = await _client.PostAsJsonAsync("/auth/login", loginRequest);
         loginResponse.EnsureSuccessStatusCode();
         // Use the correct TokenResponse from Core
-        var initialTokens = await loginResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
+        var initialTokens = await loginResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>();
         initialTokens.ShouldNotBeNull();
 
         // Reset flags after login setup
@@ -130,7 +121,7 @@ public class DelegatedUserStoreIntegrationTests : IClassFixture<DelegatedUserSto
         // Assert: Check response contains new tokens
         refreshResponse.EnsureSuccessStatusCode();
         // Use the correct TokenResponse from Core
-        var newTokens = await refreshResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>(); 
+        var newTokens = await refreshResponse.Content.ReadFromJsonAsync<CoreIdent.Core.Models.Responses.TokenResponse>();
         newTokens.ShouldNotBeNull();
         newTokens.AccessToken.ShouldNotBeNullOrWhiteSpace();
         newTokens.RefreshToken.ShouldNotBeNullOrWhiteSpace();
@@ -160,8 +151,9 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
     private readonly string _connectionString = $"DataSource=file:DelegatedUserStoreTests_{Guid.NewGuid()}?mode=memory&cache=shared";
 
     // Make sure normalized username is set
-    public static readonly CoreIdentUser TestUser = new() { 
-        Id = Guid.NewGuid().ToString(), 
+    public static readonly CoreIdentUser TestUser = new()
+    {
+        Id = Guid.NewGuid().ToString(),
         UserName = "delegate-tester@test.com",
         NormalizedUserName = "DELEGATE-TESTER@TEST.COM" // Add explicit normalized username
     };
@@ -189,7 +181,7 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
             // Get logger first
             var sp = services.BuildServiceProvider(); // Temporary SP
             _logger = sp.GetRequiredService<ILogger<DelegatedUserStoreWebApplicationFactory>>();
-            
+
             // Resolve the password hasher to pre-hash the test user password
             _passwordHasher = sp.GetRequiredService<IPasswordHasher>();
             _testUserPasswordHash = _passwordHasher.HashPassword(TestUser, "password");
@@ -201,7 +193,8 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
             services.RemoveAll<IRefreshTokenStore>();
 
             // Add required configuration for JwtTokenService
-            services.Configure<CoreIdentOptions>(options => {
+            services.Configure<CoreIdentOptions>(options =>
+            {
                 options.SigningKeySecret = "ThisIsAVeryLongSecret_AtLeast32Chars_ForHS256"; // Must be at least 32 bytes for HS256
                 options.Issuer = "https://coreident.test";
                 options.Audience = "https://coreident.test/resources";
@@ -210,17 +203,17 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
 
             // Register DbContext with persistent connection
             services.AddDbContext<CoreIdentDbContext>(options => options.UseSqlite(_connection), ServiceLifetime.Scoped);
-            
+
             // Register Core stores except user store
-            services.AddScoped<IRefreshTokenStore, CoreIdent.Core.Stores.InMemoryRefreshTokenStore>();
-            
+            services.AddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+
             // Make sure we register the required stores for TokenService
-            services.TryAddScoped<IClientStore, CoreIdent.Core.Stores.InMemoryClientStore>();
-            services.TryAddScoped<IScopeStore, CoreIdent.Core.Stores.InMemoryScopeStore>();
-            
+            services.TryAddScoped<IClientStore, InMemoryClientStore>();
+            services.TryAddScoped<IScopeStore, InMemoryScopeStore>();
+
             // Explicitly register the token service
             services.AddScoped<ITokenService, JwtTokenService>();
-            
+
             // Add DelegatedUserStore with mock delegates
             services.AddCoreIdentDelegatedUserStore(options =>
             {
@@ -232,12 +225,12 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
                     CoreIdentUser? user = null;
                     if (id == TestUser.Id)
                     {
-                        user = new CoreIdentUser 
+                        user = new CoreIdentUser
                         {
                             Id = TestUser.Id,
                             UserName = TestUser.UserName,
                             NormalizedUserName = TestUser.NormalizedUserName,
-                            PasswordHash = _testUserPasswordHash 
+                            PasswordHash = _testUserPasswordHash
                         };
                     }
                     return Task.FromResult(user);
@@ -250,12 +243,12 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
                     CoreIdentUser? user = null;
                     if (string.Equals(username, TestUser.UserName, StringComparison.OrdinalIgnoreCase))
                     {
-                         user = new CoreIdentUser 
+                        user = new CoreIdentUser
                         {
                             Id = TestUser.Id,
                             UserName = TestUser.UserName,
                             NormalizedUserName = TestUser.NormalizedUserName,
-                            PasswordHash = _testUserPasswordHash 
+                            PasswordHash = _testUserPasswordHash
                         };
                     }
                     return Task.FromResult(user);
@@ -292,31 +285,32 @@ public class DelegatedUserStoreWebApplicationFactory : WebApplicationFactory<Pro
         builder.Configure(app =>
         {
             // Log all registered endpoints to debug routing issues
-            app.Use(async (context, next) => {
-                _logger.LogInformation("Request received: {Method} {Path}", 
+            app.Use(async (context, next) =>
+            {
+                _logger.LogInformation("Request received: {Method} {Path}",
                     context.Request.Method, context.Request.Path.Value);
                 await next();
-                _logger.LogInformation("Response completed: {StatusCode} for {Method} {Path}", 
+                _logger.LogInformation("Response completed: {StatusCode} for {Method} {Path}",
                     context.Response.StatusCode, context.Request.Method, context.Request.Path.Value);
             });
-            
+
             // Add our test middleware before other middleware
             app.UseMiddleware<TestEndpointMiddleware>();
-            
+
             // Run migrations
             var serviceProvider = app.ApplicationServices;
             using var scope = serviceProvider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<DelegatedUserStoreWebApplicationFactory>>();
-            
-            try 
-            { 
+
+            try
+            {
                 db.Database.Migrate();
                 logger.LogInformation("Database migrations applied successfully");
-            } 
-            catch (Exception ex) 
-            { 
-                logger.LogError(ex, "Migration failed"); 
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Migration failed");
             }
         });
 
@@ -347,19 +341,19 @@ public class TestEndpointMiddleware : IMiddleware
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         var path = context.Request.Path.Value;
-        
-        if (string.Equals(path, "/auth/login", StringComparison.OrdinalIgnoreCase) && 
+
+        if (string.Equals(path, "/auth/login", StringComparison.OrdinalIgnoreCase) &&
             context.Request.Method == "POST")
         {
             _logger.LogInformation("TestEndpointMiddleware intercepting login request");
             // Enable buffering before reading
-            context.Request.EnableBuffering(); 
-            
+            context.Request.EnableBuffering();
+
             try
             {
                 // Read directly from JSON
                 var loginRequest = await context.Request.ReadFromJsonAsync<TestLoginRequest>();
-                
+
                 if (loginRequest == null || string.IsNullOrEmpty(loginRequest.Email) || string.IsNullOrEmpty(loginRequest.Password))
                 {
                     _logger.LogWarning("Login request body missing required fields.");
@@ -370,46 +364,46 @@ public class TestEndpointMiddleware : IMiddleware
 
                 // Get dependencies *after* successfully reading the request
                 var userStore = context.RequestServices.GetRequiredService<IUserStore>();
-                
+
                 // Validate credentials (calls the delegate)
                 var normalizedEmail = loginRequest.Email.ToUpperInvariant();
                 var validationResult = await userStore.ValidateCredentialsAsync(normalizedEmail, loginRequest.Password, CancellationToken.None);
-                
+
                 if (validationResult != PasswordVerificationResult.Success)
                 {
                     _logger.LogWarning("Login validation failed for {Email}. Result: {Result}", normalizedEmail, validationResult);
                     context.Response.StatusCode = 401;
                     return;
                 }
-                
+
                 // Find user (calls the delegate)
                 var user = await userStore.FindUserByUsernameAsync(normalizedEmail, CancellationToken.None);
-                
+
                 if (user == null)
                 {
-                     _logger.LogWarning("User not found after successful validation for {Email}.", normalizedEmail);
+                    _logger.LogWarning("User not found after successful validation for {Email}.", normalizedEmail);
                     context.Response.StatusCode = 401;
                     return;
                 }
-                
+
                 _logger.LogInformation("Login successful for {Email}. Creating mock tokens.", normalizedEmail);
                 // Create mock tokens for testing
                 // Use the correct TokenResponse from Core
-                var response = new CoreIdent.Core.Models.Responses.TokenResponse 
+                var response = new CoreIdent.Core.Models.Responses.TokenResponse
                 {
                     AccessToken = "test_access_token_" + Guid.NewGuid().ToString(),
                     RefreshToken = "test_refresh_token_" + Guid.NewGuid().ToString(),
                     ExpiresIn = 3600,
                     TokenType = "Bearer"
                 };
-                
+
                 context.Response.StatusCode = 200;
                 await context.Response.WriteAsJsonAsync(response);
                 return;
             }
             catch (JsonException jsonEx)
             {
-                 _logger.LogError(jsonEx, "Error deserializing login request JSON");
+                _logger.LogError(jsonEx, "Error deserializing login request JSON");
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsJsonAsync(new { error = "Invalid JSON request format" });
                 return;
@@ -422,13 +416,13 @@ public class TestEndpointMiddleware : IMiddleware
                 return;
             }
         }
-        else if (string.Equals(path, "/auth/token/refresh", StringComparison.OrdinalIgnoreCase) && 
+        else if (string.Equals(path, "/auth/token/refresh", StringComparison.OrdinalIgnoreCase) &&
                 context.Request.Method == "POST")
         {
             _logger.LogInformation("TestEndpointMiddleware intercepting token refresh request");
-             // Enable buffering before reading
+            // Enable buffering before reading
             context.Request.EnableBuffering();
-            
+
             try
             {
                 // Read directly from JSON
@@ -444,35 +438,35 @@ public class TestEndpointMiddleware : IMiddleware
 
                 // Get dependencies *after* successfully reading the request
                 var userStore = context.RequestServices.GetRequiredService<IUserStore>();
-                
+
                 // For testing, assume refresh token is valid and find the user by ID directly
                 var user = await userStore.FindUserByIdAsync(DelegatedUserStoreWebApplicationFactory.TestUser.Id, CancellationToken.None);
-                
+
                 if (user == null)
                 {
                     _logger.LogWarning("User not found for refresh token processing (ID: {UserId}).", DelegatedUserStoreWebApplicationFactory.TestUser.Id);
                     context.Response.StatusCode = 401;
                     return;
                 }
-                
-                 _logger.LogInformation("Refresh token processing successful for user {UserId}. Creating mock tokens.", user.Id);
+
+                _logger.LogInformation("Refresh token processing successful for user {UserId}. Creating mock tokens.", user.Id);
                 // Create mock tokens for testing
                 // Use the correct TokenResponse from Core
-                var response = new CoreIdent.Core.Models.Responses.TokenResponse 
+                var response = new CoreIdent.Core.Models.Responses.TokenResponse
                 {
                     AccessToken = "test_access_token_" + Guid.NewGuid().ToString(),
                     RefreshToken = "test_refresh_token_" + Guid.NewGuid().ToString(),
                     ExpiresIn = 3600,
                     TokenType = "Bearer"
                 };
-                
+
                 context.Response.StatusCode = 200;
                 await context.Response.WriteAsJsonAsync(response);
                 return;
             }
             catch (JsonException jsonEx)
             {
-                 _logger.LogError(jsonEx, "Error deserializing refresh token request JSON");
+                _logger.LogError(jsonEx, "Error deserializing refresh token request JSON");
                 context.Response.StatusCode = 400;
                 await context.Response.WriteAsJsonAsync(new { error = "Invalid JSON request format" });
                 return;
@@ -485,8 +479,8 @@ public class TestEndpointMiddleware : IMiddleware
                 return;
             }
         }
-        
+
         // For all other paths, continue with the regular pipeline
         await next(context);
     }
-} 
+}

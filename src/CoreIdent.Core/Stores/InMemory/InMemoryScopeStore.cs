@@ -1,15 +1,9 @@
 using CoreIdent.Core.Models;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using System.Security.Claims;
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 
-namespace CoreIdent.Core.Stores;
+namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
 /// Simple in-memory store for OAuth scopes.
@@ -138,11 +132,11 @@ public class InMemoryScopeStore : IScopeStore
             if (_scopes.TryGetValue(name, out var scope) && scope.Enabled)
             {
                 foundScopes.Add(scope);
-                 _logger.LogDebug("Found enabled scope: {ScopeName}", name);
+                _logger.LogDebug("Found enabled scope: {ScopeName}", name);
             }
             else
             {
-                 _logger.LogDebug("Scope not found or disabled: {ScopeName}", name);
+                _logger.LogDebug("Scope not found or disabled: {ScopeName}", name);
             }
         }
 
@@ -155,10 +149,10 @@ public class InMemoryScopeStore : IScopeStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         var allEnabledScopes = _scopes.Values.Where(s => s.Enabled).ToList();
-         _logger.LogDebug("Retrieving all {Count} enabled scopes.", allEnabledScopes.Count);
+        _logger.LogDebug("Retrieving all {Count} enabled scopes.", allEnabledScopes.Count);
         // Return copies? For simplicity, returning direct references.
         return Task.FromResult<IEnumerable<CoreIdentScope>>(allEnabledScopes);
     }
 
-     // Optional: Add methods for managing scopes if needed (e.g., AddScopeAsync, UpdateScopeAsync)
-} 
+    // Optional: Add methods for managing scopes if needed (e.g., AddScopeAsync, UpdateScopeAsync)
+}

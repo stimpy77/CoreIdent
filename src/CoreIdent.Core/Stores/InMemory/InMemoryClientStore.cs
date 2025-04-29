@@ -1,13 +1,8 @@
 using CoreIdent.Core.Models;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
-namespace CoreIdent.Core.Stores;
+namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
 /// Simple in-memory store for OAuth clients.
@@ -36,7 +31,7 @@ public class InMemoryClientStore : IClientStore
                 }
                 else
                 {
-                     _logger.LogDebug("Added initial client: {ClientId}", client.ClientId);
+                    _logger.LogDebug("Added initial client: {ClientId}", client.ClientId);
                 }
             }
         }
@@ -57,24 +52,24 @@ public class InMemoryClientStore : IClientStore
         }
         else
         {
-             _logger.LogDebug("Client not found: {ClientId}", clientId);
-             return Task.FromResult<CoreIdentClient?>(null);
+            _logger.LogDebug("Client not found: {ClientId}", clientId);
+            return Task.FromResult<CoreIdentClient?>(null);
         }
     }
 
     // Optional: Add methods for managing clients if needed (e.g., AddClientAsync, UpdateClientAsync)
     public Task AddClientAsync(CoreIdentClient client, CancellationToken cancellationToken)
     {
-         ArgumentNullException.ThrowIfNull(client);
-         cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(client);
+        cancellationToken.ThrowIfCancellationRequested();
 
-         if (!_clients.TryAdd(client.ClientId, client))
-         {
-             _logger.LogWarning("Client already exists: {ClientId}", client.ClientId);
-             // Throw or return a specific result? Throwing for now.
-             throw new InvalidOperationException($"Client with ID '{client.ClientId}' already exists.");
-         }
-          _logger.LogInformation("Added client: {ClientId}", client.ClientId);
-         return Task.CompletedTask;
+        if (!_clients.TryAdd(client.ClientId, client))
+        {
+            _logger.LogWarning("Client already exists: {ClientId}", client.ClientId);
+            // Throw or return a specific result? Throwing for now.
+            throw new InvalidOperationException($"Client with ID '{client.ClientId}' already exists.");
+        }
+        _logger.LogInformation("Added client: {ClientId}", client.ClientId);
+        return Task.CompletedTask;
     }
-} 
+}

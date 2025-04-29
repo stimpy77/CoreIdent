@@ -2,12 +2,10 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shouldly; 
-using System;
-using Xunit;
+using Shouldly;
 
 namespace CoreIdent.Core.Tests.Extensions;
 
@@ -68,9 +66,9 @@ public class CoreIdentServiceCollectionExtensionsTests
         var configureAction = CreateValidConfigurationAction();
 
         // Act
-        #pragma warning disable CS8604 // Possible null reference argument.
+#pragma warning disable CS8604 // Possible null reference argument.
         Action act = () => services.AddCoreIdent(configureAction);
-        #pragma warning restore CS8604
+#pragma warning restore CS8604
 
         // Assert
         Should.Throw<ArgumentNullException>(act).ParamName.ShouldBe("services");
@@ -84,9 +82,9 @@ public class CoreIdentServiceCollectionExtensionsTests
         Action<CoreIdentOptions>? configureAction = null;
 
         // Act
-        #pragma warning disable CS8604 // Possible null reference argument.
+#pragma warning disable CS8604 // Possible null reference argument.
         Action act = () => services.AddCoreIdent(configureAction);
-        #pragma warning restore CS8604
+#pragma warning restore CS8604
 
         // Assert
         Should.Throw<ArgumentNullException>(act).ParamName.ShouldBe("configureOptions");
@@ -121,5 +119,5 @@ public class CoreIdentServiceCollectionExtensionsTests
         // exception.Message.ShouldNotContain("Audience is required.");
     }
 
-     // TODO: Add test for AddCoreIdent with custom UserStore type if needed
+    // TODO: Add test for AddCoreIdent with custom UserStore type if needed
 }
