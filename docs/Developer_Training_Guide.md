@@ -1006,3 +1006,18 @@ When a client application requests access to resources protected by CoreIdent (r
     *   Skipping consent when `RequireConsent=false` on the client.
 
 For further details, see the [README.md](../README.md) and the `DEVPLAN.md` for implementation status.
+
+### 4. Routing Rules (Summary)
+
+CoreIdent follows specific routing conventions:
+
+*   **Base Path (`CoreIdentRouteOptions.BasePath`, default `/auth`):** Most standard endpoints (`/register`, `/login`, `/authorize`, `/token`, `/consent`) are relative to this path.
+*   **Token Management Path (`CoreIdentRouteOptions.TokenPath`, default `token`):** The token *issuance* endpoint (`/token`) uses this path relative to `BasePath`. The token *management* endpoints (`/introspect`, `/revoke`) are appended to this path. For example, defaults result in `/auth/token/introspect`. Changing `TokenPath` to `oauth2` results in `/auth/oauth2/introspect`.
+*   **User Profile Path (`CoreIdentRouteOptions.UserProfilePath`, default `/me`):**
+    *   If the configured path **starts with `/`**, it's mapped relative to the **application root**, ignoring `BasePath` (e.g., `/me`).
+    *   If the configured path **does not start with `/`**, it's mapped relative to the **`BasePath`** (e.g., `me` results in `/auth/me` by default).
+*   **Root Paths (`DiscoveryPath`, `JwksPath`):** The OIDC Discovery (`/.well-known/openid-configuration`) and JWKS (`/.well-known/jwks.json`) endpoints are **always relative to the application root** and ignore `BasePath`. This is required by the OpenID Connect specification.
+    *   See [OIDC Discovery Spec, Section 4](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig).
+    *   The paths used are configurable via `CoreIdentRouteOptions.DiscoveryPath` and `CoreIdentRouteOptions.JwksPath` but will always be treated as root-relative, ensuring a single leading slash (`/`) regardless of the input value.
+
+Understanding these rules is key to configuring and consuming CoreIdent endpoints correctly.

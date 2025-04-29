@@ -29,8 +29,12 @@ namespace CoreIdent.Core.Extensions
             ArgumentNullException.ThrowIfNull(endpoints);
             ArgumentNullException.ThrowIfNull(routeOptions);
 
+            // Ensure paths start with a single leading slash
+            var discoveryPath = "/" + routeOptions.DiscoveryPath.TrimStart('/');
+            var jwksPath = "/" + routeOptions.JwksPath.TrimStart('/');
+
             // Endpoint: GET /.well-known/openid-configuration
-            endpoints.MapGet(routeOptions.DiscoveryPath, (
+            endpoints.MapGet(discoveryPath, (
                 IOptions<CoreIdentOptions> options,
                 ILoggerFactory loggerFactory,
                 LinkGenerator links,
@@ -40,14 +44,14 @@ namespace CoreIdent.Core.Extensions
                  var logger = loggerFactory.CreateLogger("DiscoveryEndpoint");
                 try
                 {
-                    logger.LogInformation("Discovery endpoint hit: {Path}", routeOptions.DiscoveryPath);
+                    logger.LogInformation("Discovery endpoint hit: {Path}", discoveryPath);
                     var opts = options.Value;
                     // Ensure Issuer is correctly determined (scheme + host)
                     var issuer = opts.Issuer ?? $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
                     var baseUrl = issuer.TrimEnd('/'); // Use the determined issuer
 
                     // Construct URIs relative to the issuer
-                    var jwksUri = $"{baseUrl}{routeOptions.JwksPath}"; // Use configured path
+                    var jwksUri = $"{baseUrl}{jwksPath}"; // Use normalized path
                     var authorizationEndpoint = $"{baseUrl}{routeOptions.Combine(routeOptions.AuthorizePath)}"; // Combine base path
                     var tokenEndpoint = $"{baseUrl}{routeOptions.Combine(routeOptions.TokenPath)}";
                     //var userinfoEndpoint = $"{baseUrl}/auth/userinfo"; // TODO: Define UserInfoPath in options?
@@ -82,7 +86,7 @@ namespace CoreIdent.Core.Extensions
             .WithSummary("Provides OpenID Connect discovery information.");
 
             // Endpoint: GET /.well-known/jwks.json
-            endpoints.MapGet(routeOptions.JwksPath, (
+            endpoints.MapGet(jwksPath, (
                  // Inject concrete JwtTokenService, as ITokenService lacks GetSecurityKey
                  [FromServices] JwtTokenService tokenService,
                  ILoggerFactory loggerFactory) =>
@@ -90,7 +94,7 @@ namespace CoreIdent.Core.Extensions
                  var logger = loggerFactory.CreateLogger("JwksEndpoint");
                 try
                 {
-                    logger.LogInformation("JWKS endpoint hit: {Path}", routeOptions.JwksPath);
+                    logger.LogInformation("JWKS endpoint hit: {Path}", jwksPath);
 
                     // Get the security key and construct JWK based on its type
                     var securityKey = tokenService.GetSecurityKey(); // Now valid on concrete type

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace CoreIdent.Core.Extensions
 {
@@ -29,9 +30,13 @@ namespace CoreIdent.Core.Extensions
             var logger = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("TokenManagementEndpoints");
             logger.LogInformation("Registering token management endpoints with base path: {BasePath}", routeOptions.BasePath);
 
+            // Construct dynamic paths based on TokenPath
+            var introspectPath = $"{routeOptions.TokenPath.TrimEnd('/')}/introspect";
+            var revokePath = $"{routeOptions.TokenPath.TrimEnd('/')}/revoke";
+
             // Route for token introspection (RFC 7662)
-            logger.LogInformation("Mapping token introspection endpoint: {Path}", routeOptions.Combine("token/introspect"));
-            endpoints.MapPost("token/introspect", async (
+            logger.LogInformation("Mapping token introspection endpoint: {Path}", routeOptions.Combine(introspectPath));
+            endpoints.MapPost(introspectPath, async (
                 HttpRequest request,
                 HttpContext httpContext,
                 IRefreshTokenStore refreshTokenStore,
@@ -100,8 +105,8 @@ namespace CoreIdent.Core.Extensions
             });
 
             // Route for token revocation (RFC 7009)
-            logger.LogInformation("Mapping token revocation endpoint: {Path}", routeOptions.Combine("token/revoke"));
-            endpoints.MapPost("token/revoke", async (
+            logger.LogInformation("Mapping token revocation endpoint: {Path}", routeOptions.Combine(revokePath));
+            endpoints.MapPost(revokePath, async (
                 HttpRequest request,
                 HttpContext httpContext,
                 IRefreshTokenStore refreshTokenStore,

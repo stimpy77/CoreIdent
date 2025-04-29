@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using System.Linq;
 
 namespace CoreIdent.Core.Extensions
 {
@@ -20,8 +21,30 @@ namespace CoreIdent.Core.Extensions
         /// </summary>
         public static void MapUserProfileEndpoints(this IEndpointRouteBuilder endpoints, CoreIdentRouteOptions routeOptions)
         {
+            ArgumentNullException.ThrowIfNull(endpoints);
+            ArgumentNullException.ThrowIfNull(routeOptions);
+
+            var path = routeOptions.UserProfilePath;
+            IEndpointRouteBuilder targetBuilder;
+
+            // Determine the target builder based on the path prefix
+            if (path.StartsWith("/"))
+            {
+                // If path starts with '/', use the root builder (passed as `endpoints`)
+                // and ensure the path doesn't have duplicate slashes if combined later (though it shouldn't be)
+                targetBuilder = endpoints; 
+                path = "/" + path.TrimStart('/'); // Ensure single leading slash
+            }
+            else
+            {
+                // If path does not start with '/', assume it's relative to the group
+                // The `endpoints` parameter here is expected to be the group builder itself
+                targetBuilder = endpoints; 
+                path = path.TrimStart('/'); // Path is relative, no leading slash needed for MapGet
+            }
+
             // GET /me - Get current user's profile
-            endpoints.MapGet("/me", async (
+            targetBuilder.MapGet(path, async (
                 HttpContext httpContext,
                 IUserStore userStore,
                 ILoggerFactory loggerFactory,
@@ -66,7 +89,7 @@ namespace CoreIdent.Core.Extensions
             .WithSummary("Gets the current user's profile.");
 
             // PUT /me - Update current user's profile (basic example)
-            endpoints.MapPut("/me", async (
+            targetBuilder.MapPut(path, async (
                 [FromBody] UpdateUserProfileRequest request,
                 HttpContext httpContext,
                 IUserStore userStore,
