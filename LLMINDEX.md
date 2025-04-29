@@ -86,8 +86,8 @@ This is the central library containing the core logic, interfaces, and models.
         *   `CoreIdentRefreshToken.cs`
         *   `AuthorizationCode.cs`
         *   `UserGrant.cs`: Model for storing user consent grants (SubjectId, ClientId, GrantedScopes, Expiration etc.).
-        *   `Requests`: DTOs for API requests (`LoginRequest`, `RegisterRequest`, `RefreshTokenRequest`, `ConsentRequest`).
-        *   `Responses`: DTOs for API responses (`TokenResponse`).
+        *   `Requests`: DTOs for API requests (`LoginRequest`, `RegisterRequest`, `RefreshTokenRequest`, `ConsentRequest`, `TokenRequest`, `UpdateUserProfileRequest`).
+        *   `Responses`: DTOs for API responses (`TokenResponse`, `ErrorResponse`).
     *   `CoreIdent.Core.Stores`: Defines core persistence **interfaces**.
         *   `IUserStore.cs`
         *   `IRefreshTokenStore.cs`
@@ -108,13 +108,15 @@ This is the central library containing the core logic, interfaces, and models.
         *   `ITokenService.cs`
         *   `DefaultPasswordHasher.cs`
         *   `JwtTokenService.cs`
-    *   `CoreIdent.Core.Extensions`: Provides service registration extensions.
+    *   `CoreIdent.Core.Extensions`: Provides service registration and endpoint mapping extensions.
         *   `CoreIdentServiceCollectionExtensions.cs`: `AddCoreIdent` (registers core services and default in-memory stores).
-        *   `CoreIdentEndpointRouteBuilderExtensions.cs`: `MapCoreIdentEndpoints`
-            *   `/authorize` endpoint updated to check for user authentication (cookie) and existing consent (`IUserGrantStore`), redirects to `ConsentPath` if needed.
-            *   `/consent` GET endpoint added.
-            *   `/consent` POST endpoint added to handle consent submission, save grant (`IUserGrantStore`), and redirect.
-            *   Other endpoints: `/token` (handles `authorization_code`, `client_credentials`, `refresh_token`), `/register`, `/login`, discovery, JWKS.
+        *   `AuthEndpointsExtensions.cs`: `MapAuthEndpoints` (maps `/register`, `/login`).
+        *   `OAuthEndpointsExtensions.cs`: `MapOAuthEndpoints` (maps `/authorize`, `/consent`).
+        *   `UserProfileEndpointsExtensions.cs`: `MapUserProfileEndpoints` (maps `/me`).
+        *   `TokenManagementEndpointsExtensions.cs`: `MapTokenManagementEndpoints` (maps `/token/introspect`, `/token/revoke`).
+        *   `TokenEndpointsExtensions.cs`: `MapTokenEndpoints` (maps `/token`, `/token/refresh`).
+        *   `DiscoveryEndpointsExtensions.cs`: `MapDiscoveryEndpoints` (maps `/.well-known/openid-configuration`, `/.well-known/jwks.json`).
+        *   `CoreIdentEndpointRouteBuilderExtensions.cs`: `MapCoreIdentEndpoints` (orchestrates mapping using the other `Map*` extensions).
     *   **Custom Claims Extensibility:**
         - Implemented via ICustomClaimsProvider, allowing injection of claims into tokens per user, client, scope, or request context. See README for usage.
 
@@ -203,8 +205,14 @@ This appendix lists every class in the CoreIdent codebase (src and tests), with 
 - Configuration/CoreIdentOptions.cs: CoreIdentOptions, TokenSecurityOptions, TokenTheftDetectionMode
 - Configuration/CoreIdentOptionsValidator.cs: CoreIdentOptionsValidator
 - Configuration/CoreIdentRouteOptions.cs: CoreIdentRouteOptions
+- Extensions/AuthEndpointsExtensions.cs: AuthEndpointsExtensions
 - Extensions/CoreIdentEndpointRouteBuilderExtensions.cs: CoreIdentEndpointRouteBuilderExtensions
 - Extensions/CoreIdentServiceCollectionExtensions.cs: CoreIdentServiceCollectionExtensions
+- Extensions/DiscoveryEndpointsExtensions.cs: DiscoveryEndpointsExtensions
+- Extensions/OAuthEndpointsExtensions.cs: OAuthEndpointsExtensions
+- Extensions/TokenEndpointsExtensions.cs: TokenEndpointsExtensions
+- Extensions/TokenManagementEndpointsExtensions.cs: TokenManagementEndpointsExtensions
+- Extensions/UserProfileEndpointsExtensions.cs: UserProfileEndpointsExtensions, UpdateUserProfileRequest
 - Models/AuthorizationCode.cs: AuthorizationCode
 - Models/CoreIdentClient.cs: CoreIdentClient, CoreIdentClientSecret
 - Models/CoreIdentRefreshToken.cs: CoreIdentRefreshToken
@@ -215,6 +223,8 @@ This appendix lists every class in the CoreIdent codebase (src and tests), with 
 - Models/Requests/LoginRequest.cs: LoginRequest
 - Models/Requests/RefreshTokenRequest.cs: RefreshTokenRequest
 - Models/Requests/RegisterRequest.cs: RegisterRequest
+- Models/Requests/TokenRequest.cs: TokenRequest
+- Models/Responses/ErrorResponse.cs: ErrorResponse
 - Models/Responses/TokenResponse.cs: TokenResponse
 - Services/DefaultPasswordHasher.cs: DefaultPasswordHasher
 - Services/IPasswordHasher.cs: IPasswordHasher
