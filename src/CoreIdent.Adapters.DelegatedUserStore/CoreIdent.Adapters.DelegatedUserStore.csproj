@@ -15,7 +15,7 @@
     <Description>CoreIdent adapter to delegate user storage and credential validation to an existing external system.</Description>
     <PackageTags>identity;authentication;authorization;security;netcore;aspnetcore;adapter;delegate</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/stimpy77/CoreIdent</PackageProjectUrl>
+    <PackageProjectUrl>https://coreident.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/stimpy77/CoreIdent.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile> <!-- Include project README -->

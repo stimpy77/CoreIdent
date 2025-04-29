@@ -15,7 +15,7 @@
     <Description>Entity Framework Core persistence provider for CoreIdent. Implements IUserStore, IRefreshTokenStore, etc. using EF Core.</Description>
     <PackageTags>identity;authentication;authorization;security;netcore;aspnetcore;entityframeworkcore;efcore;persistence</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/stimpy77/CoreIdent</PackageProjectUrl>
+    <PackageProjectUrl>https://coreident.net</PackageProjectUrl>
     <RepositoryUrl>https://github.com/stimpy77/CoreIdent.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile> <!-- Include project README -->
