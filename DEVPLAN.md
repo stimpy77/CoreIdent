@@ -550,6 +550,8 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Test Case (Integration):**
     - [ ] Revoked tokens are invalidated and cannot be used.
     - [ ] Introspection endpoint returns correct token status and claims.
+    - [ ] Verify token introspection endpoint (`/introspect`) path correctly uses customized `CoreIdentRouteOptions.TokenPath`.
+    - [ ] Verify token revocation endpoint (`/revoke`) path correctly uses customized `CoreIdentRouteOptions.TokenPath`.
 - [ ] **Update README.md** with details on revocation and introspection endpoints.
 - [ ] **Update Developer Training Guide** with details on revocation and introspection endpoints.
 
@@ -560,10 +562,19 @@ This document provides a detailed breakdown of tasks, components, features, test
 *   **Component:** Token Lifetime Configuration
     - [ ] Support per-client and per-scope token lifetimes.
 *   **Component:** Key Management
+    - [ ] Implement support for asymmetric signing keys (RSA, potentially ECDSA).
+        *   *Guidance:* Add configuration options to specify key material (e.g., PEM files, key vault reference).
+        *   *Guidance:* Update `ITokenService`/`JwtTokenService` to load and use asymmetric keys for signing.
+        *   *Guidance:* Update JWKS endpoint (`/.well-known/jwks.json`) to publish public keys correctly (including `kty`, `n`, `e` for RSA).
+        *   *Guidance:* Update token validation logic (where applicable internally or in examples) to handle asymmetric key validation.
     - [ ] Add support for key rotation and multiple signing keys (JWKS).
 *   **Test Case (Integration):**
     - [ ] Tokens expire according to per-client/scope configuration.
     - [ ] Key rotation works without breaking existing tokens.
+    - [ ] Verify tokens can be signed and validated using configured RSA keys.
+    - [ ] Verify JWKS endpoint correctly publishes RSA public key details.
+    - [ ] Verify user profile endpoint (`/me`) works correctly when `UserProfilePath` is configured as root-relative (e.g., default `/me`).
+    - [ ] Verify user profile endpoint (`/me`) works correctly when `UserProfilePath` is configured as base-path relative (e.g., `me` results in `/auth/me`).
 - [ ] **Update README.md** with details on security enhancements.
 - [ ] **Update Developer Training Guide** with details on security enhancements.
 
@@ -737,7 +748,7 @@ A summary table of major protocols and features, their status in CoreIdent, and 
 | Multi-Factor Authentication (MFA) & Passwordless | 2nd-factor (TOTP/WebAuthn) and passwordless options | *Planned* |
 | Dynamic Client Registration (RFC 7591) | Programmatic registration of OAuth clients | *Planned* |
 | Client-Initiated Backchannel Authentication (CIBA, RFC 9126) | Asynchronous user-approval flow for critical AI actions | *Planned* |
-| Pushed Authorization Requests (PAR, RFC 9121) | Secure “push” of auth requests to avoid leaking request parameters | *Planned* |
+| Pushed Authorization Requests (PAR, RFC 9121) | Secure "push" of auth requests to avoid leaking request parameters | *Planned* |
 | Device Authorization Flow (RFC 8628) | Grant for devices with limited input (e.g. IoT, consoles) | *Planned* |
 | Token Introspection (RFC 7662) | Endpoint for resource servers to validate token metadata | *Planned* |
 | Token Revocation (RFC 7009) | Endpoint to revoke tokens on logout or compromise | *Planned* |
