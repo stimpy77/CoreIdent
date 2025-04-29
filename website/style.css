@@ -69,7 +69,6 @@ h3, h4 {
   width: 100%;
   max-width: 600px;
   height: auto;
-  max-height: 316px;
   display: block;
   border-radius: 20px;
   box-shadow: 0 4px 32px rgba(0,0,0,0.07);
@@ -482,7 +481,7 @@ footer {
 @media (max-width: 1100px) {
   .hero-flex {
     flex-direction: column-reverse;
-    gap: 32px;
+    gap: 20px;
   }
   .hero-logo-block.hero-logo-full {
     width: 100%;
@@ -490,10 +489,11 @@ footer {
     height: auto;
     min-width: 0;
     margin-bottom: 0;
+    flex-basis: auto;
   }
   .hero-logo-full-img {
     max-width: 90vw;
-    max-height: 220px;
+    height: auto;
   }
   .hero-content {
     align-items: center;
@@ -519,8 +519,8 @@ footer {
     padding: 0 2vw;
   }
   .hero-logo-full-img {
-    max-width: 100vw;
-    max-height: 140px;
+    max-width: 80vw;
+    height: auto;
   }
   .hero-logo-block.hero-logo-full {
     height: auto;
