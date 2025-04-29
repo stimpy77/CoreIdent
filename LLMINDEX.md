@@ -78,7 +78,7 @@ This is the central library containing the core logic, interfaces, and models.
 *   **Key Namespaces & Responsibilities:**
     *   `CoreIdent.Core.Configuration`: Handles configuration options.
         *   `CoreIdentOptions.cs`: Defines core settings.
-        *   `CoreIdentRouteOptions.cs`: Defines endpoint paths (including `ConsentPath`).
+        *   `CoreIdentRouteOptions.cs`: Defines endpoint paths (including `ConsentPath`, `DiscoveryPath`, `JwksPath`, `UserProfilePath`).
     *   `CoreIdent.Core.Models`: Defines core domain models/entities.
         *   `CoreIdentUser.cs`, `CoreIdentUserClaim.cs`
         *   `CoreIdentClient.cs`, `CoreIdentClientSecret.cs` (Includes `RequireConsent` flag)
@@ -112,10 +112,10 @@ This is the central library containing the core logic, interfaces, and models.
         *   `CoreIdentServiceCollectionExtensions.cs`: `AddCoreIdent` (registers core services and default in-memory stores).
         *   `AuthEndpointsExtensions.cs`: `MapAuthEndpoints` (maps `/register`, `/login`).
         *   `OAuthEndpointsExtensions.cs`: `MapOAuthEndpoints` (maps `/authorize`, `/consent`).
-        *   `UserProfileEndpointsExtensions.cs`: `MapUserProfileEndpoints` (maps `/me`).
-        *   `TokenManagementEndpointsExtensions.cs`: `MapTokenManagementEndpoints` (maps `/token/introspect`, `/token/revoke`).
-        *   `TokenEndpointsExtensions.cs`: `MapTokenEndpoints` (maps `/token`, `/token/refresh`).
-        *   `DiscoveryEndpointsExtensions.cs`: `MapDiscoveryEndpoints` (maps `/.well-known/openid-configuration`, `/.well-known/jwks.json`).
+        *   `UserProfileEndpointsExtensions.cs`: `MapUserProfileEndpoints` (maps `/me` or configured `UserProfilePath` relative to root or base path based on configuration).
+        *   `TokenManagementEndpointsExtensions.cs`: `MapTokenManagementEndpoints` (maps endpoints relative to `TokenPath`, e.g., `token/introspect`, `token/revoke`).
+        *   `TokenEndpointsExtensions.cs`: `MapTokenEndpoints` (maps `/token` using `TokenPath`, `/token/refresh`).
+        *   `DiscoveryEndpointsExtensions.cs`: `MapDiscoveryEndpoints` (maps root-relative `/.well-known/openid-configuration`, `/.well-known/jwks.json`).
         *   `CoreIdentEndpointRouteBuilderExtensions.cs`: `MapCoreIdentEndpoints` (orchestrates mapping using the other `Map*` extensions).
     *   **Custom Claims Extensibility:**
         - Implemented via ICustomClaimsProvider, allowing injection of claims into tokens per user, client, scope, or request context. See README for usage.

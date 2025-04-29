@@ -42,27 +42,33 @@ public class CoreIdentRouteOptions
     /// <summary>
     /// Path for the OIDC UserInfo endpoint. Defaults to "userinfo". Relative to BasePath.
     /// </summary>
-    public string UserInfoPath { get; set; } = "userinfo"; // Not yet implemented
+    public string UserInfoPath { get; set; } = "userinfo";
 
     /// <summary>
     /// Path for the OIDC Discovery configuration endpoint. Defaults to ".well-known/openid-configuration". Relative to the root, not BasePath.
     /// </summary>
-    public string DiscoveryPath { get; set; } = ".well-known/openid-configuration"; // Not yet implemented
+    public string DiscoveryPath { get; set; } = ".well-known/openid-configuration";
 
     /// <summary>
     /// Path for the OIDC JWKS endpoint. Defaults to ".well-known/jwks.json". Relative to the root, not BasePath.
     /// </summary>
-    public string JwksPath { get; set; } = ".well-known/jwks.json"; // Not yet implemented
+    public string JwksPath { get; set; } = ".well-known/jwks.json";
 
     /// <summary>
     /// Path for the consent endpoint. Defaults to "consent". Relative to BasePath.
     /// </summary>
-    public string ConsentPath { get; set; } = "consent"; // Not yet implemented
+    public string ConsentPath { get; set; } = "consent";
 
     /// <summary>
     /// Path for the end session/logout endpoint. Defaults to "endsession". Relative to BasePath.
     /// </summary>
     public string EndSessionPath { get; set; } = "endsession"; // Not yet implemented
+
+    /// <summary>
+    /// Path for the user profile endpoint (e.g., "/me"). Defaults to "/me".
+    /// If the path starts with '/', it is relative to the root. Otherwise, it is relative to BasePath.
+    /// </summary>
+    public string UserProfilePath { get; set; } = "/me"; // Task 4
 
     // Helper method to combine BasePath and relative path
     internal string Combine(string relativePath)

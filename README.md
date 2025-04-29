@@ -30,8 +30,10 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 *   **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, token theft detection, securely hashed token handle storage), password storage, and endpoint protection. **PKCE is enforced** for the Authorization Code Flow.
 *   **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
 *   **Implements Standard Flows:** Implements standard OAuth 2.0 flows (Authorization Code + PKCE, Client Credentials) and key OIDC features (ID Tokens, Discovery, JWKS). *(Note: Full OIDC conformance requires features like asymmetric key support - see roadmap).*
-*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints. *(Note: Currently supports HS256 symmetric keys only. Asymmetric key support (RSA/ECDSA) is planned).*
+*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints. *(Note: Currently supports HS256 symmetric keys only. Asymmetric key support (RSA/ECDSA) is planned).* These endpoints are **always** served from the application root, ignoring the configured `BasePath`.
 *   **User Consent:** Provides a standard mechanism for users to grant or deny requested permissions to client applications.
+*   **/me Endpoint:** A `/me` endpoint (configurable path) to retrieve the current user's profile.
+*   **/token Management:** Endpoints for token introspection (`token/introspect`) and revocation (`token/revoke`), relative to the configured `TokenPath` (which itself is relative to `BasePath`.
 *   **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
 *   **No Vendor Lock-In:** Own your identity layer.
 
@@ -222,6 +224,17 @@ Configure the core options in your `appsettings.json` (or another configuration 
       "EnableTokenFamilyTracking": true, // Default=true (Recommended). Set to false to disable family tracking & revocation on theft detection.
       "TokenTheftDetectionMode": "RevokeFamily" // Default. Options: Silent, RevokeFamily, RevokeAllUserTokens. Only applies if EnableTokenFamilyTracking=true.
     }
+  },
+  "CoreIdentRoutes": { // Optional section to override default paths
+    "BasePath": "/auth",
+    "RegisterPath": "register",
+    "LoginPath": "login",
+    "TokenPath": "token", // Base for token issuance, introspection, revocation
+    "AuthorizePath": "authorize",
+    "ConsentPath": "consent",
+    "DiscoveryPath": ".well-known/openid-configuration", // Always root-relative
+    "JwksPath": ".well-known/jwks.json", // Always root-relative
+    "UserProfilePath": "/me" // Default is root-relative. Use "me" (no slash) for base-path relative.
   }
 }
 ```
@@ -485,9 +498,15 @@ app.UseAuthorization();
 // Map CoreIdent endpoints
 app.MapCoreIdentEndpoints(options =>
 {
-    // Example: Customize the base path or specific endpoints
+    // Example: Customize the base path or specific endpoints via CoreIdentRouteOptions
+    // builder.Configuration.GetSection("CoreIdentRoutes").Bind(options); // Bind from appsettings
+
+    // Or set individually:
     // options.BasePath = "/identity";
     // options.RegisterPath = "signup";
+    // options.TokenPath = "oauth2/token"; // Will result in /identity/oauth2/token/introspect etc.
+    // options.UserProfilePath = "profile"; // Will result in /identity/profile
+    // options.UserProfilePath = "/my/profile"; // Will result in /my/profile (root-relative)
 });
 
 // Map your application's endpoints/controllers
@@ -498,3 +517,19 @@ app.MapGet("/protected", (ClaimsPrincipal user) => $"Hello {user.Identity?.Name}
 
 
 app.Run();
+```
+
+### 4. Routing Rules
+
+CoreIdent endpoints follow predictable routing rules:
+
+*   **Base Path:** Most endpoints (`/register`, `/login`, `/authorize`, `/token`, `/consent`, etc.) are mapped relative to the configured `BasePath` (default: `/auth`).
+*   **Token Management:** The token introspection (`/token/introspect`) and revocation (`/token/revoke`) endpoints are mapped relative to the configured `TokenPath`, which *itself* is relative to the `BasePath`. So, if `BasePath` is `/auth` and `TokenPath` is `token` (default), the introspection endpoint is `/auth/token/introspect`. If `TokenPath` is changed to `oauth2`, the endpoint becomes `/auth/oauth2/introspect`.
+*   **User Profile (`/me`):** The user profile path (`UserProfilePath`) behaviour depends on its configuration:
+    *   If `UserProfilePath` starts with `/` (e.g., `"/me"`, the default), it is mapped **relative to the application root**, ignoring `BasePath`. The default path is `/me`.
+    *   If `UserProfilePath` does *not* start with `/` (e.g., `"me"`), it is mapped **relative to the `BasePath`**. With default `BasePath`, this would result in `/auth/me`.
+*   **Root-Level Endpoints (Discovery & JWKS):** The OIDC Discovery (`/.well-known/openid-configuration`) and JWKS (`/.well-known/jwks.json`) endpoints are **always** mapped relative to the **application root**, intentionally bypassing the `BasePath`. This is mandated by the OpenID Connect specifications.
+    *   See [OpenID Connect Discovery 1.0, Section 4](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for details on the discovery endpoint path.
+    *   The `jwks_uri` published in the discovery document points to the root-relative JWKS path.
+
+Understanding these rules helps predict the final endpoint URLs, especially when customizing paths via `CoreIdentRouteOptions`.
