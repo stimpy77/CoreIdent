@@ -19,7 +19,7 @@
 *   **Phase 4 (In Progress):** User Interaction & External Integrations
     *   **Completed:** User Consent Mechanism (backend logic, storage, integration tests).
     *   **Next:** Basic Web UI (`CoreIdent.UI.Web` package), MFA Framework, External/Passwordless Providers.
-*   **Phase 5 (Future):** Advanced Features & Polish (Token Revocation/Introspection, Dynamic Client Registration, More Flows, Extensibility, Templates).
+*   **Phase 5 (Future):** Advanced Features & Polish (Token Revocation/Introspection, Asymmetric Key Support (RSA/ECDSA), Dynamic Client Registration, More Flows, Extensibility, Templates).
 
 ## Why CoreIdent?
 
@@ -29,8 +29,8 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 *   **Modularity & Extensibility:** A lean core with features (like storage, providers) added via separate NuGet packages. Use only what you need.
 *   **Secure by Default:** Implements security best practices for token handling (JWTs, refresh token rotation, token theft detection, securely hashed token handle storage), password storage, and endpoint protection. **PKCE is enforced** for the Authorization Code Flow.
 *   **Flexible Storage:** Choose between integrated persistence (Entity Framework Core) or adapt to existing user systems with the Delegated User Store.
-*   **Standards Compliant:** Implements standard OAuth 2.0 flows (Authorization Code + PKCE, Client Credentials) and OIDC features (ID Tokens, Discovery, JWKS).
-*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints for OIDC metadata and public key discovery.
+*   **Implements Standard Flows:** Implements standard OAuth 2.0 flows (Authorization Code + PKCE, Client Credentials) and key OIDC features (ID Tokens, Discovery, JWKS). *(Note: Full OIDC conformance requires features like asymmetric key support - see roadmap).*
+*   **OIDC Discovery & JWKS Endpoints:** Standards-compliant `/.well-known/openid-configuration` and `/.well-known/jwks.json` endpoints. *(Note: Currently supports HS256 symmetric keys only. Asymmetric key support (RSA/ECDSA) is planned).*
 *   **User Consent:** Provides a standard mechanism for users to grant or deny requested permissions to client applications.
 *   **Future-Ready:** Built on modern .NET (9+), designed to support traditional credentials, modern passwordless methods (Passkeys/WebAuthn), and decentralized approaches (Web3, LNURL) in future phases.
 *   **No Vendor Lock-In:** Own your identity layer.
@@ -41,12 +41,13 @@ Tired of wrestling with complex identity vendors or rolling your own auth from s
 
 *   **Core Authentication API:** Secure `/auth/register`, `/auth/login`, and `/auth/token/refresh` endpoints.
 *   **JWT Issuance:** Standard access tokens upon login.
+*   **HS256 Token Signing:** Currently supports **HS256 (symmetric key)** for signing Access and ID Tokens. *(RSA/ECDSA support is planned for Phase 5).*
 *   **Refresh Token Management:** Secure refresh token generation, persistent storage (EF Core), rotation, securely hashed token handle storage, and token theft detection with family revocation.
 *   **OAuth/OIDC Core Flows:**
     *   **Authorization Code Flow with PKCE:** Secure flow for web apps, SPAs, and mobile clients via `/auth/authorize` and `/auth/token`. PKCE is enforced.
     *   **Client Credentials Flow:** Secure flow for machine-to-machine (M2M) authentication via `/auth/token`. Supports Basic Auth and request body client authentication.
-    *   **ID Token Issuance:** Standard OIDC ID tokens generated alongside access tokens for relevant flows (`openid` scope).
-    *   **OIDC Discovery & JWKS:** Standard endpoints (`/.well-known/openid-configuration`, `/.well-known/jwks.json`) for metadata and key discovery.
+    *   **ID Token Issuance:** Standard OIDC ID tokens generated alongside access tokens for relevant flows (`openid` scope), signed with HS256.
+    *   **OIDC Discovery & JWKS:** Standard endpoints (`/.well-known/openid-configuration`, `/.well-known/jwks.json`) for metadata and key discovery (currently publishing HS256 symmetric key details).
 *   **User Consent:**
     *   Standard flow for prompting users to grant or deny permissions (`scope`s) requested by client applications during the Authorization Code flow.
     *   Persistent storage of user grants via EF Core (`EfUserGrantStore`).
@@ -158,7 +159,7 @@ Comprehensive integration tests (`tests/CoreIdent.Integration.Tests/ConsentFlowT
 
 ## Protocol & Feature Roadmap
 
-The following table summarizes major protocols and features, their status in CoreIdent, and what’s coming next. For full technical details, see [DEVPLAN.md](https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md) and related docs. For the most up-to-date status, see the [Feature Roadmap](https://coreident.net/features.html) on the website.
+The following table summarizes major protocols and features, their status in CoreIdent, and what's coming next. For full technical details, see [DEVPLAN.md](https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md) and related docs. For the most up-to-date status, see the [Feature Roadmap](https://coreident.net/features.html) on the website.
 
 | Protocol / Feature | Description / Notes | CoreIdent Status |
 |--------------------|--------------------|------------------|
@@ -168,11 +169,11 @@ The following table summarizes major protocols and features, their status in Cor
 | Multi-Factor Authentication (MFA) & Passwordless | 2nd-factor (TOTP/WebAuthn) and passwordless options | *Planned* |
 | Dynamic Client Registration (RFC 7591) | Programmatic registration of OAuth clients | *Planned* |
 | Client-Initiated Backchannel Authentication (CIBA, RFC 9126) | Asynchronous user-approval flow for critical AI actions | *Planned* |
-| Pushed Authorization Requests (PAR, RFC 9121) | Secure “push” of auth requests to avoid leaking request parameters | *Planned* |
+| Pushed Authorization Requests (PAR, RFC 9121) | Secure "push" of auth requests to avoid leaking request parameters | *Planned* |
 | Device Authorization Flow (RFC 8628) | Grant for devices with limited input (e.g. IoT, consoles) | *Planned* |
 | Token Introspection (RFC 7662) | Endpoint for resource servers to validate token metadata | *Planned* |
 | Token Revocation (RFC 7009) | Endpoint to revoke tokens on logout or compromise | *Planned* |
-| JWKS & Key Rotation | JWKS endpoint and automated key-rotation for signing keys | *Planned* |
+| JWKS & Key Rotation | JWKS endpoint and automated key-rotation for signing keys | JWKS endpoint (HS256 only currently). Asymmetric key (RSA/ECDSA) support & rotation planned. |
 | Consent Screen (OIDC) | User-facing UI to approve scopes/permissions | *Planned* |
 | Audit Logging | Structured logging of login, consent, token events | *Planned* |
 | Fine-Grained Authorization (FGA/RBAC) | Relationship-based or attribute-based access control for per-document/data enforcement | Under consideration |
