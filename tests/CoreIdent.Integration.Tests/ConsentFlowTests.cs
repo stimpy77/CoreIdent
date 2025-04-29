@@ -1,23 +1,14 @@
 #pragma warning disable CS8600, CS8601, CS8602, CS8604, CS0219
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Threading.Tasks;
+using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
+using CoreIdent.Storage.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
-using Shouldly;
-using Xunit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication;
-using CoreIdent.Core.Stores;
 using Microsoft.Extensions.Logging;
-using CoreIdent.Integration.Tests;
-using CoreIdent.Storage.EntityFrameworkCore;
+using Shouldly;
+using System.Net;
 
 namespace CoreIdent.Integration.Tests
 {
@@ -127,7 +118,7 @@ namespace CoreIdent.Integration.Tests
         {
             using var scope = _factory.Services.CreateScope();
             var grantStore = scope.ServiceProvider.GetRequiredService<IUserGrantStore>();
-            if (grantStore is CoreIdent.Core.Stores.InMemoryUserGrantStore mem)
+            if (grantStore is InMemoryUserGrantStore mem)
             {
                 mem.ClearAll();
             }

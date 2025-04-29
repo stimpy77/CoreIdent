@@ -1,8 +1,7 @@
-using System.Net;
-using System.Net.Http.Json;
 using CoreIdent.Core.Models.Requests;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions; // Needed for AddCoreIdentEntityFrameworkStores
+using CoreIdent.TestHost;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -11,9 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions; // For RemoveAll
 using Microsoft.Extensions.Logging;
 using Shouldly; // For assertions
-using Xunit;
-using System.Threading.Tasks;
-using CoreIdent.TestHost;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace CoreIdent.Integration.Tests;
 
@@ -58,12 +56,12 @@ public class RegistrationTestWebApplicationFactory : WebApplicationFactory<Progr
             try
             {
                 db.Database.Migrate();
-                logger.LogInformation("Database migrated successfully for {FactoryName} using connection {ConnectionString}.", 
+                logger.LogInformation("Database migrated successfully for {FactoryName} using connection {ConnectionString}.",
                     nameof(RegistrationTestWebApplicationFactory), _connectionString);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred migrating the database for {FactoryName}. Connection: {ConnectionString}. Error: {ErrorMessage}", 
+                logger.LogError(ex, "An error occurred migrating the database for {FactoryName}. Connection: {ConnectionString}. Error: {ErrorMessage}",
                     nameof(RegistrationTestWebApplicationFactory), _connectionString, ex.Message);
                 throw;
             }

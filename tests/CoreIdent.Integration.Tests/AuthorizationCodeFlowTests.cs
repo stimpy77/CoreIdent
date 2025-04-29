@@ -1,43 +1,29 @@
 #pragma warning disable CS8600, CS8601, CS8602, CS8604, CS0219
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
-using System.Security.Cryptography;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
-using CoreIdent.Core.Models.Requests;
-using CoreIdent.Core.Models.Responses;
-using CoreIdent.Core.Stores;
+using CoreIdent.Core.Services;
+using CoreIdent.Core.Stores.InMemory;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Data.Sqlite;
-using Shouldly;
-using Xunit;
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.IdentityModel.Tokens;
-using CoreIdent.Core.Extensions;
-using CoreIdent.Core.Services;
-using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using CoreIdent.Core.Configuration;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using CoreIdent.TestHost;
 using Microsoft.AspNetCore.Authentication;
-using HtmlAgilityPack;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using Shouldly;
+using System.Net;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace CoreIdent.Integration.Tests
 {
@@ -60,7 +46,7 @@ namespace CoreIdent.Integration.Tests
             catch (Exception ex)
             {
                 Console.WriteLine($"[FACTORY-ERROR] Failed to open SQLite connection: {ex.Message}");
-                throw; 
+                throw;
             }
 
             TestUserId = Guid.NewGuid().ToString();
@@ -69,7 +55,7 @@ namespace CoreIdent.Integration.Tests
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseUrls("http://127.0.0.1:0"); 
+            builder.UseUrls("http://127.0.0.1:0");
 
             builder.ConfigureServices(services =>
             {
@@ -78,8 +64,8 @@ namespace CoreIdent.Integration.Tests
 
                 services.AddDbContext<CoreIdentDbContext>(options =>
                 {
-                    options.UseSqlite(_connection); 
-                }, ServiceLifetime.Scoped); 
+                    options.UseSqlite(_connection);
+                }, ServiceLifetime.Scoped);
 
                 services.AddCoreIdentEntityFrameworkStores<CoreIdentDbContext>();
 
@@ -101,7 +87,7 @@ namespace CoreIdent.Integration.Tests
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "[FACTORY-ERROR] An error occurred migrating/seeding the database in ConfigureServices.");
-                        throw; 
+                        throw;
                     }
                 }
             });
@@ -110,7 +96,7 @@ namespace CoreIdent.Integration.Tests
             {
                 app.Use(async (context, next) =>
                 {
-                    if (context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId) && 
+                    if (context.Request.Headers.TryGetValue("X-Test-User-Id", out var userId) &&
                         context.Request.Headers.TryGetValue("X-Test-User-Email", out var userEmail))
                     {
                         var claims = new List<Claim>
@@ -126,7 +112,7 @@ namespace CoreIdent.Integration.Tests
 
                 app.UseRouting();
 
-                app.UseAuthentication(); 
+                app.UseAuthentication();
 
                 app.UseAuthorization();
 
@@ -135,7 +121,7 @@ namespace CoreIdent.Integration.Tests
                 app.UseEndpoints(endpoints =>
                 {
                     endpoints.MapCoreIdentEndpoints();
-                    
+
                     endpoints.MapPost("/test-login", async context =>
                     {
                         var testUserId = context.Request.Query["userId"].ToString();
@@ -162,7 +148,8 @@ namespace CoreIdent.Integration.Tests
                     });
                     endpoints.MapGet("/test-auth-check", async context =>
                     {
-                        var resultObj = new {
+                        var resultObj = new
+                        {
                             IsAuthenticated = context.User?.Identity?.IsAuthenticated ?? false,
                             UserId = context.User?.FindFirstValue(ClaimTypes.NameIdentifier),
                             Email = context.User?.FindFirstValue(ClaimTypes.Email)
@@ -188,11 +175,11 @@ namespace CoreIdent.Integration.Tests
                 AllowedScopes = { "openid", "profile", "email", "api1", "offline_access" },
                 RequireConsent = false, // Disable consent for integration tests
                 AllowOfflineAccess = true,
-                AccessTokenLifetime = 3600, 
-                AbsoluteRefreshTokenLifetime = 2592000, 
-                SlidingRefreshTokenLifetime = 1296000, 
-                RefreshTokenUsage = TokenUsage.OneTimeOnly, 
-                RefreshTokenExpiration = TokenExpiration.Sliding, 
+                AccessTokenLifetime = 3600,
+                AbsoluteRefreshTokenLifetime = 2592000,
+                SlidingRefreshTokenLifetime = 1296000,
+                RefreshTokenUsage = TokenUsage.OneTimeOnly,
+                RefreshTokenExpiration = TokenExpiration.Sliding,
                 Enabled = true,
             };
 
@@ -203,10 +190,10 @@ namespace CoreIdent.Integration.Tests
 
             var testUser = new CoreIdentUser
             {
-                Id = TestUserId, 
+                Id = TestUserId,
                 UserName = TestUserEmail,
                 NormalizedUserName = TestUserEmail.ToUpperInvariant(),
-                PasswordHash = passwordHasher.HashPassword(null!, "password") 
+                PasswordHash = passwordHasher.HashPassword(null!, "password")
             };
 
             if (!context.Users.Any(u => u.NormalizedUserName == testUser.NormalizedUserName))
@@ -216,10 +203,10 @@ namespace CoreIdent.Integration.Tests
             else
             {
                 var existingUser = context.Users.FirstOrDefault(u => u.NormalizedUserName == testUser.NormalizedUserName);
-                if(existingUser != null) TestUserId = existingUser.Id;
+                if (existingUser != null) TestUserId = existingUser.Id;
             }
 
-            try 
+            try
             {
                 context.SaveChanges();
             }
@@ -262,22 +249,22 @@ namespace CoreIdent.Integration.Tests
         // Helper method to generate PKCE code challenge and verifier
         private (string codeVerifier, string codeChallenge) GeneratePkceValues()
         {
-            var randomBytes = new byte[32]; 
+            var randomBytes = new byte[32];
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomBytes);
             string codeVerifier = Base64UrlEncoder.Encode(randomBytes);
-            
+
             using var sha256 = SHA256.Create();
             var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
             string codeChallenge = Base64UrlEncoder.Encode(challengeBytes);
-            
+
             return (codeVerifier, codeChallenge);
         }
 
         private async Task<HttpResponseMessage> GetAuthorizationCodeAsync(
-            HttpClient client, 
-            string state, 
-            string? codeChallenge, 
+            HttpClient client,
+            string state,
+            string? codeChallenge,
             string? codeChallengeMethod)
         {
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
@@ -287,7 +274,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method={codeChallengeMethod}" +
                 $"&state={state}", UriKind.Relative);
-                
+
             var response = await client.GetAsync(authorizeUri);
             response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
             response.Headers.Location.ShouldNotBeNull();
@@ -300,26 +287,26 @@ namespace CoreIdent.Integration.Tests
             {
                 throw new InvalidOperationException($"Expected a redirect response, but got {response.StatusCode}");
             }
-            
+
             var location = response.Headers.Location;
             if (location == null)
             {
                 throw new InvalidOperationException("Redirect response does not contain a Location header");
             }
-            
+
             var uri = location.IsAbsoluteUri ? location : new Uri(_client.BaseAddress!, location);
             var query = QueryHelpers.ParseQuery(uri.Query);
-            
+
             // Add detailed logging to help diagnose issues
             Console.WriteLine($"[DEBUG] ExtractAuthorizationCode: Location={uri}");
             Console.WriteLine($"[DEBUG] Query keys: {string.Join(", ", query.Keys)}");
-            
+
             if (!query.ContainsKey("code"))
             {
                 Console.WriteLine($"[DEBUG] No code found in redirect. Query parameters: {string.Join(", ", query.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
                 return string.Empty;
             }
-            
+
             var code = query["code"]!;
             Console.WriteLine($"[DEBUG] Successfully obtained authorization code: {code}");
             return code;
@@ -335,17 +322,17 @@ namespace CoreIdent.Integration.Tests
                 var seededUser = await userStore.FindUserByUsernameAsync(_factory.TestUserEmail, default);
                 _factory.TestUserId = seededUser?.Id ?? throw new InvalidOperationException("Test user could not be found or seeded.");
             }
-            
+
             using var grantServiceScope = _factory.Services.CreateScope();
             var userGrantStore = grantServiceScope.ServiceProvider.GetRequiredService<CoreIdent.Core.Stores.IUserGrantStore>();
-            
+
             Console.WriteLine($"[DEBUG] EnsureUserGrantExistsAsync: Setting up grant for userId={_factory.TestUserId}, clientId={clientId}, scopes={string.Join(",", scopes)}");
-            
+
             // Clear any existing grants first to ensure clean state
-            try 
+            try
             {
                 // Try to cast to InMemoryUserGrantStore to access ClearAll if available
-                if (userGrantStore is CoreIdent.Core.Stores.InMemoryUserGrantStore inMemoryStore)
+                if (userGrantStore is InMemoryUserGrantStore inMemoryStore)
                 {
                     inMemoryStore.ClearAll();
                     Console.WriteLine("[DEBUG] Cleared all existing user grants");
@@ -355,13 +342,13 @@ namespace CoreIdent.Integration.Tests
             {
                 Console.WriteLine($"[DEBUG] Unable to clear grants: {ex.Message}");
             }
-            
+
             // Create a fresh grant
             try
             {
                 await userGrantStore.StoreUserGrantAsync(_factory.TestUserId, clientId, scopes, default);
                 Console.WriteLine("[DEBUG] Successfully created user grant");
-                
+
                 // Verify the grant exists
                 var hasGrant = await userGrantStore.HasUserGrantedConsentAsync(_factory.TestUserId, clientId, scopes, default);
                 Console.WriteLine($"[DEBUG] Verified grant exists: {hasGrant}");
@@ -386,23 +373,23 @@ namespace CoreIdent.Integration.Tests
 
         // Helper to follow auth flow with detailed logging
         private async Task<string?> GetAuthorizationCodeWithConsentHandlingAsync(
-            HttpClient client, 
+            HttpClient client,
             string clientId,
-            string redirectUri, 
+            string redirectUri,
             string[] scopes,
-            string? codeChallenge, 
+            string? codeChallenge,
             string state)
         {
             // Step 1: Ensure user grant exists to bypass consent screen
             await EnsureUserGrantExistsAsync(clientId, scopes);
-            
+
             // Step 2: Ensure user is authenticated for the client
             var cookieHeader = await EnsureAuthenticatedAsync(client);
-            
+
             // Step 3: Prepare and send the authorize request
             var encodedRedirectUri = WebUtility.UrlEncode(redirectUri);
             var encodedScopes = WebUtility.UrlEncode(string.Join(" ", scopes));
-            
+
             var authorizeUri = new Uri(
                 $"/auth/authorize?client_id={clientId}" +
                 $"&response_type=code" +
@@ -411,47 +398,47 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state={state}", UriKind.Relative);
-            
+
             Console.WriteLine($"[DEBUG] Authorize request URI: {authorizeUri}");
-            
+
             // Don't follow redirects automatically - need to handle them manually
             var clientOptions = new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 HandleCookies = true
             };
-            
+
             using var authorizeClient = _factory.CreateClient(clientOptions);
-            
+
             // Ensure authentication cookie is forwarded
             if (!string.IsNullOrEmpty(cookieHeader))
                 authorizeClient.DefaultRequestHeaders.Add("Cookie", cookieHeader);
-            
+
             // Dump all headers before request for debugging
             Console.WriteLine("[DEBUG] Auth request headers:");
             foreach (var header in authorizeClient.DefaultRequestHeaders)
             {
                 Console.WriteLine($"[DEBUG]   {header.Key}: {string.Join(", ", header.Value)}");
             }
-            
+
             // Make the authorize request
             var authorizeResponse = await authorizeClient.GetAsync(authorizeUri);
-            
+
             Console.WriteLine($"[DEBUG] Authorize response status: {authorizeResponse.StatusCode}");
-            
+
             // Handle the response based on status code
             if (authorizeResponse.StatusCode == HttpStatusCode.OK)
             {
                 // Not redirected - likely a login or consent page
                 var responseContent = await authorizeResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"[DEBUG] 200 OK response content: {responseContent.Substring(0, Math.Min(responseContent.Length, 500))}");
-                
+
                 if (responseContent.Contains("/auth/login") || responseContent.Contains("login"))
                 {
                     Console.WriteLine("[DEBUG] Auth response contains login form - authentication failed");
                     return string.Empty;
                 }
-                
+
                 if (responseContent.Contains("/auth/consent") || responseContent.Contains("consent"))
                 {
                     Console.WriteLine("[DEBUG] Auth response contains consent form - handling consent");
@@ -461,24 +448,24 @@ namespace CoreIdent.Integration.Tests
                         return await HandleConsentFlowAsync(authorizeClient, responseUri);
                     }
                 }
-                
+
                 Console.WriteLine($"[DEBUG] Auth response was 200 OK but not recognized");
                 return string.Empty;
             }
-            
+
             if (authorizeResponse.StatusCode != HttpStatusCode.Redirect)
             {
                 var errorContent = await authorizeResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"[DEBUG] Auth response was unexpected: {authorizeResponse.StatusCode}. Content: {errorContent.Substring(0, Math.Min(errorContent.Length, 500))}");
                 return string.Empty;
             }
-            
+
             // 2. Extract code from redirect location
             var authLocation = authorizeResponse.Headers.Location!;
             authLocation.ShouldNotBeNull();
             var absoluteLocation = authLocation.IsAbsoluteUri ? authLocation : new Uri(authorizeClient.BaseAddress!, authLocation);
             Console.WriteLine($"[DEBUG] Redirect location: {absoluteLocation}");
-            
+
             // Check if we need to handle login or consent
             if (absoluteLocation.ToString().StartsWith("http://localhost:12345/callback"))
             {
@@ -546,51 +533,51 @@ namespace CoreIdent.Integration.Tests
         {
             Console.WriteLine($"[DEBUG] Getting consent page: {consentUrl}");
             var consentResponse = await client.GetAsync(consentUrl);
-            
+
             if (!consentResponse.IsSuccessStatusCode)
             {
                 Console.WriteLine($"[DEBUG] Failed to get consent page: {consentResponse.StatusCode}");
                 return string.Empty;
             }
-            
+
             var consentHtml = await consentResponse.Content.ReadAsStringAsync();
             var formFields = HtmlFormParser.ExtractInputFields(consentHtml);
-            
+
             Console.WriteLine($"[DEBUG] Consent form fields: {string.Join(", ", formFields.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
-            
+
             // Add consent approval
             formFields["Allow"] = "true";
-            
+
             // Ensure antiforgery token is present
             if (!formFields.ContainsKey("__RequestVerificationToken"))
             {
-                var tokenMatch = System.Text.RegularExpressions.Regex.Match(consentHtml, 
-                    "<input[^>]+name=\"__RequestVerificationToken\"[^>]+value=\"([^\"]+)\"", 
+                var tokenMatch = System.Text.RegularExpressions.Regex.Match(consentHtml,
+                    "<input[^>]+name=\"__RequestVerificationToken\"[^>]+value=\"([^\"]+)\"",
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                
+
                 if (tokenMatch.Success)
                 {
                     formFields["__RequestVerificationToken"] = tokenMatch.Groups[1].Value;
                 }
             }
-            
+
             var content = new FormUrlEncodedContent(formFields);
-            
+
             Console.WriteLine($"[DEBUG] Posting consent form to: {consentUrl}");
             var postConsentResponse = await client.PostAsync(consentUrl, content);
-            
+
             if (postConsentResponse.StatusCode != HttpStatusCode.Redirect)
             {
                 var responseContent = await postConsentResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"[DEBUG] Consent POST did not redirect: {postConsentResponse.StatusCode}. Response: {responseContent.Substring(0, Math.Min(responseContent.Length, 500))}");
                 return string.Empty;
             }
-            
+
             var redirectLocation = postConsentResponse.Headers.Location!;
             redirectLocation.ShouldNotBeNull();
             var absoluteRedirect = redirectLocation.IsAbsoluteUri ? redirectLocation : new Uri(client.BaseAddress!, redirectLocation);
             Console.WriteLine($"[DEBUG] Consent redirected to: {absoluteRedirect}");
-            
+
             // Check for code in the redirect URL
             var query = QueryHelpers.ParseQuery(absoluteRedirect.Query);
             if (!query.ContainsKey("code"))
@@ -598,7 +585,7 @@ namespace CoreIdent.Integration.Tests
                 Console.WriteLine($"[DEBUG] No code in consent redirect. Query: {string.Join(", ", query.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
                 return string.Empty;
             }
-            
+
             var code = query["code"]!;
             Console.WriteLine($"[DEBUG] Got authorization code after consent: {code}");
             return code;
@@ -631,7 +618,7 @@ namespace CoreIdent.Integration.Tests
         {
             // Create a new UserGrant beforehand and store it to bypass consent flow
             await EnsureUserGrantExistsAsync(_testClientId, new[] { "openid", "profile", "api1" });
-            
+
             var (_, codeChallenge) = GeneratePkceValues();
             await EnsureAuthenticatedAsync(_client);
             var requestUri = new Uri($"/auth/authorize?client_id=test-authcode-client" +
@@ -652,7 +639,7 @@ namespace CoreIdent.Integration.Tests
             consentLocation.ShouldNotBeNull();
             var absoluteConsentLocation = consentLocation.IsAbsoluteUri ? consentLocation : new Uri(_client.BaseAddress!, consentLocation);
             Console.WriteLine($"[DEBUG] Step 1: absoluteConsentLocation: {absoluteConsentLocation}");
-            
+
             // If the redirect is to consent, proceed as before. If it's directly to callback, assert and finish.
             if (absoluteConsentLocation.ToString().StartsWith("http://localhost:12345/callback"))
             {
@@ -723,7 +710,7 @@ namespace CoreIdent.Integration.Tests
         {
             var (_, codeChallenge) = GeneratePkceValues();
             var invalidClientId = "invalid-client";
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={invalidClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -731,10 +718,10 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=abc123", UriKind.Relative);
-                
+
             var response = await _client.GetAsync(authorizeUri);
-            
-            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest); 
+
+            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
         [Fact]
@@ -742,7 +729,7 @@ namespace CoreIdent.Integration.Tests
         {
             var (_, codeChallenge) = GeneratePkceValues();
             var invalidRedirectUri = "http://invalid-callback.com";
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode(invalidRedirectUri)}" +
@@ -750,9 +737,9 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=abc123", UriKind.Relative);
-                
+
             var response = await _client.GetAsync(authorizeUri);
-            
+
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
@@ -760,33 +747,33 @@ namespace CoreIdent.Integration.Tests
         public async Task Authorize_WithMissingRedirectUri_ReturnsBadRequest()
         {
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&scope=openid%20profile" +
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=abc123", UriKind.Relative);
-                
+
             var response = await _client.GetAsync(authorizeUri);
-            
+
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
         [Fact]
         public async Task Authorize_WithMissingPkceChallenge_ReturnsRedirect()
         {
-            var (_, _) = GeneratePkceValues(); 
-            
+            var (_, _) = GeneratePkceValues();
+
             var stateValue = "test-missing-pkce";
             var authResponse = await GetAuthorizationCodeAsync(
                 _client,
                 stateValue,
-                null, 
+                null,
                 null);
-            
+
             var authCode = ExtractAuthorizationCode(authResponse);
-            
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
@@ -795,11 +782,11 @@ namespace CoreIdent.Integration.Tests
                 ["redirect_uri"] = "http://localhost:12345/callback"
                 // Intentionally missing code_verifier
             });
-            
+
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -818,7 +805,7 @@ namespace CoreIdent.Integration.Tests
             var redirectUri = "http://localhost:12345/callback";
             var scopes = new[] { "openid", "profile", "api1", "offline_access" };
             var state = "test-token-state";
-            
+
             // Get authorization code using our improved helper
             var code = await GetAuthorizationCodeWithConsentHandlingAsync(
                 _client,
@@ -827,14 +814,14 @@ namespace CoreIdent.Integration.Tests
                 scopes,
                 codeChallenge,
                 state);
-            
+
             // Validate we got an authorization code
             if (string.IsNullOrEmpty(code))
             {
                 Assert.True(false, "Authorization code should be obtained successfully");
                 return;
             }
-            
+
             // Create token request
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
@@ -844,7 +831,7 @@ namespace CoreIdent.Integration.Tests
                 ["redirect_uri"] = redirectUri,
                 ["code_verifier"] = "test-verifier"
             });
-            
+
             // Add detailed logging for the token request
             Console.WriteLine("[DEBUG] Token request details:");
             Console.WriteLine($"[DEBUG] grant_type: authorization_code");
@@ -852,7 +839,7 @@ namespace CoreIdent.Integration.Tests
             Console.WriteLine($"[DEBUG] code: {code}");
             Console.WriteLine($"[DEBUG] redirect_uri: {redirectUri}");
             Console.WriteLine($"[DEBUG] code_verifier: test-verifier");
-            
+
             // Get client information for debugging
             using (var serviceScope = _factory.Services.CreateScope())
             {
@@ -877,16 +864,16 @@ namespace CoreIdent.Integration.Tests
                     Console.WriteLine($"[DEBUG] Error retrieving client info: {ex.Message}");
                 }
             }
-            
+
             // Request token
             Console.WriteLine($"[DEBUG] Sending token request to: {_client.BaseAddress}auth/token");
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             // Log detailed information about the response
             Console.WriteLine($"[DEBUG] Token response status: {tokenResponse.StatusCode}");
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             Console.WriteLine($"[DEBUG] Token response content: {responseContent}");
-            
+
             if (tokenResponse.StatusCode == HttpStatusCode.BadRequest)
             {
                 var errorDoc = JsonDocument.Parse(responseContent);
@@ -901,14 +888,14 @@ namespace CoreIdent.Integration.Tests
                 }
                 return;
             }
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
-            
+
             // Parse token response
             var content = await tokenResponse.Content.ReadAsStringAsync();
             using JsonDocument document = JsonDocument.Parse(content);
             JsonElement root = document.RootElement;
-            
+
             // Validate token properties
             root.GetProperty("access_token").GetString().ShouldNotBeNullOrEmpty();
             root.GetProperty("token_type").GetString().ShouldBe("Bearer");
@@ -921,12 +908,12 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var invalidCode = "this_code_does_not_exist";
-            
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = _testClientId,
-                ["code"] = invalidCode, 
+                ["code"] = invalidCode,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = "test-verifier"
             });
@@ -934,7 +921,7 @@ namespace CoreIdent.Integration.Tests
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
 
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -964,21 +951,21 @@ namespace CoreIdent.Integration.Tests
             var code = query["code"]!;
 
             var (invalidVerifier, _) = GeneratePkceValues();
-            invalidVerifier.ShouldNotBe(originalVerifier); 
-            
+            invalidVerifier.ShouldNotBe(originalVerifier);
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = _testClientId,
-                ["code"] = code!, 
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
-                ["code_verifier"] = invalidVerifier 
+                ["code_verifier"] = invalidVerifier
             });
 
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
 
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -1000,7 +987,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={challenge}" +
                 "&code_challenge_method=S256" +
                 "&state=test-consumed-code", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var authLocation = authorizeResponse.Headers.Location!;
@@ -1018,7 +1005,7 @@ namespace CoreIdent.Integration.Tests
             });
 
             var tokenResponse1 = await _client.PostAsync("/auth/token", tokenRequest1);
-            
+
             if (tokenResponse1.StatusCode == HttpStatusCode.BadRequest)
             {
                 var errorContent = await tokenResponse1.Content.ReadAsStringAsync();
@@ -1036,7 +1023,7 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = _testClientId,
-                ["code"] = code!, 
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = verifier
             });
@@ -1065,7 +1052,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={challenge}" +
                 "&code_challenge_method=S256" +
                 "&state=test-mismatch-redirect", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var authLocation = authorizeResponse.Headers.Location!;
@@ -1078,8 +1065,8 @@ namespace CoreIdent.Integration.Tests
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = _testClientId,
-                ["code"] = code!, 
-                ["redirect_uri"] = wrongRedirectUri, 
+                ["code"] = code!,
+                ["redirect_uri"] = wrongRedirectUri,
                 ["code_verifier"] = verifier
             });
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
@@ -1099,7 +1086,7 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 "&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1107,7 +1094,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 "&code_challenge_method=S256" +
                 "&state=test-expired-code", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.StatusCode.ShouldBe(HttpStatusCode.Redirect);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
@@ -1129,7 +1116,7 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 "&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1137,7 +1124,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 "&code_challenge_method=S256" +
                 "&state=test-invalid-client", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.StatusCode.ShouldBe(HttpStatusCode.Redirect);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
@@ -1155,16 +1142,16 @@ namespace CoreIdent.Integration.Tests
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
-                ["client_id"] = "invalid-client-id", 
+                ["client_id"] = "invalid-client-id",
                 ["code"] = code,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = "test-verifier"
             });
 
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_client", "invalid_grant", "invalid_request", "invalid_token");
@@ -1178,17 +1165,17 @@ namespace CoreIdent.Integration.Tests
         public async Task Token_WithMissingCodeVerifier_ReturnsBadRequest()
         {
             await EnsureAuthenticatedAsync(_client);
-            var (_, codeChallenge) = GeneratePkceValues(); 
-            
+            var (_, codeChallenge) = GeneratePkceValues();
+
             var stateValue = "test-missing-verifier";
             var authResponse = await GetAuthorizationCodeAsync(
                 _client,
                 stateValue,
-                codeChallenge, 
+                codeChallenge,
                 "S256");
-            
+
             var authCode = ExtractAuthorizationCode(authResponse);
-            
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["client_id"] = _testClientId,
@@ -1197,11 +1184,11 @@ namespace CoreIdent.Integration.Tests
                 ["redirect_uri"] = "http://localhost:12345/callback"
                 // Intentionally missing code_verifier
             });
-            
+
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -1250,18 +1237,18 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var invalidRefreshToken = "invalid-refresh-token";
-            
+
             var refreshRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "refresh_token",
                 ["client_id"] = _testClientId,
                 ["refresh_token"] = invalidRefreshToken ?? string.Empty
             });
-            
+
             var refreshResponse = await _client.PostAsync("/auth/token", refreshRequest);
-            
+
             refreshResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await refreshResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -1276,7 +1263,7 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 "&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode(_testClientRedirectUri)}" +
@@ -1312,10 +1299,10 @@ namespace CoreIdent.Integration.Tests
             await EnsureAuthenticatedAsync(client1);
             var client2 = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
             await EnsureAuthenticatedAsync(client2);
-            
+
             var (_, codeChallenge1) = GeneratePkceValues();
             var (_, codeChallenge2) = GeneratePkceValues();
-            
+
             var authorizeUri1 = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1323,7 +1310,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge1}" +
                 $"&code_challenge_method=S256" +
                 $"&state=concurrent1", UriKind.Relative);
-                
+
             var authorizeUri2 = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1331,29 +1318,29 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge2}" +
                 $"&code_challenge_method=S256" +
                 $"&state=concurrent2", UriKind.Relative);
-            
+
             var task1 = client1.GetAsync(authorizeUri1);
             var task2 = client2.GetAsync(authorizeUri2);
-            
+
             await Task.WhenAll(task1, task2);
-            
+
             var response1 = await task1;
             var response2 = await task2;
-            
+
             response1.StatusCode.ShouldBe(HttpStatusCode.Redirect);
             response2.StatusCode.ShouldBe(HttpStatusCode.Redirect);
-            
+
             response1.Headers.Location.ShouldNotBeNull();
             response2.Headers.Location.ShouldNotBeNull();
-            
+
             var location1 = response1.Headers.Location!;
             var absoluteLocation1 = location1.IsAbsoluteUri ? location1 : new Uri(client1.BaseAddress!, location1);
             var query1 = QueryHelpers.ParseQuery(absoluteLocation1.Query);
-            
+
             var location2 = response2.Headers.Location!;
             var absoluteLocation2 = location2.IsAbsoluteUri ? location2 : new Uri(client2.BaseAddress!, location2);
             var query2 = QueryHelpers.ParseQuery(absoluteLocation2.Query);
-            
+
             if (!query1.TryGetValue("code", out var codeVal1) || string.IsNullOrEmpty(codeVal1))
             {
                 Console.WriteLine($"[DEBUG] No code found in redirect. Query parameters: {string.Join(", ", query1.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
@@ -1364,10 +1351,10 @@ namespace CoreIdent.Integration.Tests
                 Console.WriteLine($"[DEBUG] No code found in redirect. Query parameters: {string.Join(", ", query2.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
                 Assert.True(false, "Authorization response did not contain a code parameter.");
             }
-            
+
             var code1 = codeVal1;
             var code2 = codeVal2;
-            
+
             code1.ShouldNotBe(code2);
         }
 
@@ -1381,11 +1368,11 @@ namespace CoreIdent.Integration.Tests
                 ["client_id"] = _testClientId,
                 ["some_invalid_param"] = "value"
             });
-            
+
             var response = await _client.PostAsync("/auth/token", malformedRequest);
-            
+
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_request", "invalid_grant", "invalid_client", "invalid_token");
@@ -1400,7 +1387,7 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1408,7 +1395,7 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=test-client-auth", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var authLocation = authorizeResponse.Headers.Location!;
@@ -1425,7 +1412,7 @@ namespace CoreIdent.Integration.Tests
             var clientWithAuth = _factory.CreateClient();
             var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_testClientId}:"));
             clientWithAuth.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
-            
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
@@ -1434,9 +1421,9 @@ namespace CoreIdent.Integration.Tests
                 ["code_verifier"] = "test-verifier"
                 // client_id is in the Authorization header now
             });
-            
+
             var tokenResponse = await clientWithAuth.PostAsync("/auth/token", tokenRequest);
-            
+
             if (tokenResponse.IsSuccessStatusCode)
             {
                 var responseContent = await tokenResponse.Content.ReadAsStringAsync();
@@ -1451,7 +1438,7 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 "&response_type=code" +
                 "&redirect_uri=" + WebUtility.UrlEncode("http://localhost:12345/callback") +
@@ -1459,7 +1446,7 @@ namespace CoreIdent.Integration.Tests
                 "&code_challenge=" + codeChallenge +
                 "&code_challenge_method=S256" +
                 "&state=test-token-expiry", UriKind.Relative);
-            
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var authLocation = authorizeResponse.Headers.Location!;
@@ -1482,7 +1469,7 @@ namespace CoreIdent.Integration.Tests
                 ["code_verifier"] = "test-verifier"
             });
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             if (tokenResponse.StatusCode == HttpStatusCode.BadRequest)
             {
                 var errorContent = await tokenResponse.Content.ReadAsStringAsync();
@@ -1494,21 +1481,21 @@ namespace CoreIdent.Integration.Tests
                 }
                 return;
             }
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using JsonDocument document = JsonDocument.Parse(responseContent);
             JsonElement root = document.RootElement;
-            
+
             string accessToken = root.GetProperty("access_token").GetString()!;
             string tokenType = root.GetProperty("token_type").GetString()!;
             string refreshToken = root.GetProperty("refresh_token").GetString()!;
             int expiresIn = root.GetProperty("expires_in").GetInt32();
-            
+
             root.TryGetProperty("id_token", out var idTokenElement).ShouldBeTrue("id_token should be present in the response");
             var idToken = idTokenElement.GetString();
             idToken.ShouldNotBeNullOrWhiteSpace();
-            
+
             var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
             var validationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
@@ -1516,7 +1503,7 @@ namespace CoreIdent.Integration.Tests
                 IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("TestSecretKeyNeedsToBe_AtLeast32CharsLongForHS256")),
                 ValidateIssuer = true,
                 ValidIssuer = "https://test.issuer.com",
-                ValidateAudience = false, 
+                ValidateAudience = false,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
@@ -1524,7 +1511,7 @@ namespace CoreIdent.Integration.Tests
             var jwtToken = (System.IdentityModel.Tokens.Jwt.JwtSecurityToken)validatedToken;
             jwtToken.Claims.ShouldContain(c => c.Type == "sub");
             jwtToken.Claims.ShouldContain(c => c.Type == "iat");
-            jwtToken.Claims.ShouldContain(c => c.Type == "nonce"); 
+            jwtToken.Claims.ShouldContain(c => c.Type == "nonce");
         }
 
         [Fact]
@@ -1532,15 +1519,15 @@ namespace CoreIdent.Integration.Tests
         {
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
-                $"&scope=openid" + 
+                $"&scope=openid" +
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state=test-scope-validation", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
             var authLocation = authorizeResponse.Headers.Location!;
@@ -1562,10 +1549,10 @@ namespace CoreIdent.Integration.Tests
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = "test-verifier"
             });
-            
+
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_scope", "invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -1585,11 +1572,11 @@ namespace CoreIdent.Integration.Tests
                 ["client_id"] = _testClientId,
                 ["client_secret"] = "secret"
             });
-            
+
             var response = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBe("unsupported_grant_type");
@@ -1605,7 +1592,7 @@ namespace CoreIdent.Integration.Tests
             await EnsureAuthenticatedAsync(_client);
             var (_, codeChallenge) = GeneratePkceValues();
             var originalState = "original-state-value";
-            
+
             var authorizeUri = new Uri($"/auth/authorize?client_id={_testClientId}" +
                 $"&response_type=code" +
                 $"&redirect_uri={WebUtility.UrlEncode("http://localhost:12345/callback")}" +
@@ -1613,46 +1600,46 @@ namespace CoreIdent.Integration.Tests
                 $"&code_challenge={codeChallenge}" +
                 $"&code_challenge_method=S256" +
                 $"&state={originalState}", UriKind.Relative);
-                
+
             var authorizeResponse = await _client.GetAsync(authorizeUri);
             authorizeResponse.Headers.Location.ShouldNotBeNull();
-            
+
             var location = authorizeResponse.Headers.Location!;
             var absoluteLocation = location.IsAbsoluteUri ? location : new Uri(_client.BaseAddress!, location);
             Console.WriteLine($"[DEBUG] Redirect location: {absoluteLocation}");
-            
+
             // Check if we got redirected to login
             if (absoluteLocation.ToString().Contains("/auth/login"))
             {
                 Console.WriteLine("[DEBUG] Redirected to login page, authentication may have failed");
                 return;
             }
-            
+
             // Otherwise, we should have a code in the callback URL
             var query = QueryHelpers.ParseQuery(absoluteLocation.Query);
-            
+
             if (!query.ContainsKey("code"))
             {
                 Console.WriteLine($"[DEBUG] No code found in redirect. Query parameters: {string.Join(", ", query.Select(kvp => $"{kvp.Key}={kvp.Value}"))}");
                 return;
             }
-            
+
             var code = query["code"]!;
             Console.WriteLine($"[DEBUG] Successfully obtained authorization code: {code}");
-            
+
             var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "authorization_code",
                 ["client_id"] = _testClientId,
-                ["code"] = code!, 
+                ["code"] = code!,
                 ["redirect_uri"] = "http://localhost:12345/callback",
                 ["code_verifier"] = "invalid-verifier"
             });
-            
+
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-            
+
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using var document = JsonDocument.Parse(responseContent);
             document.RootElement.GetProperty("error").GetString().ShouldBeOneOf("invalid_grant", "invalid_client", "invalid_request", "invalid_token");
@@ -1698,7 +1685,7 @@ namespace CoreIdent.Integration.Tests
                 ["code_verifier"] = "test-verifier"
             });
             var tokenResponse = await _client.PostAsync("/auth/token", tokenRequest);
-            
+
             if (tokenResponse.StatusCode == HttpStatusCode.BadRequest)
             {
                 var errorContent = await tokenResponse.Content.ReadAsStringAsync();
@@ -1710,21 +1697,21 @@ namespace CoreIdent.Integration.Tests
                 }
                 return;
             }
-            
+
             tokenResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
             var responseContent = await tokenResponse.Content.ReadAsStringAsync();
             using JsonDocument document = JsonDocument.Parse(responseContent);
             JsonElement root = document.RootElement;
-            
+
             string accessToken = root.GetProperty("access_token").GetString()!;
             string tokenType = root.GetProperty("token_type").GetString()!;
             string refreshToken = root.GetProperty("refresh_token").GetString()!;
             int expiresIn = root.GetProperty("expires_in").GetInt32();
-            
+
             root.TryGetProperty("id_token", out var idTokenElement).ShouldBeTrue("id_token should be present in the response");
             var idToken = idTokenElement.GetString();
             idToken.ShouldNotBeNullOrWhiteSpace();
-            
+
             var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
             var validationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
@@ -1732,7 +1719,7 @@ namespace CoreIdent.Integration.Tests
                 IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("TestSecretKeyNeedsToBe_AtLeast32CharsLongForHS256")),
                 ValidateIssuer = true,
                 ValidIssuer = "https://test.issuer.com",
-                ValidateAudience = false, 
+                ValidateAudience = false,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
@@ -1740,7 +1727,7 @@ namespace CoreIdent.Integration.Tests
             var jwtToken = (System.IdentityModel.Tokens.Jwt.JwtSecurityToken)validatedToken;
             jwtToken.Claims.ShouldContain(c => c.Type == "sub");
             jwtToken.Claims.ShouldContain(c => c.Type == "iat");
-            jwtToken.Claims.ShouldContain(c => c.Type == "nonce" && c.Value == nonce); 
+            jwtToken.Claims.ShouldContain(c => c.Type == "nonce" && c.Value == nonce);
         }
 
         [Fact]

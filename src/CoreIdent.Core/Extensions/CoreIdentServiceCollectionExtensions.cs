@@ -1,10 +1,10 @@
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions; // For TryAdd*
 using Microsoft.Extensions.Options;
-using System;
 
 namespace CoreIdent.Core.Extensions;
 

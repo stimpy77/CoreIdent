@@ -1,12 +1,7 @@
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
 using Shouldly;
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace CoreIdent.Core.Tests.Stores;
 

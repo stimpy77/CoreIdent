@@ -1,12 +1,9 @@
 using CoreIdent.Storage.EntityFrameworkCore;
-using Microsoft.AspNetCore.Hosting;
+using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System.Data.Common;
-using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using Xunit;
 
 namespace CoreIdent.TestHost.Setup;
@@ -35,20 +32,20 @@ public class TestSetupFixture : WebApplicationFactory<Program>, IAsyncLifetime
             }
 
             // Remove the DbConnection registration if it exists
-             var connectionDescriptor = services.SingleOrDefault(
-                 d => d.ServiceType == typeof(DbConnection));
-             if (connectionDescriptor != null)
-             {
-                 services.Remove(connectionDescriptor);
-             }
+            var connectionDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbConnection));
+            if (connectionDescriptor != null)
+            {
+                services.Remove(connectionDescriptor);
+            }
 
             // Use the connection string created in InitializeAsync
-             if (string.IsNullOrEmpty(_dbConnectionString))
-             {
-                  throw new InvalidOperationException("Database connection string not initialized before ConfigureServices.");
-             }
-             _dbConnection = new SqliteConnection(_dbConnectionString);
-             // Connection will be opened in InitializeAsync or already open
+            if (string.IsNullOrEmpty(_dbConnectionString))
+            {
+                throw new InvalidOperationException("Database connection string not initialized before ConfigureServices.");
+            }
+            _dbConnection = new SqliteConnection(_dbConnectionString);
+            // Connection will be opened in InitializeAsync or already open
 
             // Add DbContext using Sqlite in-memory database
             services.AddDbContext<CoreIdentDbContext>(options =>
@@ -99,10 +96,10 @@ public class TestSetupFixture : WebApplicationFactory<Program>, IAsyncLifetime
         // Create and open the connection here
         if (_dbConnection == null)
         {
-             _dbConnectionString = $"DataSource=file:memdb-{Guid.NewGuid()}?mode=memory&cache=shared";
-             _dbConnection = new SqliteConnection(_dbConnectionString);
-             await _dbConnection.OpenAsync(); // Open connection here
-             Console.WriteLine($"TestSetupFixture: Initialized and opened DB connection: {_dbConnectionString}");
+            _dbConnectionString = $"DataSource=file:memdb-{Guid.NewGuid()}?mode=memory&cache=shared";
+            _dbConnection = new SqliteConnection(_dbConnectionString);
+            await _dbConnection.OpenAsync(); // Open connection here
+            Console.WriteLine($"TestSetupFixture: Initialized and opened DB connection: {_dbConnectionString}");
         }
         else
         {
@@ -139,4 +136,4 @@ public class DatabaseCollection : ICollectionFixture<TestSetupFixture>
     // This class has no code, and is never created. Its purpose is simply
     // to be the place to apply [CollectionDefinition] and all the
     // ICollectionFixture<> interfaces.
-} 
+}

@@ -1,14 +1,9 @@
+using System.Collections.Concurrent;
+using System.Security.Claims;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Security.Claims;
 
-namespace CoreIdent.Core.Stores;
+namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
 /// An in-memory implementation of IUserStore for testing or simple scenarios.

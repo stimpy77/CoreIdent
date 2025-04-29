@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using CoreIdent.Core.Models;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
-namespace CoreIdent.Core.Stores
+namespace CoreIdent.Core.Stores.InMemory
 {
     /// <summary>
     /// In-memory store for user consent grants.
@@ -33,20 +28,20 @@ namespace CoreIdent.Core.Stores
         public Task SaveAsync(UserGrant grant, CancellationToken cancellationToken)
         {
             if (grant == null) throw new ArgumentNullException(nameof(grant));
-            
+
             // Ensure both SubjectId and UserId are set
             if (string.IsNullOrWhiteSpace(grant.SubjectId))
             {
                 if (string.IsNullOrWhiteSpace(grant.UserId))
                     throw new ArgumentException("Either SubjectId or UserId must be provided");
-                
+
                 grant.SubjectId = grant.UserId;
             }
             else if (string.IsNullOrWhiteSpace(grant.UserId))
             {
                 grant.UserId = grant.SubjectId;
             }
-            
+
             var key = GetKey(grant.SubjectId, grant.ClientId);
             _grants.AddOrUpdate(key,
                 grant,
@@ -67,7 +62,7 @@ namespace CoreIdent.Core.Stores
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(nameof(userId));
             if (string.IsNullOrWhiteSpace(clientId)) throw new ArgumentException(nameof(clientId));
             if (scopes == null) throw new ArgumentNullException(nameof(scopes));
-            
+
             // Create a new UserGrant with both userId and subjectId set to the same value
             var grant = new UserGrant
             {
@@ -78,7 +73,7 @@ namespace CoreIdent.Core.Stores
                 GrantedScopes = scopes.ToList(), // Set both Scopes and GrantedScopes
                 GrantedAt = DateTime.UtcNow
             };
-            
+
             var key = GetKey(userId, clientId);
             _grants[key] = grant;
             return Task.CompletedTask;
@@ -89,23 +84,23 @@ namespace CoreIdent.Core.Stores
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException(nameof(userId));
             if (string.IsNullOrWhiteSpace(clientId)) throw new ArgumentException(nameof(clientId));
             if (scopes == null) throw new ArgumentNullException(nameof(scopes));
-            
+
             var scopesList = scopes.ToList();
             var key = GetKey(userId, clientId);
-            
+
             // First try to find by exact key
             if (_grants.TryGetValue(key, out var grant))
             {
                 return Task.FromResult(scopesList.All(scope => grant.GrantedScopes.Contains(scope)));
             }
-            
+
             // Fallback to checking by user ID through all grants
-            var hasConsent = _grants.Values.Any(g => 
+            var hasConsent = _grants.Values.Any(g =>
                 (g.UserId == userId || g.SubjectId == userId) &&
                 g.ClientId == clientId &&
                 scopesList.All(scope => g.GrantedScopes.Contains(scope))
             );
-            
+
             return Task.FromResult(hasConsent);
         }
 
