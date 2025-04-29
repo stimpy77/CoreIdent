@@ -242,6 +242,7 @@ namespace CoreIdent.Core.Extensions
                             storedCode = codeToStore;
                             logger.LogInformation("Stored authorization code {CodeHandle} for client {ClientId} and user {UserId} on attempt {Attempt}",
                                 generatedCode, clientId, subjectId, attempts);
+                            break;
                         }
                         else if (storeResult == StoreResult.Conflict)
                         {
@@ -249,14 +250,14 @@ namespace CoreIdent.Core.Extensions
                         }
                         else
                         {
-                            logger.LogError("Authorization code storage failed with result {StoreResult} for code {CodeHandle} on attempt {Attempt}", storeResult, generatedCode, attempts);
-                            return Results.Problem("Failed to store authorization request.", statusCode: StatusCodes.Status500InternalServerError);
+                            logger.LogError("Authorization code storage failed with unexpected result {StoreResult} for code {CodeHandle} on attempt {Attempt}", storeResult, generatedCode, attempts);
+                            return Results.Problem("Failed to store authorization request due to storage system error.", statusCode: StatusCodes.Status500InternalServerError);
                         }
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Unexpected exception calling StoreAuthorizationCodeAsync for code {CodeHandle} on attempt {Attempt}", generatedCode, attempts);
-                        return Results.Problem("Failed to store authorization request due to unexpected error.", statusCode: StatusCodes.Status500InternalServerError);
+                        return Results.Problem("Failed to store authorization request due to unexpected exception.", statusCode: StatusCodes.Status500InternalServerError);
                     }
                 }
 
