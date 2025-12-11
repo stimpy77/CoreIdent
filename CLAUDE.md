@@ -117,3 +117,4 @@ tests/
 - Delete or weaken existing tests
 - Hardcode configuration values
 - Log sensitive data (tokens, passwords, PII)
+- Add AI co-authorship to commits (no `Co-authored-by: Claude` or similar)
