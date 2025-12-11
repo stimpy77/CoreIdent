@@ -257,23 +257,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 0.6: OpenTelemetry Metrics Integration
 
-*   **Component:** Metrics Instrumentation
-    - [ ] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
-    - [ ] (L2) Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
-    - [ ] (L2) Add CoreIdent-specific metrics:
+> **Note:** .NET 10 provides built-in metrics (`aspnetcore.authentication.*`, `aspnetcore.identity.*`). CoreIdent adds supplementary metrics for OAuth/OIDC-specific operations.
+
+*   **Component:** CoreIdent-Specific Metrics
+    - [ ] (L2) Add supplementary metrics not covered by .NET 10 built-ins:
         - `coreident.passwordless.email.sent` — Email magic links sent
         - `coreident.passwordless.email.verified` — Successful email verifications
-        - `coreident.token.issued` — Tokens issued (by type)
+        - `coreident.token.issued` — Tokens issued (by type: access, refresh, id)
         - `coreident.token.revoked` — Tokens revoked
-        - `coreident.client.authenticated` — Client authentications
+        - `coreident.client.authenticated` — Client authentications (M2M)
 *   **Component:** Metrics Configuration
-    - [ ] (L1) Add `AddCoreIdentMetrics()` extension method
-    - [ ] (L2) Support filtering/sampling
+    - [ ] (L1) Add `AddCoreIdentMetrics()` extension to enable CoreIdent metrics alongside .NET 10 built-ins
 *   **Test Case:**
-    - [ ] (L2) Metrics are emitted for key operations
-    - [ ] (L2) Metrics integrate with Aspire dashboard
+    - [ ] (L2) CoreIdent-specific metrics are emitted for key operations
 *   **Documentation:**
-    - [ ] (L1) Metrics and observability guide
+    - [ ] (L1) Metrics and observability guide (reference .NET 10 built-in metrics)
 
 ---
 
@@ -404,41 +402,22 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 1.2: Passkey Integration (WebAuthn/FIDO2)
 
-*   **Component:** `CoreIdentPasskeyOptions`
-    - [ ] (L2) Create wrapper around .NET 10's `IdentityPasskeyOptions`
-        ```csharp
-        public class CoreIdentPasskeyOptions
-        {
-            public string? RelyingPartyId { get; set; }
-            public string RelyingPartyName { get; set; } = "CoreIdent";
-            public TimeSpan ChallengeTimeout { get; set; } = TimeSpan.FromMinutes(5);
-            public UserVerificationRequirement UserVerification { get; set; } = UserVerificationRequirement.Preferred;
-        }
-        ```
-*   **Component:** Passkey Service
-    - [ ] (L1) Create `IPasskeyService` interface
-    - [ ] (L3) Implement using .NET 10's built-in passkey support
-    - [ ] (L3) Handle registration ceremony
-    - [ ] (L3) Handle authentication ceremony
-*   **Component:** Passkey Credential Storage
-    - [ ] (L1) Create `IPasskeyCredentialStore` interface
-    - [ ] (L1) Create `PasskeyCredential` model
-    - [ ] (L2) Implement in-memory store
-    - [ ] (L2) Implement EF Core store
-*   **Component:** Passkey Endpoints
-    - [ ] (L2) `POST /auth/passkey/register/options` - Get registration options
-    - [ ] (L3) `POST /auth/passkey/register/complete` - Complete registration
-    - [ ] (L2) `POST /auth/passkey/authenticate/options` - Get authentication options
-    - [ ] (L3) `POST /auth/passkey/authenticate/complete` - Complete authentication
-*   **Component:** DI Registration
-    - [ ] (L1) Add `AddPasskeys()` extension method
+> **Note:** .NET 10 provides built-in passkey support via `IdentityPasskeyOptions` and ASP.NET Core Identity. CoreIdent wraps this for minimal-API scenarios and adds convenience configuration.
+
+*   **Component:** CoreIdent Passkey Configuration
+    - [ ] (L1) Create `AddCoreIdentPasskeys()` extension that configures .NET 10's `IdentityPasskeyOptions`
+    - [ ] (L1) Expose simplified configuration surface for common scenarios
+*   **Component:** Passkey Endpoints (Minimal API wrappers)
+    - [ ] (L2) `POST /auth/passkey/register/options` - Wrap .NET 10's registration options generation
+    - [ ] (L2) `POST /auth/passkey/register/complete` - Wrap .NET 10's registration completion
+    - [ ] (L2) `POST /auth/passkey/authenticate/options` - Wrap .NET 10's authentication options
+    - [ ] (L2) `POST /auth/passkey/authenticate/complete` - Wrap .NET 10's authentication completion
 *   **Test Case (Integration):**
     - [ ] (L2) Registration flow returns valid options
     - [ ] (L2) Authentication flow returns valid options
     - [ ] (Note: Full WebAuthn testing requires browser automation or mocks)
 *   **Documentation:**
-    - [ ] (L1) Add passkey setup guide
-    - [ ] (L1) Document browser requirements
+    - [ ] (L1) Add passkey setup guide (reference .NET 10 docs)
     - [ ] (L2) Provide JavaScript integration examples
 
 ---
@@ -474,33 +453,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 1.4: ClaimsPrincipal Extensions (C# 14)
 
+> **Note:** C# 14 extension members syntax is a language feature. CoreIdent provides a convenience library of common claim accessors using this syntax.
+
 *   **Component:** Extension Members
-    - [ ] (L2) Create `CoreIdent.Core/Extensions/ClaimsPrincipalExtensions.cs`
-        ```csharp
-        public static class ClaimsPrincipalExtensions
-        {
-            extension(ClaimsPrincipal principal)
-            {
-                public string? Email => principal.FindFirstValue(ClaimTypes.Email) 
-                                      ?? principal.FindFirstValue("email");
-                public string? UserId => principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                                       ?? principal.FindFirstValue("sub");
-                public string? Name => principal.FindFirstValue(ClaimTypes.Name)
-                                     ?? principal.FindFirstValue("name");
-                public Guid GetUserIdAsGuid() { /* ... */ }
-                public T? GetClaim<T>(string type) where T : IParsable<T> { /* ... */ }
-                public IEnumerable<string> GetRoles() { /* ... */ }
-            }
-        }
-        ```
+    - [ ] (L2) Create `CoreIdent.Core/Extensions/ClaimsPrincipalExtensions.cs` using C# 14 `extension` syntax
+        - `Email` — Returns email from standard or OIDC claim types
+        - `UserId` / `Sub` — Returns subject identifier
+        - `Name` — Returns display name
+        - `GetUserIdAsGuid()` — Parses user ID as GUID
+        - `GetClaim<T>()` — Generic typed claim accessor using `IParsable<T>`
+        - `GetRoles()` — Returns role claims as enumerable
 *   **Test Case (Unit):**
-    - [ ] (L1) `Email` property returns correct value from various claim types
-    - [ ] (L1) `UserId` property returns correct value
-    - [ ] (L1) `GetUserIdAsGuid()` parses correctly or throws
+    - [ ] (L1) Extension properties return correct values from various claim types
     - [ ] (L2) `GetClaim<T>()` parses various types correctly
 *   **Documentation:**
     - [ ] (L1) Add usage examples to README
-    - [ ] (L1) Document available extension properties/methods
 
 ---
 
