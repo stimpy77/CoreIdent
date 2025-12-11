@@ -36,6 +36,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** C# 14 Features
     - [ ] Enable C# 14 in all projects (`<LangVersion>14</LangVersion>`)
     - [ ] Add `ClaimsPrincipalExtensions` using extension members syntax
+*   **Component:** F# Compatibility
+    - [ ] Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
+    - [ ] Create F# sample project using Giraffe/Saturn
+    - [ ] Add F# template (`coreident-api-fsharp`)
+    - [ ] Document F# usage patterns
 *   **Test Case:**
     - [ ] All existing tests pass after migration
     - [ ] Solution builds without warnings on .NET 10
@@ -252,6 +257,28 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 0.6: OpenTelemetry Metrics Integration
+
+*   **Component:** Metrics Instrumentation
+    - [ ] Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
+    - [ ] Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
+    - [ ] Add CoreIdent-specific metrics:
+        - `coreident.passwordless.email.sent` — Email magic links sent
+        - `coreident.passwordless.email.verified` — Successful email verifications
+        - `coreident.token.issued` — Tokens issued (by type)
+        - `coreident.token.revoked` — Tokens revoked
+        - `coreident.client.authenticated` — Client authentications
+*   **Component:** Metrics Configuration
+    - [ ] Add `AddCoreIdentMetrics()` extension method
+    - [ ] Support filtering/sampling
+*   **Test Case:**
+    - [ ] Metrics are emitted for key operations
+    - [ ] Metrics integrate with Aspire dashboard
+*   **Documentation:**
+    - [ ] Metrics and observability guide
+
+---
+
 ## Phase 1: Passwordless & Developer Experience
 
 **Goal:** Make passwordless authentication trivially easy; establish the "5-minute auth" story.
@@ -458,13 +485,150 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+## Phase 1.5: Client Libraries
+
+**Goal:** Enable any .NET application to authenticate against CoreIdent (or any OAuth/OIDC server) with minimal code.
+
+**Estimated Duration:** 3-4 weeks
+
+**Prerequisites:** Phase 1 complete (server-side passwordless)
+
+---
+
+### Feature 1.5.1: Core Client Library
+
+*   **Component:** `CoreIdent.Client` Package (.NET Standard 2.0+)
+    - [ ] Create new project targeting `netstandard2.0;net8.0;net10.0`
+    - [ ] Define `ICoreIdentClient` interface
+        ```csharp
+        public interface ICoreIdentClient
+        {
+            Task<AuthResult> LoginAsync(CancellationToken ct = default);
+            Task<AuthResult> LoginSilentAsync(CancellationToken ct = default);
+            Task LogoutAsync(CancellationToken ct = default);
+            Task<string?> GetAccessTokenAsync(CancellationToken ct = default);
+            Task<ClaimsPrincipal?> GetUserAsync(CancellationToken ct = default);
+            bool IsAuthenticated { get; }
+            event EventHandler<AuthStateChangedEventArgs>? AuthStateChanged;
+        }
+        ```
+    - [ ] Define `CoreIdentClientOptions`
+        ```csharp
+        public class CoreIdentClientOptions
+        {
+            public string Authority { get; set; } = string.Empty;
+            public string ClientId { get; set; } = string.Empty;
+            public string? ClientSecret { get; set; }
+            public string RedirectUri { get; set; } = string.Empty;
+            public string PostLogoutRedirectUri { get; set; } = string.Empty;
+            public IEnumerable<string> Scopes { get; set; } = ["openid", "profile"];
+            public bool UsePkce { get; set; } = true;
+            public bool UseDPoP { get; set; } = false;
+            public TimeSpan TokenRefreshThreshold { get; set; } = TimeSpan.FromMinutes(5);
+        }
+        ```
+*   **Component:** Token Storage Abstraction
+    - [ ] Define `ISecureTokenStorage` interface
+        ```csharp
+        public interface ISecureTokenStorage
+        {
+            Task StoreTokensAsync(TokenSet tokens, CancellationToken ct = default);
+            Task<TokenSet?> GetTokensAsync(CancellationToken ct = default);
+            Task ClearTokensAsync(CancellationToken ct = default);
+        }
+        ```
+    - [ ] Implement `InMemoryTokenStorage` (default, non-persistent)
+    - [ ] Implement `FileTokenStorage` (encrypted file, for console apps)
+*   **Component:** Browser Abstraction
+    - [ ] Define `IBrowserLauncher` interface
+        ```csharp
+        public interface IBrowserLauncher
+        {
+            Task<BrowserResult> LaunchAsync(string url, string redirectUri, CancellationToken ct = default);
+        }
+        ```
+    - [ ] Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
+*   **Component:** OAuth/OIDC Flow Implementation
+    - [ ] Implement Authorization Code + PKCE flow
+    - [ ] Implement token refresh logic
+    - [ ] Implement logout (end session)
+    - [ ] Handle discovery document fetching and caching
+*   **Test Case (Unit):**
+    - [ ] PKCE code verifier/challenge generation is correct
+    - [ ] Token refresh triggers before expiry
+    - [ ] State parameter prevents CSRF
+*   **Test Case (Integration):**
+    - [ ] Full login flow against CoreIdent test server
+    - [ ] Token refresh works correctly
+    - [ ] Logout clears tokens
+
+---
+
+### Feature 1.5.2: MAUI Client
+
+*   **Component:** `CoreIdent.Client.Maui` Package
+    - [ ] Create project targeting `net8.0-android;net8.0-ios;net8.0-maccatalyst;net10.0-android;net10.0-ios`
+    - [ ] Implement `MauiSecureTokenStorage` using `SecureStorage`
+    - [ ] Implement `MauiBrowserLauncher` using `WebAuthenticator`
+    - [ ] Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
+*   **Test Case:**
+    - [ ] Tokens persist across app restarts
+    - [ ] WebAuthenticator flow completes successfully
+*   **Documentation:**
+    - [ ] MAUI integration guide with sample app
+
+---
+
+### Feature 1.5.3: WPF/WinForms Client
+
+*   **Component:** `CoreIdent.Client.Wpf` Package
+    - [ ] Create project targeting `net8.0-windows;net10.0-windows`
+    - [ ] Implement `DpapiTokenStorage` using Windows DPAPI
+    - [ ] Implement `WebView2BrowserLauncher` (embedded browser)
+    - [ ] Implement `SystemBrowserLauncher` (external browser with localhost callback)
+*   **Test Case:**
+    - [ ] DPAPI storage encrypts/decrypts correctly
+    - [ ] WebView2 flow works
+*   **Documentation:**
+    - [ ] WPF/WinForms integration guide
+
+---
+
+### Feature 1.5.4: Console Client
+
+*   **Component:** `CoreIdent.Client.Console` Package
+    - [ ] Create project targeting `net8.0;net10.0`
+    - [ ] Implement `EncryptedFileTokenStorage`
+    - [ ] Implement device code flow support (for headless scenarios)
+*   **Test Case:**
+    - [ ] Device code flow works
+    - [ ] File storage is encrypted
+*   **Documentation:**
+    - [ ] Console/CLI app integration guide
+
+---
+
+### Feature 1.5.5: Blazor WASM Client
+
+*   **Component:** `CoreIdent.Client.Blazor` Package
+    - [ ] Create project targeting `net8.0;net10.0`
+    - [ ] Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
+    - [ ] Integrate with Blazor's `AuthenticationStateProvider`
+*   **Test Case:**
+    - [ ] Auth state propagates to Blazor components
+    - [ ] Token refresh works in browser
+*   **Documentation:**
+    - [ ] Blazor WASM integration guide
+
+---
+
 ## Phase 2: External Provider Integration
 
 **Goal:** Seamless integration with third-party OAuth/OIDC providers.
 
 **Estimated Duration:** 2-3 weeks
 
-**Prerequisites:** Phase 1 complete
+**Prerequisites:** Phase 1.5 complete
 
 ---
 

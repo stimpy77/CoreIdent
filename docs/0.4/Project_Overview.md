@@ -34,19 +34,20 @@ CoreIdent is built as a **composable ecosystem of packages**, not a monolithic f
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         CORE (Required)                                 │
 │  CoreIdent.Core — Interfaces, base services, minimal API endpoints      │
+│  (C# & F# compatible)                                                   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
-        ┌───────────────────────────┼───────────────────────────┐
-        ▼                           ▼                           ▼
-┌───────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│   STORAGE     │         │   PROVIDERS     │         │   FEATURES      │
-├───────────────┤         ├─────────────────┤         ├─────────────────┤
-│ .EFCore       │         │ .Google         │         │ .Passwordless   │
-│ .Sqlite       │         │ .Microsoft      │         │ .Passkeys       │
-│ .MongoDB*     │         │ .GitHub         │         │ .MFA            │
-│ .Redis*       │         │ .Apple*         │         │ .UI.Web         │
-│ .Adapters     │         │ .SAML*          │         │ .AdminApi       │
-└───────────────┘         └─────────────────┘         └─────────────────┘
+        ┌───────────────────────────┼─────────────────────────────────────────┐
+        ▼                           ▼                           ▼           ▼
+┌───────────────┐         ┌─────────────────┐         ┌─────────────────┐  ┌─────────────────┐
+│   STORAGE     │         │   PROVIDERS     │         │   FEATURES      │  │   CLIENTS       │
+├───────────────┤         ├─────────────────┤         ├─────────────────┤  ├─────────────────┤
+│ .EFCore       │         │ .Google         │         │ .Passwordless   │  │ .Client         │
+│ .Sqlite       │         │ .Microsoft      │         │ .Passkeys       │  │ .Client.Maui    │
+│ .MongoDB*     │         │ .GitHub         │         │ .MFA            │  │ .Client.Wpf     │
+│ .Redis*       │         │ .Apple*         │         │ .UI.Web         │  │ .Client.Console │
+│ .Adapters     │         │ .SAML*          │         │ .AdminApi       │  │ .Client.Blazor  │
+└───────────────┘         └─────────────────┘         └─────────────────┘  └─────────────────┘
                                                       * = community/future
 ```
 
@@ -124,33 +125,121 @@ builder.Services.AddCoreIdent()
 |---------|----------------------|
 | **Built-in Passkey Support** | Wrap `IdentityPasskeyOptions` with simplified configuration; extend for server-side scenarios |
 | **C# 14 Extension Members** | Provide `ClaimsPrincipal` extensions for clean claim access (`User.Email`, `User.GetUserId()`) |
-| **Authentication Metrics** | Expose via CoreIdent's telemetry; add custom metrics for passwordless flows |
-| **Cookie Auth API Improvements** | Leverage proper 401/403 for API endpoints without workarounds |
+| **Authentication Metrics** | Integrate with `Microsoft.AspNetCore.Authentication` metrics (sign_ins, sign_outs, duration) |
+| **ASP.NET Core Identity Metrics** | Expose `aspnetcore.identity.*` metrics for user ops, password checks, 2FA tracking |
+| **Cookie Auth API Improvements** | Leverage `IApiEndpointMetadata` for proper 401/403 on API endpoints |
 | **ASP.NET Core Identity** | Build on top of `UserManager<T>`, `SignInManager<T>` where appropriate |
+| **Post-Quantum Cryptography** | Future-ready with .NET 10's ML-DSA support (watch list) |
+| **`*.localhost` Dev Certificates** | Better local dev experience with unique subdomains |
+
+---
+
+## Language & Platform Support
+
+### F# First-Class Support
+
+CoreIdent is designed to work seamlessly with F#:
+
+```fsharp
+// F# example - Giraffe/Saturn integration
+let webApp =
+    choose [
+        route "/api/protected" >=> authorize >=> text "Hello from F#!"
+    ]
+
+let configureServices (services: IServiceCollection) =
+    services.AddCoreIdent(fun options ->
+        options.Issuer <- "https://myapp.com"
+        options.Audience <- "my-api"
+    ) |> ignore
+```
+
+**F# considerations:**
+- All public APIs use F#-friendly types (no `out` parameters, `Result<T>` where appropriate)
+- Async methods return `Task<T>` (compatible with F# `task { }` CE)
+- Configuration uses mutable options pattern (standard .NET) but also supports F# record-style
+- Examples and templates provided in both C# and F#
+
+### Client Libraries for Any .NET App
+
+**`CoreIdent.Client`** — Core client library for authenticating against CoreIdent (or any OAuth/OIDC server):
+
+```csharp
+// Works in ANY .NET app: MAUI, WPF, WinForms, Console, Blazor WASM
+var authClient = new CoreIdentClient(new CoreIdentClientOptions
+{
+    Authority = "https://auth.myapp.com",
+    ClientId = "my-desktop-app",
+    RedirectUri = "myapp://callback",
+    Scopes = ["openid", "profile", "api"]
+});
+
+// Trigger login (opens browser/webview)
+var result = await authClient.LoginAsync();
+
+// Tokens are securely stored and auto-refreshed
+var accessToken = await authClient.GetAccessTokenAsync();
+```
+
+**Platform-specific packages:**
+
+| Package | Platform | Secure Storage | Browser Integration |
+|---------|----------|----------------|--------------------|
+| `CoreIdent.Client` | .NET Standard 2.0+ | Pluggable | Pluggable |
+| `CoreIdent.Client.Maui` | .NET MAUI | SecureStorage | WebAuthenticator |
+| `CoreIdent.Client.Wpf` | WPF | DPAPI | WebView2 / System Browser |
+| `CoreIdent.Client.WinForms` | WinForms | DPAPI | WebView2 / System Browser |
+| `CoreIdent.Client.Console` | Console Apps | File (encrypted) | System Browser |
+| `CoreIdent.Client.Blazor` | Blazor WASM | Browser Storage | Native |
+
+**Key features:**
+- **Secure token storage** — Platform-appropriate secure storage (Keychain, DPAPI, SecureStorage)
+- **Automatic token refresh** — Background refresh before expiry
+- **PKCE by default** — All public client flows use PKCE
+- **Offline support** — Cached tokens work offline until expiry
+- **DPoP support** — Proof-of-possession tokens (Phase 3)
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Your Application                         │
-├─────────────────────────────────────────────────────────────────┤
-│                     CoreIdent.Core (0.4)                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
-│  │ Auth APIs   │  │ Token Svc   │  │ Passwordless Engine     │  │
-│  │ /login      │  │ JWT/Refresh │  │ Email Magic Links       │  │
-│  │ /register   │  │ Asymmetric  │  │ Passkey (via .NET 10)   │  │
-│  │ /authorize  │  │ Keys        │  │ SMS (pluggable)         │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
-├─────────────────────────────────────────────────────────────────┤
-│                      Extension Packages                          │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌───────────────┐  │
-│  │ Storage.EFCore   │  │ Providers.*      │  │ UI.Web        │  │
-│  │ Storage.Sqlite   │  │ (Google, MS,     │  │ (Razor/Blazor │  │
-│  │ Adapters.*       │  │  GitHub, etc.)   │  │  components)  │  │
-│  └──────────────────┘  └──────────────────┘  └───────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT APPLICATIONS                              │
+│  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│  │ MAUI App      │  │ WPF/WinForms  │  │ Console App   │  │ Blazor WASM   │  │
+│  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  │
+│          └────────────┴──────────────┴──────────────┴────────────┘           │
+│                                    │                                       │
+│                     ┌───────────────┴────────────────┐                      │
+│                     │   CoreIdent.Client (C#/F#)   │                      │
+│                     │   - Secure token storage     │                      │
+│                     │   - Auto token refresh       │                      │
+│                     │   - PKCE flow handling       │                      │
+│                     │   - Platform abstractions    │                      │
+│                     └───────────────┬────────────────┘                      │
+└───────────────────────────────────────┴───────────────────────────────────────┘
+                                        │
+                              HTTPS / OAuth 2.0
+                                        │
+┌───────────────────────────────────────┴───────────────────────────────────────┐
+│                        SERVER / EMBEDDED AUTH                              │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                     CoreIdent.Core (0.4) — C# & F#                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  ┌─────────────┐  │
+│  │ Auth APIs   │  │ Token Svc   │  │ Passwordless Engine     │  │ Metrics     │  │
+│  │ /login      │  │ JWT/Refresh │  │ Email Magic Links       │  │ OpenTelemetry│  │
+│  │ /register   │  │ RS256/ES256 │  │ Passkey (ASP.NET 10)    │  │ .NET 10     │  │
+│  │ /authorize  │  │ Key Rotate  │  │ SMS (pluggable)         │  │ native      │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  └─────────────┘  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                      Extension Packages                                     │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│  │ Storage.EFCore   │  │ Providers.*      │  │ UI.Web        │  │ Client.*      │  │
+│  │ Storage.Sqlite   │  │ (Google, MS,     │  │ (Razor/Blazor │  │ Client.Maui   │  │
+│  │ Adapters.*       │  │  GitHub, etc.)   │  │  components)  │  │ Client.Wpf    │  │
+│  └──────────────────┘  └──────────────────┘  └───────────────┘  └───────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
