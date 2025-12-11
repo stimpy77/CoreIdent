@@ -132,6 +132,23 @@ builder.Services.AddCoreIdent()
 | **Post-Quantum Cryptography** | Future-ready with .NET 10's ML-DSA support (watch list) |
 | **`*.localhost` Dev Certificates** | Better local dev experience with unique subdomains |
 
+### .NET 10 Reference Documentation
+
+For implementers unfamiliar with .NET 10's auth features, start here:
+
+- **Overview:** [What's new in .NET 10](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/overview)
+- **ASP.NET Core 10:** [What's new in ASP.NET Core 10](https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-10.0)
+- **Passkeys:** [Passkey authentication in ASP.NET Core Identity](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys)
+- **Identity Introduction:** [Introduction to Identity on ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity)
+- **Auth Metrics:** [ASP.NET Core built-in metrics](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/built-in)
+- **C# 14:** [What's new in C# 14](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-14)
+- **F# 10:** [F# release notes](https://fsharp.github.io/fsharp-compiler-docs/release-notes/About.html)
+- **MAUI:** [What's new in .NET MAUI in .NET 10](https://learn.microsoft.com/en-us/dotnet/maui/whats-new/dotnet-10)
+
+**Third-party analysis:**
+- [Auth0: .NET 10 Authentication & Authorization Enhancements](https://auth0.com/blog/authentication-authorization-enhancements-dotnet-10/)
+- [Duende: Most Anticipated .NET 10 Auth Features](https://duendesoftware.com/blog/20250916-duende-most-anticipated-dotnet-10-auth-features)
+
 ---
 
 ## Language & Platform Support
