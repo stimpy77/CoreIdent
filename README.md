@@ -4,7 +4,17 @@
 > 
 > CoreIdent is being rebuilt from scratch targeting **.NET 10** with a passwordless-first approach, client libraries for MAUI/WPF/Blazor, and expanded OAuth/OIDC capabilities.
 > 
-> **See the [`rescope_net10`](https://github.com/stimpy77/CoreIdent/tree/rescope_net10) branch for the new vision and planning documents.**
+> **See the [`rescope_net10`](https://github.com/stimpy77/CoreIdent/tree/rescope_net10) branch for the new vision and planning documents:**
+> - [Project Overview](https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Project_Overview.md) — Vision, architecture, roadmap
+> - [Technical Plan](https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Technical_Plan.md) — Specifications, interfaces
+> - [Development Plan](https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/DEVPLAN.md) — Task-level checklist
+
+---
+
+<details>
+<summary><strong>⚠️ DEPRECATED: Previous 0.3.x Documentation (click to expand)</strong></summary>
+
+> **The content below describes the previous implementation which is being replaced. See the [`rescope_net10`](https://github.com/stimpy77/CoreIdent/tree/rescope_net10) branch for the new direction.**
 
 ---
 
@@ -14,11 +24,11 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NuGet Version](https://img.shields.io/nuget/v/CoreIdent.Core.svg)](https://www.nuget.org/packages/CoreIdent.Core/)
 
-**CoreIdent is building the foundation for a modern, open-source, developer-centric identity and authentication solution for .NET.** It aims to replace complex, often vendor-locked systems with a flexible, convention-driven alternative that empowers developers.
+~~**CoreIdent is building the foundation for a modern, open-source, developer-centric identity and authentication solution for .NET.** It aims to replace complex, often vendor-locked systems with a flexible, convention-driven alternative that empowers developers.~~
 
-**Think: A spiritual successor to IdentityServer, built for today's .NET.**
+~~**Think: A spiritual successor to IdentityServer, built for today's .NET.**~~
 
-**Current Status:** Phase 3 (Core OAuth/OIDC Flows) is complete. Phase 4 (User Interaction) has begun, with the **User Consent Mechanism** feature now complete.
+~~**Current Status:** Phase 3 (Core OAuth/OIDC Flows) is complete. Phase 4 (User Interaction) has begun, with the **User Consent Mechanism** feature now complete.~~
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
@@ -541,3 +551,5 @@ CoreIdent endpoints follow predictable routing rules:
     *   The `jwks_uri` published in the discovery document points to the root-relative JWKS path.
 
 Understanding these rules helps predict the final endpoint URLs, especially when customizing paths via `CoreIdentRouteOptions`.
+
+</details>
