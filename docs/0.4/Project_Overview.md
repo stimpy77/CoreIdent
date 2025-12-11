@@ -275,6 +275,8 @@ var accessToken = await authClient.GetAccessTokenAsync();
 - [ ] Token Introspection endpoint (RFC 7662)
 - [ ] **Unified test infrastructure** — Reusable `WebApplicationFactory` base, fixtures, seeders
 - [ ] Remove/deprecate HS256-only code paths (keep as opt-in for dev/testing)
+- [ ] **CLI Tool (`dotnet coreident`)** — `init`, `keys generate`, `client add` commands
+- [ ] **.devcontainer configuration** — One-click dev environment for contributors
 
 **Why This First:** Nothing else matters if tokens can't be validated securely in production.
 
@@ -300,6 +302,9 @@ var accessToken = await authClient.GetAccessTokenAsync();
 - [ ] **`dotnet new` Templates**
   - `coreident-api` — Minimal API with CoreIdent auth
   - `coreident-server` — Full OAuth/OIDC server setup
+- [ ] **Aspire Integration** (`CoreIdent.Aspire`)
+  - Pre-configured dashboard integration
+  - Health checks, metrics, traces out of the box
 - [ ] Comprehensive getting-started documentation
 
 ---
@@ -326,12 +331,15 @@ var accessToken = await authClient.GetAccessTokenAsync();
 
 **Deliverables:**
 - [ ] **Key Rotation** — Automated rotation with grace period for old keys
-- [ ] **Session Management** — OIDC logout, session tracking
+- [ ] **Session Management** — OIDC logout, back-channel logout, session tracking
 - [ ] **Dynamic Client Registration** (RFC 7591)
 - [ ] **Device Authorization Flow** (RFC 8628) — For IoT/TV apps
 - [ ] **Pushed Authorization Requests** (RFC 9126) — Enhanced security
 - [ ] **DPoP - Demonstrating Proof of Possession** (RFC 9449) — Sender-constrained tokens
 - [ ] **Rich Authorization Requests** (RFC 9396) — Fine-grained authorization
+- [ ] **Token Exchange** (RFC 8693) — Impersonation, delegation, cross-service auth
+- [ ] **JWT-Secured Authorization Request (JAR)** — Signed/encrypted auth requests
+- [ ] **Webhook System** — Events for user.created, login, token.issued, consent.granted
 - [ ] OIDC Conformance test suite integration
 - [ ] Rate limiting and abuse prevention
 
@@ -346,8 +354,17 @@ var accessToken = await authClient.GetAccessTokenAsync();
   - Registration page
   - Consent page
   - Account management (change email, manage passkeys)
+- [ ] **Self-Service User Portal**
+  - Account settings (email, password, MFA)
+  - Session management (view/revoke active sessions)
+  - Linked accounts management
+  - Audit log viewer (user's own activity)
 - [ ] **Admin API** — Programmatic user/client management
 - [ ] Basic admin dashboard (optional package)
+- [ ] **Multi-tenancy Support**
+  - Multiple issuers in one instance
+  - Per-tenant configuration (keys, providers, branding)
+  - Tenant isolation and data separation
 
 ---
 
@@ -363,6 +380,19 @@ var accessToken = await authClient.GetAccessTokenAsync();
 - [ ] **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
 - [ ] **Verifiable Credentials** — W3C VC integration points
 - [ ] **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
+- [ ] **Risk-Based Authentication**
+  - Device fingerprinting
+  - Geo-location checks
+  - Step-up auth for sensitive operations
+- [ ] **Credential Breach Detection**
+  - HaveIBeenPwned API integration
+  - Compromised credential alerts
+- [ ] **API Gateway Integration Patterns**
+  - YARP integration examples
+  - Token exchange for downstream services
+- [ ] **Blazor Server Integration** (`CoreIdent.Client.BlazorServer`)
+  - Circuit-aware token management
+  - Server-side session handling
 
 ---
 

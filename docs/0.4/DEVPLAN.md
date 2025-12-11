@@ -279,6 +279,48 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 0.7: CLI Tool (`dotnet coreident`)
+
+*   **Component:** CLI Package (`CoreIdent.Cli`)
+    - [ ] Create .NET tool package
+    - [ ] Register as `dotnet tool install -g CoreIdent.Cli`
+*   **Component:** `init` Command
+    - [ ] Scaffold `appsettings.json` with CoreIdent section
+    - [ ] Generate secure random signing key (for dev)
+    - [ ] Add package references to `.csproj`
+*   **Component:** `keys generate` Command
+    - [ ] Generate RSA key pair (PEM format)
+    - [ ] Generate ECDSA key pair (PEM format)
+    - [ ] Output to file or stdout
+*   **Component:** `client add` Command
+    - [ ] Interactive client registration
+    - [ ] Generate client ID and secret
+    - [ ] Output configuration snippet
+*   **Component:** `migrate` Command
+    - [ ] Wrapper around EF Core migrations for CoreIdent schema
+*   **Test Case:**
+    - [ ] Each command works in isolation
+    - [ ] Generated keys are valid and usable
+*   **Documentation:**
+    - [ ] CLI reference guide
+
+---
+
+### Feature 0.8: Dev Container Configuration
+
+*   **Component:** `.devcontainer/` Setup
+    - [ ] Create `devcontainer.json`
+    - [ ] Configure .NET 10 SDK
+    - [ ] Include recommended VS Code extensions
+    - [ ] Pre-configure database (SQLite for simplicity)
+*   **Component:** Codespaces Support
+    - [ ] Test in GitHub Codespaces
+    - [ ] Add "Open in Codespaces" badge to README
+*   **Documentation:**
+    - [ ] Contributing guide with dev container instructions
+
+---
+
 ## Phase 1: Passwordless & Developer Experience
 
 **Goal:** Make passwordless authentication trivially easy; establish the "5-minute auth" story.
@@ -482,6 +524,29 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Documentation:**
     - [ ] Add template usage to getting started guide
     - [ ] Document template parameters
+
+---
+
+### Feature 1.6: Aspire Integration
+
+*   **Component:** `CoreIdent.Aspire` Package
+    - [ ] Create package targeting Aspire 9.0+
+    - [ ] Implement `IDistributedApplicationComponent`
+*   **Component:** Dashboard Integration
+    - [ ] Pre-configured metrics export
+    - [ ] Structured logging integration
+    - [ ] Distributed tracing for auth flows
+*   **Component:** Health Checks
+    - [ ] Database connectivity check
+    - [ ] Key availability check
+    - [ ] External provider connectivity (if configured)
+*   **Component:** Service Defaults
+    - [ ] `AddCoreIdentDefaults()` extension for Aspire service defaults
+*   **Test Case:**
+    - [ ] Aspire dashboard shows CoreIdent metrics
+    - [ ] Health checks report correctly
+*   **Documentation:**
+    - [ ] Aspire integration guide
 
 ---
 
@@ -792,7 +857,70 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 3.8: OIDC Conformance Testing
+### Feature 3.8: Token Exchange (RFC 8693)
+
+*   **Component:** Token Exchange Endpoint
+    - [ ] Implement `POST /auth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`
+    - [ ] Support `subject_token` and `actor_token`
+    - [ ] Support token type indicators
+*   **Component:** Exchange Policies
+    - [ ] Define `ITokenExchangePolicy` interface
+    - [ ] Implement delegation policy
+    - [ ] Implement impersonation policy
+*   **Test Case:**
+    - [ ] Delegation exchange produces valid token
+    - [ ] Impersonation exchange includes `act` claim
+    - [ ] Unauthorized exchanges are rejected
+*   **Documentation:**
+    - [ ] Token exchange guide with use cases
+
+---
+
+### Feature 3.9: JWT-Secured Authorization Request (JAR)
+
+*   **Component:** Request Object Support
+    - [ ] Parse `request` parameter (JWT)
+    - [ ] Validate signature against registered client keys
+    - [ ] Support `request_uri` for remote request objects
+*   **Component:** Encryption Support (Optional)
+    - [ ] Decrypt JWE request objects
+*   **Test Case:**
+    - [ ] Signed request object is validated
+    - [ ] Invalid signature is rejected
+*   **Documentation:**
+    - [ ] JAR implementation guide
+
+---
+
+### Feature 3.10: Webhook System
+
+*   **Component:** `IWebhookService` Interface
+    - [ ] Define webhook event types
+    - [ ] Define delivery mechanism
+*   **Component:** Webhook Configuration
+    - [ ] Per-event endpoint configuration
+    - [ ] Secret for signature verification
+    - [ ] Retry policy configuration
+*   **Component:** Event Types
+    - [ ] `user.created`, `user.updated`, `user.deleted`
+    - [ ] `user.login.success`, `user.login.failed`
+    - [ ] `token.issued`, `token.revoked`
+    - [ ] `consent.granted`, `consent.revoked`
+    - [ ] `client.created`, `client.updated`
+*   **Component:** Delivery
+    - [ ] HTTP POST with JSON payload
+    - [ ] HMAC signature header
+    - [ ] Exponential backoff retry
+*   **Test Case:**
+    - [ ] Webhooks fire on events
+    - [ ] Retry logic works correctly
+    - [ ] Signature verification works
+*   **Documentation:**
+    - [ ] Webhook integration guide
+
+---
+
+### Feature 3.11: OIDC Conformance Testing
 
 *   **Component:** Conformance Test Integration
     - [ ] Set up OIDC conformance test suite
@@ -837,7 +965,33 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 4.2: Admin API
+### Feature 4.2: Self-Service User Portal
+
+*   **Component:** Account Settings
+    - [ ] Change email (with verification)
+    - [ ] Change password
+    - [ ] Enable/disable MFA
+*   **Component:** Session Management
+    - [ ] List active sessions (device, location, time)
+    - [ ] Revoke individual sessions
+    - [ ] "Sign out everywhere" option
+*   **Component:** Linked Accounts
+    - [ ] View linked external providers
+    - [ ] Link new provider
+    - [ ] Unlink provider (if other auth method exists)
+*   **Component:** Activity Log
+    - [ ] View own login history
+    - [ ] View consent grants
+    - [ ] View security events
+*   **Test Case:**
+    - [ ] User can manage own account
+    - [ ] Session revocation works
+*   **Documentation:**
+    - [ ] User portal customization guide
+
+---
+
+### Feature 4.3: Admin API
 
 *   **Component:** User Management Endpoints
     - [ ] CRUD operations for users
@@ -848,6 +1002,32 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] Admin role/scope requirements
 *   **Documentation:**
     - [ ] Admin API reference
+
+---
+
+### Feature 4.4: Multi-tenancy Support
+
+*   **Component:** Tenant Model
+    - [ ] `CoreIdentTenant` entity
+    - [ ] Tenant-scoped configuration
+*   **Component:** Tenant Resolution
+    - [ ] `ITenantResolver` interface
+    - [ ] Host-based resolution (subdomain)
+    - [ ] Path-based resolution
+    - [ ] Header-based resolution
+*   **Component:** Tenant Isolation
+    - [ ] Per-tenant signing keys
+    - [ ] Per-tenant user stores
+    - [ ] Per-tenant client registrations
+*   **Component:** Tenant Configuration
+    - [ ] Per-tenant branding (logo, colors)
+    - [ ] Per-tenant enabled providers
+    - [ ] Per-tenant policies
+*   **Test Case:**
+    - [ ] Tenants are isolated
+    - [ ] Cross-tenant access is prevented
+*   **Documentation:**
+    - [ ] Multi-tenancy setup guide
 
 ---
 
@@ -897,7 +1077,88 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 5.6: Verifiable Credentials
+### Feature 5.6: Risk-Based Authentication
+
+*   **Component:** Device Fingerprinting
+    - [ ] Collect device characteristics
+    - [ ] Store known devices per user
+    - [ ] Flag unknown devices
+*   **Component:** Geo-location Checks
+    - [ ] IP-based location lookup
+    - [ ] Impossible travel detection
+    - [ ] Location-based policies
+*   **Component:** Step-up Authentication
+    - [ ] Define step-up triggers
+    - [ ] Force MFA for sensitive operations
+    - [ ] Re-authentication prompts
+*   **Component:** Risk Scoring
+    - [ ] `IRiskScorer` interface
+    - [ ] Configurable risk thresholds
+*   **Test Case:**
+    - [ ] Unknown device triggers step-up
+    - [ ] Impossible travel is detected
+*   **Documentation:**
+    - [ ] Risk-based auth configuration guide
+
+---
+
+### Feature 5.7: Credential Breach Detection
+
+*   **Component:** HaveIBeenPwned Integration
+    - [ ] k-Anonymity API integration
+    - [ ] Check on registration
+    - [ ] Check on password change
+    - [ ] Optional check on login
+*   **Component:** Policy Configuration
+    - [ ] Block compromised passwords
+    - [ ] Warn but allow
+    - [ ] Force password change
+*   **Component:** Alerts
+    - [ ] Notify user of compromised credential
+    - [ ] Admin notification option
+*   **Test Case:**
+    - [ ] Known compromised password is detected
+    - [ ] Policy enforcement works
+*   **Documentation:**
+    - [ ] Breach detection setup guide
+
+---
+
+### Feature 5.8: API Gateway Integration
+
+*   **Component:** YARP Integration Examples
+    - [ ] Token validation middleware
+    - [ ] Token transformation
+    - [ ] Rate limiting integration
+*   **Component:** Token Exchange for Downstream
+    - [ ] Exchange external token for internal
+    - [ ] Scope downgrade for microservices
+*   **Documentation:**
+    - [ ] API gateway patterns guide
+
+---
+
+### Feature 5.9: Blazor Server Integration
+
+*   **Component:** `CoreIdent.Client.BlazorServer` Package
+    - [ ] Circuit-aware token storage
+    - [ ] Automatic token refresh in circuit
+    - [ ] Handle circuit disconnection gracefully
+*   **Component:** Server-side Session
+    - [ ] Session state management
+    - [ ] Distributed cache support
+*   **Component:** AuthenticationStateProvider
+    - [ ] Custom provider for server-side Blazor
+    - [ ] Cascading auth state
+*   **Test Case:**
+    - [ ] Auth persists across circuit reconnection
+    - [ ] Token refresh works in background
+*   **Documentation:**
+    - [ ] Blazor Server integration guide
+
+---
+
+### Feature 5.10: Verifiable Credentials
 
 *   **Component:** W3C VC issuance
 *   **Component:** VC verification
