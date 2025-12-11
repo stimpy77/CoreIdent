@@ -256,18 +256,20 @@ builder.Services.AddCoreIdent()
 - [ ] Community provider packages (Apple, Twitter, LinkedIn, etc.)
 - [ ] **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
 - [ ] **Verifiable Credentials** — W3C VC integration points
+- [ ] **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
 
 ---
 
 ## Future Protocol Watch List
 
-These protocols are emerging but not yet mature enough for core inclusion:
+These protocols are emerging or specialized; tracked for potential inclusion:
 
 | Protocol | Status | Notes |
 |----------|--------|-------|
 | **GNAP** (Grant Negotiation and Authorization Protocol) | IETF Draft | Potential OAuth successor; watching for standardization |
 | **OpenID Federation** | Draft | Trust chain management for large ecosystems |
 | **Selective Disclosure JWT (SD-JWT)** | Draft | Privacy-preserving credentials |
+| **SPIFFE/SPIRE** | CNCF Graduated | Workload identity; consider `CoreIdent.Identity.Spiffe` package |
 
 ---
 
