@@ -829,8 +829,41 @@ src/
 
 ## References
 
+### .NET 10 Documentation (Start Here)
+
+- [What's new in .NET 10 - Overview](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/overview)
+- [What's new in ASP.NET Core 10](https://learn.microsoft.com/en-us/aspnet/core/release-notes/aspnetcore-10.0)
+- [Passkey authentication in ASP.NET Core Identity](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys)
+- [Introduction to Identity on ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/identity)
+- [ASP.NET Core built-in metrics](https://learn.microsoft.com/en-us/aspnet/core/log-mon/metrics/built-in)
+- [What's new in C# 14](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-14)
+- [What's new in .NET MAUI in .NET 10](https://learn.microsoft.com/en-us/dotnet/maui/whats-new/dotnet-10)
+- [What's new in the .NET 10 runtime](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/runtime)
+- [What's new in the .NET 10 libraries](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/libraries)
+
+### Third-Party .NET 10 Analysis
+
+- [Auth0: .NET 10 Authentication & Authorization Enhancements](https://auth0.com/blog/authentication-authorization-enhancements-dotnet-10/)
+- [Duende: Most Anticipated .NET 10 Auth Features](https://duendesoftware.com/blog/20250916-duende-most-anticipated-dotnet-10-auth-features)
+
+### OAuth/OIDC RFCs
+
 - [RFC 7009 - Token Revocation](https://tools.ietf.org/html/rfc7009)
 - [RFC 7662 - Token Introspection](https://tools.ietf.org/html/rfc7662)
 - [RFC 7517 - JSON Web Key (JWK)](https://tools.ietf.org/html/rfc7517)
-- [.NET 10 Passkey Support](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys)
-- [C# 14 Extension Members](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/extension-methods)
+- [RFC 7591 - Dynamic Client Registration](https://tools.ietf.org/html/rfc7591)
+- [RFC 8628 - Device Authorization Grant](https://tools.ietf.org/html/rfc8628)
+- [RFC 9126 - Pushed Authorization Requests (PAR)](https://tools.ietf.org/html/rfc9126)
+- [RFC 9449 - DPoP (Demonstrating Proof of Possession)](https://tools.ietf.org/html/rfc9449)
+- [RFC 9396 - Rich Authorization Requests (RAR)](https://tools.ietf.org/html/rfc9396)
+
+### WebAuthn/Passkeys
+
+- [WebAuthn Guide](https://webauthn.guide/)
+- [FIDO Alliance - Passkeys](https://fidoalliance.org/passkeys/)
+- [W3C Web Authentication Spec](https://www.w3.org/TR/webauthn-2/)
+
+### SPIFFE/SPIRE
+
+- [SPIFFE Official Site](https://spiffe.io/)
+- [SPIRE Documentation](https://spiffe.io/docs/latest/spire-about/)
