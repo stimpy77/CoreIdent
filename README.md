@@ -24,11 +24,11 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NuGet Version](https://img.shields.io/nuget/v/CoreIdent.Core.svg)](https://www.nuget.org/packages/CoreIdent.Core/)
 
-~~**CoreIdent is building the foundation for a modern, open-source, developer-centric identity and authentication solution for .NET.** It aims to replace complex, often vendor-locked systems with a flexible, convention-driven alternative that empowers developers.~~
+**CoreIdent is building the foundation for a modern, open-source, developer-centric identity and authentication solution for .NET.** It aims to replace complex, often vendor-locked systems with a flexible, convention-driven alternative that empowers developers.
 
-~~**Think: A spiritual successor to IdentityServer, built for today's .NET.**~~
+**Think: A spiritual successor to IdentityServer, built for today's .NET.**
 
-~~**Current Status:** Phase 3 (Core OAuth/OIDC Flows) is complete. Phase 4 (User Interaction) has begun, with the **User Consent Mechanism** feature now complete.~~
+**Current Status:** Phase 3 (Core OAuth/OIDC Flows) is complete. Phase 4 (User Interaction) has begun, with the **User Consent Mechanism** feature now complete.
 
 **Development Phases:**
 *   **Phase 1 (Completed):** MVP - Core Registration/Login/Tokens with In-Memory Storage.
