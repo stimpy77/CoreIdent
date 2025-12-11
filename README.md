@@ -1,5 +1,13 @@
 # CoreIdent: Modern .NET Identity & Authentication
 
+> **🚧 Major Rescope in Progress**
+> 
+> CoreIdent is being rebuilt from scratch targeting **.NET 10** with a passwordless-first approach, client libraries for MAUI/WPF/Blazor, and expanded OAuth/OIDC capabilities.
+> 
+> **See the [`rescope_net10`](https://github.com/stimpy77/CoreIdent/tree/rescope_net10) branch for the new vision and planning documents.**
+
+---
+
 ![image](https://github.com/user-attachments/assets/96ac08ce-d88e-4d78-af98-101bb95aa317)
 
 [![Build Status](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml)
