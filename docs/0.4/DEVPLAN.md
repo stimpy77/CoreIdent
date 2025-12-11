@@ -28,9 +28,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** Solution & Project Setup
     - [ ] (L1) Create `CoreIdent.sln` solution file
-    - [ ] (L1) Create `CoreIdent.Core.csproj` targeting `net8.0;net10.0`
-    - [ ] (L1) Create `CoreIdent.Storage.EntityFrameworkCore.csproj` targeting `net8.0;net10.0`
-    - [ ] (L1) Create `CoreIdent.Adapters.DelegatedUserStore.csproj` targeting `net8.0;net10.0`
+    - [ ] (L1) Create `CoreIdent.Core.csproj` targeting `net10.0`
+    - [ ] (L1) Create `CoreIdent.Storage.EntityFrameworkCore.csproj` targeting `net10.0`
+    - [ ] (L1) Create `CoreIdent.Adapters.DelegatedUserStore.csproj` targeting `net10.0`
     - [ ] (L1) Create test projects targeting `net10.0`
     - [ ] (L2) Configure NuGet package references for .NET 10
         - `Microsoft.AspNetCore.Authentication.JwtBearer` → 10.x
@@ -560,8 +560,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 1.5.1: Core Client Library
 
-*   **Component:** `CoreIdent.Client` Package (.NET Standard 2.0+)
-    - [ ] (L1) Create new project targeting `netstandard2.0;net8.0;net10.0`
+*   **Component:** `CoreIdent.Client` Package
+    - [ ] (L1) Create new project targeting `net10.0`
     - [ ] (L1) Define `ICoreIdentClient` interface
         ```csharp
         public interface ICoreIdentClient
@@ -630,7 +630,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.2: MAUI Client
 
 *   **Component:** `CoreIdent.Client.Maui` Package
-    - [ ] (L1) Create project targeting `net8.0-android;net8.0-ios;net8.0-maccatalyst;net10.0-android;net10.0-ios`
+    - [ ] (L1) Create project targeting `net10.0-android;net10.0-ios;net10.0-maccatalyst`
     - [ ] (L2) Implement `MauiSecureTokenStorage` using `SecureStorage`
     - [ ] (L3) Implement `MauiBrowserLauncher` using `WebAuthenticator`
     - [ ] (L1) Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
@@ -645,7 +645,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.3: WPF/WinForms Client
 
 *   **Component:** `CoreIdent.Client.Wpf` Package
-    - [ ] (L1) Create project targeting `net8.0-windows;net10.0-windows`
+    - [ ] (L1) Create project targeting `net10.0-windows`
     - [ ] (L2) Implement `DpapiTokenStorage` using Windows DPAPI
     - [ ] (L3) Implement `WebView2BrowserLauncher` (embedded browser)
     - [ ] (L2) Implement `SystemBrowserLauncher` (external browser with localhost callback)
@@ -660,7 +660,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.4: Console Client
 
 *   **Component:** `CoreIdent.Client.Console` Package
-    - [ ] (L1) Create project targeting `net8.0;net10.0`
+    - [ ] (L1) Create project targeting `net10.0`
     - [ ] (L2) Implement `EncryptedFileTokenStorage`
     - [ ] (L2) Implement device code flow support (for headless scenarios)
 *   **Test Case:**
@@ -674,7 +674,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.5: Blazor WASM Client
 
 *   **Component:** `CoreIdent.Client.Blazor` Package
-    - [ ] (L1) Create project targeting `net8.0;net10.0`
+    - [ ] (L1) Create project targeting `net10.0`
     - [ ] (L2) Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
     - [ ] (L3) Integrate with Blazor's `AuthenticationStateProvider`
 *   **Test Case:**
