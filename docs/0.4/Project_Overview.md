@@ -26,6 +26,52 @@ CoreIdent wraps and extends .NET 10's built-in identity primitives, dramatically
 
 ---
 
+## Modular Design Philosophy
+
+CoreIdent is built as a **composable ecosystem of packages**, not a monolithic framework:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CORE (Required)                                 │
+│  CoreIdent.Core — Interfaces, base services, minimal API endpoints      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        ▼                           ▼                           ▼
+┌───────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│   STORAGE     │         │   PROVIDERS     │         │   FEATURES      │
+├───────────────┤         ├─────────────────┤         ├─────────────────┤
+│ .EFCore       │         │ .Google         │         │ .Passwordless   │
+│ .Sqlite       │         │ .Microsoft      │         │ .Passkeys       │
+│ .MongoDB*     │         │ .GitHub         │         │ .MFA            │
+│ .Redis*       │         │ .Apple*         │         │ .UI.Web         │
+│ .Adapters     │         │ .SAML*          │         │ .AdminApi       │
+└───────────────┘         └─────────────────┘         └─────────────────┘
+                                                      * = community/future
+```
+
+**Key modularity principles:**
+
+1. **Pay for what you use** — Don't need external providers? Don't install them.
+2. **Swap implementations** — All core services are interface-based (`IUserStore`, `ITokenService`, etc.)
+3. **Extend without forking** — Register custom implementations via DI
+4. **External library integration** — Hooks for integrating third-party security libraries
+
+**Extension points:**
+
+| Extension Point | Interface | Purpose |
+|-----------------|-----------|--------|
+| User Storage | `IUserStore` | Custom user persistence |
+| Token Generation | `ITokenService` | Custom token formats |
+| Key Management | `ISigningKeyProvider` | External key vaults |
+| Custom Claims | `ICustomClaimsProvider` | Add claims to tokens |
+| Email Delivery | `IEmailSender` | Custom email providers |
+| SMS Delivery | `ISmsProvider` | Custom SMS providers |
+| Rate Limiting | `IRateLimiter` | Custom rate limit logic |
+| Audit Logging | `IAuditLogger` | Custom audit destinations |
+
+---
+
 ## What CoreIdent Is NOT
 
 - **Not a Keycloak replacement** — We're not building a full IAM platform with admin UIs for enterprise policy management
@@ -178,6 +224,8 @@ builder.Services.AddCoreIdent()
 - [ ] **Dynamic Client Registration** (RFC 7591)
 - [ ] **Device Authorization Flow** (RFC 8628) — For IoT/TV apps
 - [ ] **Pushed Authorization Requests** (RFC 9126) — Enhanced security
+- [ ] **DPoP - Demonstrating Proof of Possession** (RFC 9449) — Sender-constrained tokens
+- [ ] **Rich Authorization Requests** (RFC 9396) — Fine-grained authorization
 - [ ] OIDC Conformance test suite integration
 - [ ] Rate limiting and abuse prevention
 
@@ -206,6 +254,20 @@ builder.Services.AddCoreIdent()
 - [ ] Audit logging infrastructure
 - [ ] Anomaly detection hooks
 - [ ] Community provider packages (Apple, Twitter, LinkedIn, etc.)
+- [ ] **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
+- [ ] **Verifiable Credentials** — W3C VC integration points
+
+---
+
+## Future Protocol Watch List
+
+These protocols are emerging but not yet mature enough for core inclusion:
+
+| Protocol | Status | Notes |
+|----------|--------|-------|
+| **GNAP** (Grant Negotiation and Authorization Protocol) | IETF Draft | Potential OAuth successor; watching for standardization |
+| **OpenID Federation** | Draft | Trust chain management for large ecosystems |
+| **Selective Disclosure JWT (SD-JWT)** | Draft | Privacy-preserving credentials |
 
 ---
 
