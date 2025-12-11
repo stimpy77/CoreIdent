@@ -3,11 +3,14 @@
 This document provides a detailed breakdown of tasks, components, test cases, and technical guidance for CoreIdent 0.4. It aligns with the rescoped vision in `Project_Overview.md` and technical specifications in `Technical_Plan.md`.
 
 **Key Changes from 0.3.x DEVPLAN:**
+- **Clean slate build** — All implementation starts fresh (no existing code)
 - Phase 0 (Foundation) is now first priority — asymmetric keys, revocation, introspection
 - Passwordless authentication moved to Phase 1
 - Test infrastructure overhaul is a dedicated effort
 - Removed: Web3, LNURL, AI integrations
 - Added: DPoP, RAR, SPIFFE/SPIRE (later phases)
+
+> **Note:** This is a ground-up rewrite. References to "creating" components mean building from scratch. The 0.3.x codebase is archived for reference only.
 
 ---
 
@@ -23,37 +26,37 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 0.1: .NET 10 Migration
 
-*   **Component:** Project File Updates
-    - [ ] Update `CoreIdent.Core.csproj` to target `net10.0` (or multi-target `net8.0;net10.0`)
-    - [ ] Update `CoreIdent.Storage.EntityFrameworkCore.csproj` target framework
-    - [ ] Update `CoreIdent.Adapters.DelegatedUserStore.csproj` target framework
-    - [ ] Update all test project target frameworks
-    - [ ] Update NuGet package references to .NET 10 compatible versions
+*   **Component:** Solution & Project Setup
+    - [ ] (L1) Create `CoreIdent.sln` solution file
+    - [ ] (L1) Create `CoreIdent.Core.csproj` targeting `net8.0;net10.0`
+    - [ ] (L1) Create `CoreIdent.Storage.EntityFrameworkCore.csproj` targeting `net8.0;net10.0`
+    - [ ] (L1) Create `CoreIdent.Adapters.DelegatedUserStore.csproj` targeting `net8.0;net10.0`
+    - [ ] (L1) Create test projects targeting `net10.0`
+    - [ ] (L2) Configure NuGet package references for .NET 10
         - `Microsoft.AspNetCore.Authentication.JwtBearer` → 10.x
         - `Microsoft.Extensions.Identity.Core` → 10.x
         - `Microsoft.EntityFrameworkCore` → 10.x
         - `Microsoft.IdentityModel.Tokens` → latest stable
 *   **Component:** C# 14 Features
-    - [ ] Enable C# 14 in all projects (`<LangVersion>14</LangVersion>`)
-    - [ ] Add `ClaimsPrincipalExtensions` using extension members syntax
+    - [ ] (L1) Enable C# 14 in all projects (`<LangVersion>14</LangVersion>`)
+    - [ ] (L2) Add `ClaimsPrincipalExtensions` using extension members syntax
 *   **Component:** F# Compatibility
-    - [ ] Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
-    - [ ] Create F# sample project using Giraffe/Saturn
-    - [ ] Add F# template (`coreident-api-fsharp`)
-    - [ ] Document F# usage patterns
+    - [ ] (L2) Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
+    - [ ] (L2) Create F# sample project using Giraffe/Saturn
+    - [ ] (L2) Add F# template (`coreident-api-fsharp`)
+    - [ ] (L1) Document F# usage patterns
 *   **Test Case:**
-    - [ ] All existing tests pass after migration
-    - [ ] Solution builds without warnings on .NET 10
+    - [ ] (L1) Solution builds without warnings on .NET 10
+    - [ ] (L1) Basic smoke test passes
 *   **Documentation:**
-    - [ ] Update README.md with .NET 10 requirement
-    - [ ] Create MIGRATION.md for 0.3.x → 0.4 upgrade path
+    - [ ] (L1) Update README.md with .NET 10 requirement
 
 ---
 
 ### Feature 0.2: Asymmetric Key Support (RS256/ES256)
 
 *   **Component:** `ISigningKeyProvider` Interface
-    - [ ] Create `CoreIdent.Core/Services/ISigningKeyProvider.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Services/ISigningKeyProvider.cs`
         ```csharp
         public interface ISigningKeyProvider
         {
@@ -65,7 +68,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public record SecurityKeyInfo(string KeyId, SecurityKey Key, DateTime? ExpiresAt);
         ```
 *   **Component:** `CoreIdentKeyOptions` Configuration
-    - [ ] Create `CoreIdent.Core/Configuration/CoreIdentKeyOptions.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Configuration/CoreIdentKeyOptions.cs`
         ```csharp
         public class CoreIdentKeyOptions
         {
@@ -80,28 +83,28 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public enum KeyType { RSA, ECDSA, Symmetric }
         ```
 *   **Component:** `RsaSigningKeyProvider` Implementation
-    - [ ] Create `CoreIdent.Core/Services/RsaSigningKeyProvider.cs`
+    - [ ] (L3) Create `CoreIdent.Core/Services/RsaSigningKeyProvider.cs`
         *   *Guidance:* Load RSA key from PEM string, PEM file, or X509 certificate
         *   *Guidance:* Generate key on startup if none configured (dev mode only, log warning)
         *   *Guidance:* Support `kid` (key ID) generation based on key thumbprint
 *   **Component:** `EcdsaSigningKeyProvider` Implementation
-    - [ ] Create `CoreIdent.Core/Services/EcdsaSigningKeyProvider.cs`
+    - [ ] (L3) Create `CoreIdent.Core/Services/EcdsaSigningKeyProvider.cs`
         *   *Guidance:* Support ES256 (P-256 curve)
         *   *Guidance:* Similar loading patterns as RSA
 *   **Component:** `SymmetricSigningKeyProvider` Implementation (Legacy/Dev)
-    - [ ] Create `CoreIdent.Core/Services/SymmetricSigningKeyProvider.cs`
-        *   *Guidance:* Wrap existing HS256 logic
+    - [ ] (L2) Create `CoreIdent.Core/Services/SymmetricSigningKeyProvider.cs`
+        *   *Guidance:* Implement HS256 logic (for dev/testing only)
         *   *Guidance:* Log deprecation warning when used
-*   **Component:** Update `JwtTokenService`
-    - [ ] Inject `ISigningKeyProvider` instead of reading key from options directly
-    - [ ] Use `SigningCredentials` from provider for all token generation
-    - [ ] Include `kid` claim in JWT header
-*   **Component:** Update JWKS Endpoint
-    - [ ] Modify `DiscoveryEndpointsExtensions.cs` to use `ISigningKeyProvider.GetValidationKeysAsync()`
-    - [ ] Return proper RSA key format (`kty: "RSA"`, `n`, `e`, `kid`, `use: "sig"`, `alg`)
-    - [ ] Support multiple keys in JWKS (for rotation)
+*   **Component:** `JwtTokenService`
+    - [ ] (L2) Create `JwtTokenService` using `ISigningKeyProvider`
+    - [ ] (L2) Use `SigningCredentials` from provider for all token generation
+    - [ ] (L2) Include `kid` claim in JWT header
+*   **Component:** JWKS Endpoint
+    - [ ] (L2) Create `DiscoveryEndpointsExtensions.cs` with JWKS endpoint using `ISigningKeyProvider.GetValidationKeysAsync()`
+    - [ ] (L3) Return proper RSA key format (`kty: "RSA"`, `n`, `e`, `kid`, `use: "sig"`, `alg`)
+    - [ ] (L2) Support multiple keys in JWKS (for rotation)
 *   **Component:** DI Registration
-    - [ ] Add `AddSigningKey()` extension method with overloads:
+    - [ ] (L2) Add `AddSigningKey()` extension method with overloads:
         ```csharp
         .AddSigningKey(options => options.UseRsa(keyPath))
         .AddSigningKey(options => options.UseRsaPem(pemString))
@@ -109,26 +112,26 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         .AddSigningKey(options => options.UseSymmetric(secret)) // Dev only
         ```
 *   **Test Case (Unit):**
-    - [ ] `RsaSigningKeyProvider` loads key from PEM file correctly
-    - [ ] `RsaSigningKeyProvider` loads key from PEM string correctly
-    - [ ] `RsaSigningKeyProvider` generates key when none configured
-    - [ ] `EcdsaSigningKeyProvider` loads ES256 key correctly
-    - [ ] Generated tokens include `kid` in header
-    - [ ] JWKS endpoint returns valid RSA public key structure
+    - [ ] (L2) `RsaSigningKeyProvider` loads key from PEM file correctly
+    - [ ] (L2) `RsaSigningKeyProvider` loads key from PEM string correctly
+    - [ ] (L2) `RsaSigningKeyProvider` generates key when none configured
+    - [ ] (L2) `EcdsaSigningKeyProvider` loads ES256 key correctly
+    - [ ] (L1) Generated tokens include `kid` in header
+    - [ ] (L2) JWKS endpoint returns valid RSA public key structure
 *   **Test Case (Integration):**
-    - [ ] Token signed with RSA can be validated using JWKS public key
-    - [ ] Token signed with ECDSA can be validated using JWKS public key
-    - [ ] External JWT library can validate tokens using published JWKS
+    - [ ] (L3) Token signed with RSA can be validated using JWKS public key
+    - [ ] (L3) Token signed with ECDSA can be validated using JWKS public key
+    - [ ] (L2) External JWT library can validate tokens using published JWKS
 *   **Documentation:**
-    - [ ] Update README.md with asymmetric key configuration examples
-    - [ ] Add security guidance for key management
+    - [ ] (L1) Update README.md with asymmetric key configuration examples
+    - [ ] (L2) Add security guidance for key management
 
 ---
 
 ### Feature 0.3: Token Revocation Endpoint (RFC 7009)
 
 *   **Component:** `ITokenRevocationStore` Interface
-    - [ ] Create `CoreIdent.Core/Stores/ITokenRevocationStore.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Stores/ITokenRevocationStore.cs`
         ```csharp
         public interface ITokenRevocationStore
         {
@@ -138,14 +141,14 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `InMemoryTokenRevocationStore`
-    - [ ] Create in-memory implementation using `ConcurrentDictionary`
-    - [ ] Implement automatic cleanup of expired entries
+    - [ ] (L2) Create in-memory implementation using `ConcurrentDictionary`
+    - [ ] (L2) Implement automatic cleanup of expired entries
 *   **Component:** `EfTokenRevocationStore`
-    - [ ] Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
-    - [ ] Add `RevokedToken` entity to `CoreIdentDbContext`
-    - [ ] Add migration
+    - [ ] (L2) Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
+    - [ ] (L1) Add `RevokedToken` entity to `CoreIdentDbContext`
+    - [ ] (L1) Add migration
 *   **Component:** Revocation Endpoint
-    - [ ] Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs`
+    - [ ] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs`
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Support both access tokens and refresh tokens
         *   *Guidance:* For refresh tokens: mark as consumed in `IRefreshTokenStore`
@@ -153,28 +156,28 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Require client authentication for confidential clients
         *   *Guidance:* Always return 200 OK (per RFC 7009 - don't leak token validity)
 *   **Component:** Token Validation Integration
-    - [ ] Update token validation to check revocation store
-    - [ ] Add `ITokenRevocationStore` check in protected endpoint middleware
+    - [ ] (L3) Create token validation middleware that checks revocation store
+    - [ ] (L3) Integrate `ITokenRevocationStore` check in protected endpoint middleware
 *   **Test Case (Unit):**
-    - [ ] `InMemoryTokenRevocationStore` stores and retrieves revocations correctly
-    - [ ] Cleanup removes only expired entries
+    - [ ] (L1) `InMemoryTokenRevocationStore` stores and retrieves revocations correctly
+    - [ ] (L1) Cleanup removes only expired entries
 *   **Test Case (Integration):**
-    - [ ] `POST /auth/revoke` with valid refresh token invalidates it
-    - [ ] `POST /auth/revoke` with valid access token adds to revocation list
-    - [ ] Revoked access token is rejected by protected endpoints
-    - [ ] Revoked refresh token cannot be used for token refresh
-    - [ ] Invalid token revocation returns 200 OK (no information leakage)
-    - [ ] Confidential client must authenticate to revoke tokens
+    - [ ] (L2) `POST /auth/revoke` with valid refresh token invalidates it
+    - [ ] (L2) `POST /auth/revoke` with valid access token adds to revocation list
+    - [ ] (L3) Revoked access token is rejected by protected endpoints
+    - [ ] (L2) Revoked refresh token cannot be used for token refresh
+    - [ ] (L1) Invalid token revocation returns 200 OK (no information leakage)
+    - [ ] (L2) Confidential client must authenticate to revoke tokens
 *   **Documentation:**
-    - [ ] Add revocation endpoint to README.md
-    - [ ] Document revocation behavior and client requirements
+    - [ ] (L1) Add revocation endpoint to README.md
+    - [ ] (L1) Document revocation behavior and client requirements
 
 ---
 
 ### Feature 0.4: Token Introspection Endpoint (RFC 7662)
 
 *   **Component:** Introspection Endpoint
-    - [ ] Create `POST /auth/introspect` endpoint in `TokenManagementEndpointsExtensions.cs`
+    - [ ] (L3) Create `POST /auth/introspect` endpoint in `TokenManagementEndpointsExtensions.cs`
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Require client authentication (resource server credentials)
         *   *Guidance:* Validate token signature, expiry, revocation status
@@ -194,130 +197,125 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             }
             ```
 *   **Component:** Introspection Response Models
-    - [ ] Create `TokenIntrospectionRequest` record
-    - [ ] Create `TokenIntrospectionResponse` record
+    - [ ] (L1) Create `TokenIntrospectionRequest` record
+    - [ ] (L1) Create `TokenIntrospectionResponse` record
 *   **Test Case (Integration):**
-    - [ ] Valid access token returns `active: true` with claims
-    - [ ] Expired token returns `active: false`
-    - [ ] Revoked token returns `active: false`
-    - [ ] Invalid token returns `active: false`
-    - [ ] Unauthenticated request returns 401
-    - [ ] Response includes all standard claims
+    - [ ] (L2) Valid access token returns `active: true` with claims
+    - [ ] (L1) Expired token returns `active: false`
+    - [ ] (L2) Revoked token returns `active: false`
+    - [ ] (L1) Invalid token returns `active: false`
+    - [ ] (L1) Unauthenticated request returns 401
+    - [ ] (L2) Response includes all standard claims
 *   **Documentation:**
-    - [ ] Add introspection endpoint to README.md
-    - [ ] Document resource server integration pattern
+    - [ ] (L1) Add introspection endpoint to README.md
+    - [ ] (L2) Document resource server integration pattern
 
 ---
 
 ### Feature 0.5: Test Infrastructure Overhaul
 
 *   **Component:** `CoreIdent.Testing` Package
-    - [ ] Create new project `tests/CoreIdent.Testing/CoreIdent.Testing.csproj`
-    - [ ] Add package references: xUnit, Shouldly, Microsoft.AspNetCore.Mvc.Testing
+    - [ ] (L1) Create new project `tests/CoreIdent.Testing/CoreIdent.Testing.csproj`
+    - [ ] (L1) Add package references: xUnit, Shouldly, Microsoft.AspNetCore.Mvc.Testing
 *   **Component:** `CoreIdentWebApplicationFactory`
-    - [ ] Create `CoreIdent.Testing/Fixtures/CoreIdentWebApplicationFactory.cs`
+    - [ ] (L3) Create `CoreIdent.Testing/Fixtures/CoreIdentWebApplicationFactory.cs`
         *   *Guidance:* Encapsulate SQLite in-memory setup
         *   *Guidance:* Provide `ConfigureTestServices` hook
         *   *Guidance:* Provide `SeedDatabase` hook
         *   *Guidance:* Auto-seed standard OIDC scopes
         *   *Guidance:* Handle connection lifecycle properly
 *   **Component:** `CoreIdentTestFixture` Base Class
-    - [ ] Create `CoreIdent.Testing/Fixtures/CoreIdentTestFixture.cs`
+    - [ ] (L2) Create `CoreIdent.Testing/Fixtures/CoreIdentTestFixture.cs`
         *   *Guidance:* Implement `IAsyncLifetime`
         *   *Guidance:* Provide `Client` (HttpClient) property
         *   *Guidance:* Provide `Services` (IServiceProvider) property
         *   *Guidance:* Provide helper methods: `CreateUserAsync()`, `CreateClientAsync()`, `AuthenticateAsAsync()`
 *   **Component:** Fluent Builders
-    - [ ] Create `CoreIdent.Testing/Builders/UserBuilder.cs`
+    - [ ] (L2) Create `CoreIdent.Testing/Builders/UserBuilder.cs`
         *   *Guidance:* Fluent API: `.WithEmail()`, `.WithPassword()`, `.WithClaim()`
-    - [ ] Create `CoreIdent.Testing/Builders/ClientBuilder.cs`
+    - [ ] (L2) Create `CoreIdent.Testing/Builders/ClientBuilder.cs`
         *   *Guidance:* Fluent API: `.WithClientId()`, `.WithSecret()`, `.AsPublicClient()`, `.AsConfidentialClient()`
-    - [ ] Create `CoreIdent.Testing/Builders/ScopeBuilder.cs`
+    - [ ] (L1) Create `CoreIdent.Testing/Builders/ScopeBuilder.cs`
 *   **Component:** Assertion Extensions
-    - [ ] Create `CoreIdent.Testing/Extensions/JwtAssertionExtensions.cs`
+    - [ ] (L2) Create `CoreIdent.Testing/Extensions/JwtAssertionExtensions.cs`
         *   *Guidance:* `.ShouldBeValidJwt()`, `.ShouldHaveClaim()`, `.ShouldExpireAfter()`
-    - [ ] Create `CoreIdent.Testing/Extensions/HttpResponseAssertionExtensions.cs`
+    - [ ] (L1) Create `CoreIdent.Testing/Extensions/HttpResponseAssertionExtensions.cs`
         *   *Guidance:* `.ShouldBeSuccessful()`, `.ShouldBeUnauthorized()`, `.ShouldBeBadRequest()`
 *   **Component:** Standard Seeders
-    - [ ] Create `CoreIdent.Testing/Seeders/StandardScopes.cs`
+    - [ ] (L1) Create `CoreIdent.Testing/Seeders/StandardScopes.cs`
         *   *Guidance:* Pre-defined openid, profile, email, offline_access scopes
-    - [ ] Create `CoreIdent.Testing/Seeders/StandardClients.cs`
+    - [ ] (L1) Create `CoreIdent.Testing/Seeders/StandardClients.cs`
         *   *Guidance:* Pre-defined test clients (public, confidential)
-*   **Component:** Refactor Existing Tests
-    - [ ] Update `CoreIdent.Integration.Tests` to use new fixtures
-    - [ ] Remove duplicated `WebApplicationFactory` code from test classes
-    - [ ] Simplify test setup using builders
+*   **Component:** Integration Test Setup
+    - [ ] (L2) Create `CoreIdent.Integration.Tests` project using new fixtures
+    - [ ] (L2) Write initial integration tests using builders
 *   **Test Case:**
-    - [ ] New fixture-based tests are simpler and more readable
-    - [ ] All existing tests pass with new infrastructure
-    - [ ] Test execution time is not significantly increased
-*   **Documentation:**
-    - [ ] Add testing guide to docs
-    - [ ] Document fixture usage patterns
+    - [ ] (L1) Fixture-based tests are simple and readable
+    - [ ] (L1) Test execution time is reasonable
 
 ---
 
 ### Feature 0.6: OpenTelemetry Metrics Integration
 
 *   **Component:** Metrics Instrumentation
-    - [ ] Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
-    - [ ] Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
-    - [ ] Add CoreIdent-specific metrics:
+    - [ ] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
+    - [ ] (L2) Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
+    - [ ] (L2) Add CoreIdent-specific metrics:
         - `coreident.passwordless.email.sent` — Email magic links sent
         - `coreident.passwordless.email.verified` — Successful email verifications
         - `coreident.token.issued` — Tokens issued (by type)
         - `coreident.token.revoked` — Tokens revoked
         - `coreident.client.authenticated` — Client authentications
 *   **Component:** Metrics Configuration
-    - [ ] Add `AddCoreIdentMetrics()` extension method
-    - [ ] Support filtering/sampling
+    - [ ] (L1) Add `AddCoreIdentMetrics()` extension method
+    - [ ] (L2) Support filtering/sampling
 *   **Test Case:**
-    - [ ] Metrics are emitted for key operations
-    - [ ] Metrics integrate with Aspire dashboard
+    - [ ] (L2) Metrics are emitted for key operations
+    - [ ] (L2) Metrics integrate with Aspire dashboard
 *   **Documentation:**
-    - [ ] Metrics and observability guide
+    - [ ] (L1) Metrics and observability guide
 
 ---
 
 ### Feature 0.7: CLI Tool (`dotnet coreident`)
 
 *   **Component:** CLI Package (`CoreIdent.Cli`)
-    - [ ] Create .NET tool package
-    - [ ] Register as `dotnet tool install -g CoreIdent.Cli`
+    - [ ] (L2) Create .NET tool package
+    - [ ] (L1) Register as `dotnet tool install -g CoreIdent.Cli`
 *   **Component:** `init` Command
-    - [ ] Scaffold `appsettings.json` with CoreIdent section
-    - [ ] Generate secure random signing key (for dev)
-    - [ ] Add package references to `.csproj`
+    - [ ] (L2) Scaffold `appsettings.json` with CoreIdent section
+    - [ ] (L2) Generate secure random signing key (for dev)
+    - [ ] (L1) Add package references to `.csproj`
 *   **Component:** `keys generate` Command
-    - [ ] Generate RSA key pair (PEM format)
-    - [ ] Generate ECDSA key pair (PEM format)
-    - [ ] Output to file or stdout
+    - [ ] (L2) Generate RSA key pair (PEM format)
+    - [ ] (L2) Generate ECDSA key pair (PEM format)
+    - [ ] (L1) Output to file or stdout
 *   **Component:** `client add` Command
-    - [ ] Interactive client registration
-    - [ ] Generate client ID and secret
-    - [ ] Output configuration snippet
+    - [ ] (L2) Interactive client registration
+    - [ ] (L1) Generate client ID and secret
+    - [ ] (L1) Output configuration snippet
 *   **Component:** `migrate` Command
-    - [ ] Wrapper around EF Core migrations for CoreIdent schema
+    - [ ] (L2) Wrapper around EF Core migrations for CoreIdent schema
 *   **Test Case:**
-    - [ ] Each command works in isolation
-    - [ ] Generated keys are valid and usable
+    - [ ] (L1) Each command works in isolation
+    - [ ] (L2) Generated keys are valid and usable
 *   **Documentation:**
-    - [ ] CLI reference guide
+    - [ ] (L1) CLI reference guide
 
 ---
 
 ### Feature 0.8: Dev Container Configuration
 
 *   **Component:** `.devcontainer/` Setup
-    - [ ] Create `devcontainer.json`
-    - [ ] Configure .NET 10 SDK
-    - [ ] Include recommended VS Code extensions
-    - [ ] Pre-configure database (SQLite for simplicity)
+    - [ ] (L1) Create `devcontainer.json`
+    - [ ] (L1) Configure .NET 10 SDK
+    - [ ] (L1) Include recommended VS Code extensions
+    - [ ] (L1) Pre-configure database (SQLite for simplicity)
 *   **Component:** Codespaces Support
-    - [ ] Test in GitHub Codespaces
-    - [ ] Add "Open in Codespaces" badge to README
+    - [ ] (L1) Test in GitHub Codespaces
+    - [ ] (L1) Add "Open in Codespaces" badge to README
 *   **Documentation:**
-    - [ ] Contributing guide with dev container instructions
+    - [ ] (L1) Contributing guide with dev container instructions
 
 ---
 
@@ -334,7 +332,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.1: Email Magic Link Authentication
 
 *   **Component:** `IEmailSender` Interface
-    - [ ] Create `CoreIdent.Core/Services/IEmailSender.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Services/IEmailSender.cs`
         ```csharp
         public interface IEmailSender
         {
@@ -344,10 +342,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public record EmailMessage(string To, string Subject, string HtmlBody, string? TextBody = null);
         ```
 *   **Component:** `SmtpEmailSender` Implementation
-    - [ ] Create default SMTP implementation
-    - [ ] Support configuration via `SmtpOptions` (host, port, credentials, TLS)
+    - [ ] (L2) Create default SMTP implementation
+    - [ ] (L1) Support configuration via `SmtpOptions` (host, port, credentials, TLS)
 *   **Component:** `IPasswordlessTokenStore` Interface
-    - [ ] Create `CoreIdent.Core/Stores/IPasswordlessTokenStore.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Stores/IPasswordlessTokenStore.cs`
         ```csharp
         public interface IPasswordlessTokenStore
         {
@@ -357,22 +355,22 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `PasswordlessToken` Model
-    - [ ] Create model with: Id, Email, TokenHash, CreatedAt, ExpiresAt, Consumed, UserId
+    - [ ] (L1) Create model with: Id, Email, TokenHash, CreatedAt, ExpiresAt, Consumed, UserId
 *   **Component:** `InMemoryPasswordlessTokenStore`
-    - [ ] Create in-memory implementation
+    - [ ] (L2) Create in-memory implementation
 *   **Component:** `EfPasswordlessTokenStore`
-    - [ ] Create EF Core implementation
-    - [ ] Add entity and migration
+    - [ ] (L2) Create EF Core implementation
+    - [ ] (L1) Add entity and migration
 *   **Component:** Passwordless Endpoints
-    - [ ] Create `POST /auth/passwordless/email/start`
+    - [ ] (L3) Create `POST /auth/passwordless/email/start`
         *   *Guidance:* Accept email, generate secure token, store hashed, send email
         *   *Guidance:* Rate limit per email address
         *   *Guidance:* Always return success (don't leak email existence)
-    - [ ] Create `GET /auth/passwordless/email/verify`
+    - [ ] (L3) Create `GET /auth/passwordless/email/verify`
         *   *Guidance:* Accept token, validate, consume, create/find user, issue tokens
         *   *Guidance:* Redirect to configured success URL with tokens
 *   **Component:** `PasswordlessEmailOptions`
-    - [ ] Create configuration class
+    - [ ] (L1) Create configuration class
         ```csharp
         public class PasswordlessEmailOptions
         {
@@ -384,30 +382,30 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Email Templates
-    - [ ] Create default HTML email template
-    - [ ] Support custom template loading
+    - [ ] (L1) Create default HTML email template
+    - [ ] (L2) Support custom template loading
 *   **Test Case (Unit):**
-    - [ ] Token generation creates unique, secure tokens
-    - [ ] Token hashing is one-way and consistent
-    - [ ] Rate limiting blocks excessive requests
+    - [ ] (L2) Token generation creates unique, secure tokens
+    - [ ] (L2) Token hashing is one-way and consistent
+    - [ ] (L2) Rate limiting blocks excessive requests
 *   **Test Case (Integration):**
-    - [ ] `POST /auth/passwordless/email/start` sends email (mock sender)
-    - [ ] `GET /auth/passwordless/email/verify` with valid token issues tokens
-    - [ ] Expired token returns error
-    - [ ] Already-consumed token returns error
-    - [ ] New user is created if email not found
-    - [ ] Existing user is authenticated if email found
+    - [ ] (L2) `POST /auth/passwordless/email/start` sends email (mock sender)
+    - [ ] (L3) `GET /auth/passwordless/email/verify` with valid token issues tokens
+    - [ ] (L1) Expired token returns error
+    - [ ] (L1) Already-consumed token returns error
+    - [ ] (L2) New user is created if email not found
+    - [ ] (L2) Existing user is authenticated if email found
 *   **Documentation:**
-    - [ ] Add passwordless email setup guide
-    - [ ] Document SMTP configuration
-    - [ ] Provide email template customization examples
+    - [ ] (L1) Add passwordless email setup guide
+    - [ ] (L1) Document SMTP configuration
+    - [ ] (L1) Provide email template customization examples
 
 ---
 
 ### Feature 1.2: Passkey Integration (WebAuthn/FIDO2)
 
 *   **Component:** `CoreIdentPasskeyOptions`
-    - [ ] Create wrapper around .NET 10's `IdentityPasskeyOptions`
+    - [ ] (L2) Create wrapper around .NET 10's `IdentityPasskeyOptions`
         ```csharp
         public class CoreIdentPasskeyOptions
         {
@@ -418,37 +416,37 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Passkey Service
-    - [ ] Create `IPasskeyService` interface
-    - [ ] Implement using .NET 10's built-in passkey support
-    - [ ] Handle registration ceremony
-    - [ ] Handle authentication ceremony
+    - [ ] (L1) Create `IPasskeyService` interface
+    - [ ] (L3) Implement using .NET 10's built-in passkey support
+    - [ ] (L3) Handle registration ceremony
+    - [ ] (L3) Handle authentication ceremony
 *   **Component:** Passkey Credential Storage
-    - [ ] Create `IPasskeyCredentialStore` interface
-    - [ ] Create `PasskeyCredential` model
-    - [ ] Implement in-memory store
-    - [ ] Implement EF Core store
+    - [ ] (L1) Create `IPasskeyCredentialStore` interface
+    - [ ] (L1) Create `PasskeyCredential` model
+    - [ ] (L2) Implement in-memory store
+    - [ ] (L2) Implement EF Core store
 *   **Component:** Passkey Endpoints
-    - [ ] `POST /auth/passkey/register/options` - Get registration options
-    - [ ] `POST /auth/passkey/register/complete` - Complete registration
-    - [ ] `POST /auth/passkey/authenticate/options` - Get authentication options
-    - [ ] `POST /auth/passkey/authenticate/complete` - Complete authentication
+    - [ ] (L2) `POST /auth/passkey/register/options` - Get registration options
+    - [ ] (L3) `POST /auth/passkey/register/complete` - Complete registration
+    - [ ] (L2) `POST /auth/passkey/authenticate/options` - Get authentication options
+    - [ ] (L3) `POST /auth/passkey/authenticate/complete` - Complete authentication
 *   **Component:** DI Registration
-    - [ ] Add `AddPasskeys()` extension method
+    - [ ] (L1) Add `AddPasskeys()` extension method
 *   **Test Case (Integration):**
-    - [ ] Registration flow returns valid options
-    - [ ] Authentication flow returns valid options
+    - [ ] (L2) Registration flow returns valid options
+    - [ ] (L2) Authentication flow returns valid options
     - [ ] (Note: Full WebAuthn testing requires browser automation or mocks)
 *   **Documentation:**
-    - [ ] Add passkey setup guide
-    - [ ] Document browser requirements
-    - [ ] Provide JavaScript integration examples
+    - [ ] (L1) Add passkey setup guide
+    - [ ] (L1) Document browser requirements
+    - [ ] (L2) Provide JavaScript integration examples
 
 ---
 
 ### Feature 1.3: SMS OTP (Pluggable Provider)
 
 *   **Component:** `ISmsProvider` Interface
-    - [ ] Create `CoreIdent.Core/Services/ISmsProvider.cs`
+    - [ ] (L1) Create `CoreIdent.Core/Services/ISmsProvider.cs`
         ```csharp
         public interface ISmsProvider
         {
@@ -456,28 +454,28 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `ConsoleSmsProvider` (Dev/Testing)
-    - [ ] Create implementation that logs to console
+    - [ ] (L1) Create implementation that logs to console
 *   **Component:** SMS OTP Endpoints
-    - [ ] `POST /auth/passwordless/sms/start` - Send OTP
-    - [ ] `POST /auth/passwordless/sms/verify` - Verify OTP
+    - [ ] (L2) `POST /auth/passwordless/sms/start` - Send OTP
+    - [ ] (L2) `POST /auth/passwordless/sms/verify` - Verify OTP
 *   **Component:** OTP Generation and Storage
-    - [ ] Reuse `IPasswordlessTokenStore` with SMS-specific token type
-    - [ ] Generate 6-digit numeric OTP
+    - [ ] (L1) Reuse `IPasswordlessTokenStore` with SMS-specific token type
+    - [ ] (L1) Generate 6-digit numeric OTP
 *   **Test Case (Integration):**
-    - [ ] OTP is sent via provider (mock)
-    - [ ] Valid OTP authenticates user
-    - [ ] Expired OTP fails
-    - [ ] Rate limiting works
+    - [ ] (L1) OTP is sent via provider (mock)
+    - [ ] (L2) Valid OTP authenticates user
+    - [ ] (L1) Expired OTP fails
+    - [ ] (L2) Rate limiting works
 *   **Documentation:**
-    - [ ] Document SMS provider interface
-    - [ ] Provide Twilio implementation example (separate package)
+    - [ ] (L1) Document SMS provider interface
+    - [ ] (L2) Provide Twilio implementation example (separate package)
 
 ---
 
 ### Feature 1.4: ClaimsPrincipal Extensions (C# 14)
 
 *   **Component:** Extension Members
-    - [ ] Create `CoreIdent.Core/Extensions/ClaimsPrincipalExtensions.cs`
+    - [ ] (L2) Create `CoreIdent.Core/Extensions/ClaimsPrincipalExtensions.cs`
         ```csharp
         public static class ClaimsPrincipalExtensions
         {
@@ -496,57 +494,57 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Test Case (Unit):**
-    - [ ] `Email` property returns correct value from various claim types
-    - [ ] `UserId` property returns correct value
-    - [ ] `GetUserIdAsGuid()` parses correctly or throws
-    - [ ] `GetClaim<T>()` parses various types correctly
+    - [ ] (L1) `Email` property returns correct value from various claim types
+    - [ ] (L1) `UserId` property returns correct value
+    - [ ] (L1) `GetUserIdAsGuid()` parses correctly or throws
+    - [ ] (L2) `GetClaim<T>()` parses various types correctly
 *   **Documentation:**
-    - [ ] Add usage examples to README
-    - [ ] Document available extension properties/methods
+    - [ ] (L1) Add usage examples to README
+    - [ ] (L1) Document available extension properties/methods
 
 ---
 
 ### Feature 1.5: `dotnet new` Templates
 
 *   **Component:** Template Package Structure
-    - [ ] Create `templates/` directory structure
-    - [ ] Create `CoreIdent.Templates.csproj` for packaging
+    - [ ] (L1) Create `templates/` directory structure
+    - [ ] (L1) Create `CoreIdent.Templates.csproj` for packaging
 *   **Component:** `coreident-api` Template
-    - [ ] Create minimal API template with CoreIdent auth
-    - [ ] Include `template.json` with parameters (usePasswordless, useEfCore)
-    - [ ] Include sample `appsettings.json`
+    - [ ] (L2) Create minimal API template with CoreIdent auth
+    - [ ] (L2) Include `template.json` with parameters (usePasswordless, useEfCore)
+    - [ ] (L1) Include sample `appsettings.json`
 *   **Component:** `coreident-server` Template
-    - [ ] Create full OAuth/OIDC server template
-    - [ ] Include EF Core setup
-    - [ ] Include sample clients and scopes
+    - [ ] (L2) Create full OAuth/OIDC server template
+    - [ ] (L2) Include EF Core setup
+    - [ ] (L1) Include sample clients and scopes
 *   **Component:** Template Testing
-    - [ ] Create test that instantiates templates and builds them
+    - [ ] (L2) Create test that instantiates templates and builds them
 *   **Documentation:**
-    - [ ] Add template usage to getting started guide
-    - [ ] Document template parameters
+    - [ ] (L1) Add template usage to getting started guide
+    - [ ] (L1) Document template parameters
 
 ---
 
 ### Feature 1.6: Aspire Integration
 
 *   **Component:** `CoreIdent.Aspire` Package
-    - [ ] Create package targeting Aspire 9.0+
-    - [ ] Implement `IDistributedApplicationComponent`
+    - [ ] (L2) Create package targeting Aspire 9.0+
+    - [ ] (L3) Implement `IDistributedApplicationComponent`
 *   **Component:** Dashboard Integration
-    - [ ] Pre-configured metrics export
-    - [ ] Structured logging integration
-    - [ ] Distributed tracing for auth flows
+    - [ ] (L2) Pre-configured metrics export
+    - [ ] (L2) Structured logging integration
+    - [ ] (L2) Distributed tracing for auth flows
 *   **Component:** Health Checks
-    - [ ] Database connectivity check
-    - [ ] Key availability check
-    - [ ] External provider connectivity (if configured)
+    - [ ] (L1) Database connectivity check
+    - [ ] (L1) Key availability check
+    - [ ] (L2) External provider connectivity (if configured)
 *   **Component:** Service Defaults
-    - [ ] `AddCoreIdentDefaults()` extension for Aspire service defaults
+    - [ ] (L2) `AddCoreIdentDefaults()` extension for Aspire service defaults
 *   **Test Case:**
-    - [ ] Aspire dashboard shows CoreIdent metrics
-    - [ ] Health checks report correctly
+    - [ ] (L2) Aspire dashboard shows CoreIdent metrics
+    - [ ] (L1) Health checks report correctly
 *   **Documentation:**
-    - [ ] Aspire integration guide
+    - [ ] (L1) Aspire integration guide
 
 ---
 
@@ -563,8 +561,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.1: Core Client Library
 
 *   **Component:** `CoreIdent.Client` Package (.NET Standard 2.0+)
-    - [ ] Create new project targeting `netstandard2.0;net8.0;net10.0`
-    - [ ] Define `ICoreIdentClient` interface
+    - [ ] (L1) Create new project targeting `netstandard2.0;net8.0;net10.0`
+    - [ ] (L1) Define `ICoreIdentClient` interface
         ```csharp
         public interface ICoreIdentClient
         {
@@ -577,7 +575,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             event EventHandler<AuthStateChangedEventArgs>? AuthStateChanged;
         }
         ```
-    - [ ] Define `CoreIdentClientOptions`
+    - [ ] (L1) Define `CoreIdentClientOptions`
         ```csharp
         public class CoreIdentClientOptions
         {
@@ -593,7 +591,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Token Storage Abstraction
-    - [ ] Define `ISecureTokenStorage` interface
+    - [ ] (L1) Define `ISecureTokenStorage` interface
         ```csharp
         public interface ISecureTokenStorage
         {
@@ -602,88 +600,88 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             Task ClearTokensAsync(CancellationToken ct = default);
         }
         ```
-    - [ ] Implement `InMemoryTokenStorage` (default, non-persistent)
-    - [ ] Implement `FileTokenStorage` (encrypted file, for console apps)
+    - [ ] (L1) Implement `InMemoryTokenStorage` (default, non-persistent)
+    - [ ] (L2) Implement `FileTokenStorage` (encrypted file, for console apps)
 *   **Component:** Browser Abstraction
-    - [ ] Define `IBrowserLauncher` interface
+    - [ ] (L1) Define `IBrowserLauncher` interface
         ```csharp
         public interface IBrowserLauncher
         {
             Task<BrowserResult> LaunchAsync(string url, string redirectUri, CancellationToken ct = default);
         }
         ```
-    - [ ] Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
+    - [ ] (L3) Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
 *   **Component:** OAuth/OIDC Flow Implementation
-    - [ ] Implement Authorization Code + PKCE flow
-    - [ ] Implement token refresh logic
-    - [ ] Implement logout (end session)
-    - [ ] Handle discovery document fetching and caching
+    - [ ] (L3) Implement Authorization Code + PKCE flow
+    - [ ] (L2) Implement token refresh logic
+    - [ ] (L2) Implement logout (end session)
+    - [ ] (L2) Handle discovery document fetching and caching
 *   **Test Case (Unit):**
-    - [ ] PKCE code verifier/challenge generation is correct
-    - [ ] Token refresh triggers before expiry
-    - [ ] State parameter prevents CSRF
+    - [ ] (L2) PKCE code verifier/challenge generation is correct
+    - [ ] (L2) Token refresh triggers before expiry
+    - [ ] (L2) State parameter prevents CSRF
 *   **Test Case (Integration):**
-    - [ ] Full login flow against CoreIdent test server
-    - [ ] Token refresh works correctly
-    - [ ] Logout clears tokens
+    - [ ] (L3) Full login flow against CoreIdent test server
+    - [ ] (L2) Token refresh works correctly
+    - [ ] (L1) Logout clears tokens
 
 ---
 
 ### Feature 1.5.2: MAUI Client
 
 *   **Component:** `CoreIdent.Client.Maui` Package
-    - [ ] Create project targeting `net8.0-android;net8.0-ios;net8.0-maccatalyst;net10.0-android;net10.0-ios`
-    - [ ] Implement `MauiSecureTokenStorage` using `SecureStorage`
-    - [ ] Implement `MauiBrowserLauncher` using `WebAuthenticator`
-    - [ ] Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
+    - [ ] (L1) Create project targeting `net8.0-android;net8.0-ios;net8.0-maccatalyst;net10.0-android;net10.0-ios`
+    - [ ] (L2) Implement `MauiSecureTokenStorage` using `SecureStorage`
+    - [ ] (L3) Implement `MauiBrowserLauncher` using `WebAuthenticator`
+    - [ ] (L1) Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
 *   **Test Case:**
-    - [ ] Tokens persist across app restarts
-    - [ ] WebAuthenticator flow completes successfully
+    - [ ] (L2) Tokens persist across app restarts
+    - [ ] (L3) WebAuthenticator flow completes successfully
 *   **Documentation:**
-    - [ ] MAUI integration guide with sample app
+    - [ ] (L1) MAUI integration guide with sample app
 
 ---
 
 ### Feature 1.5.3: WPF/WinForms Client
 
 *   **Component:** `CoreIdent.Client.Wpf` Package
-    - [ ] Create project targeting `net8.0-windows;net10.0-windows`
-    - [ ] Implement `DpapiTokenStorage` using Windows DPAPI
-    - [ ] Implement `WebView2BrowserLauncher` (embedded browser)
-    - [ ] Implement `SystemBrowserLauncher` (external browser with localhost callback)
+    - [ ] (L1) Create project targeting `net8.0-windows;net10.0-windows`
+    - [ ] (L2) Implement `DpapiTokenStorage` using Windows DPAPI
+    - [ ] (L3) Implement `WebView2BrowserLauncher` (embedded browser)
+    - [ ] (L2) Implement `SystemBrowserLauncher` (external browser with localhost callback)
 *   **Test Case:**
-    - [ ] DPAPI storage encrypts/decrypts correctly
-    - [ ] WebView2 flow works
+    - [ ] (L2) DPAPI storage encrypts/decrypts correctly
+    - [ ] (L3) WebView2 flow works
 *   **Documentation:**
-    - [ ] WPF/WinForms integration guide
+    - [ ] (L1) WPF/WinForms integration guide
 
 ---
 
 ### Feature 1.5.4: Console Client
 
 *   **Component:** `CoreIdent.Client.Console` Package
-    - [ ] Create project targeting `net8.0;net10.0`
-    - [ ] Implement `EncryptedFileTokenStorage`
-    - [ ] Implement device code flow support (for headless scenarios)
+    - [ ] (L1) Create project targeting `net8.0;net10.0`
+    - [ ] (L2) Implement `EncryptedFileTokenStorage`
+    - [ ] (L2) Implement device code flow support (for headless scenarios)
 *   **Test Case:**
-    - [ ] Device code flow works
-    - [ ] File storage is encrypted
+    - [ ] (L2) Device code flow works
+    - [ ] (L2) File storage is encrypted
 *   **Documentation:**
-    - [ ] Console/CLI app integration guide
+    - [ ] (L1) Console/CLI app integration guide
 
 ---
 
 ### Feature 1.5.5: Blazor WASM Client
 
 *   **Component:** `CoreIdent.Client.Blazor` Package
-    - [ ] Create project targeting `net8.0;net10.0`
-    - [ ] Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
-    - [ ] Integrate with Blazor's `AuthenticationStateProvider`
+    - [ ] (L1) Create project targeting `net8.0;net10.0`
+    - [ ] (L2) Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
+    - [ ] (L3) Integrate with Blazor's `AuthenticationStateProvider`
 *   **Test Case:**
-    - [ ] Auth state propagates to Blazor components
-    - [ ] Token refresh works in browser
+    - [ ] (L2) Auth state propagates to Blazor components
+    - [ ] (L2) Token refresh works in browser
 *   **Documentation:**
-    - [ ] Blazor WASM integration guide
+    - [ ] (L1) Blazor WASM integration guide
 
 ---
 
@@ -700,55 +698,55 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 2.1: Provider Abstraction Layer
 
 *   **Component:** `CoreIdent.Providers.Abstractions` Package
-    - [ ] Create new project
-    - [ ] Define `IExternalAuthProvider` interface
-    - [ ] Define `ExternalAuthResult` model
-    - [ ] Define `ExternalUserProfile` model
+    - [ ] (L1) Create new project
+    - [ ] (L1) Define `IExternalAuthProvider` interface
+    - [ ] (L1) Define `ExternalAuthResult` model
+    - [ ] (L1) Define `ExternalUserProfile` model
 *   **Component:** Account Linking
-    - [ ] Add `ExternalLogin` entity to user model
-    - [ ] Support linking multiple providers to one user
-    - [ ] Handle provider-to-user mapping
+    - [ ] (L1) Add `ExternalLogin` entity to user model
+    - [ ] (L2) Support linking multiple providers to one user
+    - [ ] (L2) Handle provider-to-user mapping
 *   **Documentation:**
-    - [ ] Document provider implementation guide
+    - [ ] (L1) Document provider implementation guide
 
 ---
 
 ### Feature 2.2: Google Provider
 
 *   **Component:** `CoreIdent.Providers.Google` Package
-    - [ ] Create new project
-    - [ ] Implement `IExternalAuthProvider` for Google
-    - [ ] Handle OAuth flow with Google
-    - [ ] Map Google profile to `ExternalUserProfile`
+    - [ ] (L1) Create new project
+    - [ ] (L2) Implement `IExternalAuthProvider` for Google
+    - [ ] (L2) Handle OAuth flow with Google
+    - [ ] (L1) Map Google profile to `ExternalUserProfile`
 *   **Component:** Configuration
-    - [ ] Create `GoogleProviderOptions` (ClientId, ClientSecret, Scopes)
-    - [ ] Add `AddGoogleProvider()` extension method
+    - [ ] (L1) Create `GoogleProviderOptions` (ClientId, ClientSecret, Scopes)
+    - [ ] (L1) Add `AddGoogleProvider()` extension method
 *   **Test Case (Integration):**
-    - [ ] Configuration validation works
+    - [ ] (L1) Configuration validation works
     - [ ] (Full flow requires manual testing or mock)
 *   **Documentation:**
-    - [ ] Add Google setup guide with screenshots
+    - [ ] (L1) Add Google setup guide with screenshots
 
 ---
 
 ### Feature 2.3: Microsoft Provider
 
 *   **Component:** `CoreIdent.Providers.Microsoft` Package
-    - [ ] Create new project
-    - [ ] Implement for Microsoft/Entra ID
-    - [ ] Support both personal and work/school accounts
+    - [ ] (L1) Create new project
+    - [ ] (L2) Implement for Microsoft/Entra ID
+    - [ ] (L2) Support both personal and work/school accounts
 *   **Documentation:**
-    - [ ] Add Microsoft/Entra setup guide
+    - [ ] (L1) Add Microsoft/Entra setup guide
 
 ---
 
 ### Feature 2.4: GitHub Provider
 
 *   **Component:** `CoreIdent.Providers.GitHub` Package
-    - [ ] Create new project
-    - [ ] Implement for GitHub OAuth
+    - [ ] (L1) Create new project
+    - [ ] (L2) Implement for GitHub OAuth
 *   **Documentation:**
-    - [ ] Add GitHub setup guide
+    - [ ] (L1) Add GitHub setup guide
 
 ---
 
@@ -765,169 +763,169 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 3.1: Key Rotation
 
 *   **Component:** `IKeyRotationService`
-    - [ ] Define interface for key rotation operations
-    - [ ] Implement automatic rotation based on schedule
-    - [ ] Support overlap period for old keys
+    - [ ] (L1) Define interface for key rotation operations
+    - [ ] (L3) Implement automatic rotation based on schedule
+    - [ ] (L2) Support overlap period for old keys
 *   **Component:** Multiple Keys in JWKS
-    - [ ] Update JWKS endpoint to return all active keys
-    - [ ] Include key expiry metadata
+    - [ ] (L2) Extend JWKS endpoint to return all active keys
+    - [ ] (L1) Include key expiry metadata
 *   **Test Case:**
-    - [ ] Old tokens remain valid during overlap period
-    - [ ] New tokens use new key
-    - [ ] JWKS contains both keys during rotation
+    - [ ] (L3) Old tokens remain valid during overlap period
+    - [ ] (L2) New tokens use new key
+    - [ ] (L2) JWKS contains both keys during rotation
 
 ---
 
 ### Feature 3.2: Session Management & OIDC Logout
 
 *   **Component:** Session Tracking
-    - [ ] Create `ISessionStore` interface
-    - [ ] Track active sessions per user
+    - [ ] (L1) Create `ISessionStore` interface
+    - [ ] (L2) Track active sessions per user
 *   **Component:** OIDC Logout Endpoint
-    - [ ] Implement `GET /auth/logout` (end_session_endpoint)
-    - [ ] Support `id_token_hint`, `post_logout_redirect_uri`, `state`
-    - [ ] Revoke associated tokens
+    - [ ] (L2) Implement `GET /auth/logout` (end_session_endpoint)
+    - [ ] (L2) Support `id_token_hint`, `post_logout_redirect_uri`, `state`
+    - [ ] (L2) Revoke associated tokens
 *   **Test Case:**
-    - [ ] Logout invalidates session
-    - [ ] Logout redirects correctly
+    - [ ] (L2) Logout invalidates session
+    - [ ] (L1) Logout redirects correctly
 
 ---
 
 ### Feature 3.3: Dynamic Client Registration (RFC 7591)
 
 *   **Component:** Registration Endpoint
-    - [ ] Implement `POST /auth/register` for clients
-    - [ ] Support initial access tokens for authorization
-    - [ ] Return client credentials
+    - [ ] (L2) Implement `POST /auth/register` for clients
+    - [ ] (L2) Support initial access tokens for authorization
+    - [ ] (L1) Return client credentials
 *   **Test Case:**
-    - [ ] Client can register and receive credentials
-    - [ ] Invalid registration is rejected
+    - [ ] (L2) Client can register and receive credentials
+    - [ ] (L1) Invalid registration is rejected
 
 ---
 
 ### Feature 3.4: Device Authorization Flow (RFC 8628)
 
 *   **Component:** Device Authorization Endpoint
-    - [ ] Implement `POST /auth/device_authorization`
-    - [ ] Return device_code, user_code, verification_uri
+    - [ ] (L2) Implement `POST /auth/device_authorization`
+    - [ ] (L1) Return device_code, user_code, verification_uri
 *   **Component:** Device Token Endpoint
-    - [ ] Extend token endpoint for `urn:ietf:params:oauth:grant-type:device_code`
+    - [ ] (L3) Extend token endpoint for `urn:ietf:params:oauth:grant-type:device_code`
 *   **Test Case:**
-    - [ ] Device flow completes successfully
-    - [ ] Polling returns appropriate responses
+    - [ ] (L3) Device flow completes successfully
+    - [ ] (L2) Polling returns appropriate responses
 
 ---
 
 ### Feature 3.5: Pushed Authorization Requests (RFC 9126)
 
 *   **Component:** PAR Endpoint
-    - [ ] Implement `POST /auth/par`
-    - [ ] Return request_uri
-*   **Component:** Authorize Endpoint Update
-    - [ ] Support `request_uri` parameter
+    - [ ] (L2) Implement `POST /auth/par`
+    - [ ] (L1) Return request_uri
+*   **Component:** Authorize Endpoint Extension
+    - [ ] (L2) Add `request_uri` parameter support to authorize endpoint
 *   **Test Case:**
-    - [ ] PAR flow works end-to-end
+    - [ ] (L3) PAR flow works end-to-end
 
 ---
 
 ### Feature 3.6: DPoP - Demonstrating Proof of Possession (RFC 9449)
 
 *   **Component:** DPoP Proof Validation
-    - [ ] Implement DPoP proof parsing and validation
-    - [ ] Validate `htm`, `htu`, `iat`, `jti`, signature
-*   **Component:** Token Endpoint Update
-    - [ ] Accept DPoP header
-    - [ ] Bind tokens to DPoP key
-*   **Component:** Token Validation Update
-    - [ ] Validate DPoP proof on protected endpoints
+    - [ ] (L3) Implement DPoP proof parsing and validation
+    - [ ] (L3) Validate `htm`, `htu`, `iat`, `jti`, signature
+*   **Component:** Token Endpoint DPoP Support
+    - [ ] (L2) Add DPoP header acceptance to token endpoint
+    - [ ] (L3) Bind tokens to DPoP key
+*   **Component:** Token Validation DPoP Support
+    - [ ] (L3) Add DPoP proof validation to protected endpoints
 *   **Test Case:**
-    - [ ] DPoP-bound token requires valid proof
-    - [ ] Token without DPoP is rejected if DPoP was used at issuance
+    - [ ] (L3) DPoP-bound token requires valid proof
+    - [ ] (L3) Token without DPoP is rejected if DPoP was used at issuance
 
 ---
 
 ### Feature 3.7: Rich Authorization Requests (RFC 9396)
 
 *   **Component:** Authorization Details Support
-    - [ ] Parse `authorization_details` parameter
-    - [ ] Store with authorization code
-    - [ ] Include in token claims
+    - [ ] (L2) Parse `authorization_details` parameter
+    - [ ] (L2) Store with authorization code
+    - [ ] (L2) Include in token claims
 *   **Test Case:**
-    - [ ] Authorization details flow through to token
+    - [ ] (L2) Authorization details flow through to token
 
 ---
 
 ### Feature 3.8: Token Exchange (RFC 8693)
 
 *   **Component:** Token Exchange Endpoint
-    - [ ] Implement `POST /auth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`
-    - [ ] Support `subject_token` and `actor_token`
-    - [ ] Support token type indicators
+    - [ ] (L3) Implement `POST /auth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`
+    - [ ] (L2) Support `subject_token` and `actor_token`
+    - [ ] (L2) Support token type indicators
 *   **Component:** Exchange Policies
-    - [ ] Define `ITokenExchangePolicy` interface
-    - [ ] Implement delegation policy
-    - [ ] Implement impersonation policy
+    - [ ] (L1) Define `ITokenExchangePolicy` interface
+    - [ ] (L2) Implement delegation policy
+    - [ ] (L3) Implement impersonation policy
 *   **Test Case:**
-    - [ ] Delegation exchange produces valid token
-    - [ ] Impersonation exchange includes `act` claim
-    - [ ] Unauthorized exchanges are rejected
+    - [ ] (L2) Delegation exchange produces valid token
+    - [ ] (L3) Impersonation exchange includes `act` claim
+    - [ ] (L2) Unauthorized exchanges are rejected
 *   **Documentation:**
-    - [ ] Token exchange guide with use cases
+    - [ ] (L1) Token exchange guide with use cases
 
 ---
 
 ### Feature 3.9: JWT-Secured Authorization Request (JAR)
 
 *   **Component:** Request Object Support
-    - [ ] Parse `request` parameter (JWT)
-    - [ ] Validate signature against registered client keys
-    - [ ] Support `request_uri` for remote request objects
+    - [ ] (L2) Parse `request` parameter (JWT)
+    - [ ] (L3) Validate signature against registered client keys
+    - [ ] (L2) Support `request_uri` for remote request objects
 *   **Component:** Encryption Support (Optional)
-    - [ ] Decrypt JWE request objects
+    - [ ] (L3) Decrypt JWE request objects
 *   **Test Case:**
-    - [ ] Signed request object is validated
-    - [ ] Invalid signature is rejected
+    - [ ] (L2) Signed request object is validated
+    - [ ] (L2) Invalid signature is rejected
 *   **Documentation:**
-    - [ ] JAR implementation guide
+    - [ ] (L1) JAR implementation guide
 
 ---
 
 ### Feature 3.10: Webhook System
 
 *   **Component:** `IWebhookService` Interface
-    - [ ] Define webhook event types
-    - [ ] Define delivery mechanism
+    - [ ] (L1) Define webhook event types
+    - [ ] (L2) Define delivery mechanism
 *   **Component:** Webhook Configuration
-    - [ ] Per-event endpoint configuration
-    - [ ] Secret for signature verification
-    - [ ] Retry policy configuration
+    - [ ] (L1) Per-event endpoint configuration
+    - [ ] (L2) Secret for signature verification
+    - [ ] (L2) Retry policy configuration
 *   **Component:** Event Types
-    - [ ] `user.created`, `user.updated`, `user.deleted`
-    - [ ] `user.login.success`, `user.login.failed`
-    - [ ] `token.issued`, `token.revoked`
-    - [ ] `consent.granted`, `consent.revoked`
-    - [ ] `client.created`, `client.updated`
+    - [ ] (L1) `user.created`, `user.updated`, `user.deleted`
+    - [ ] (L1) `user.login.success`, `user.login.failed`
+    - [ ] (L1) `token.issued`, `token.revoked`
+    - [ ] (L1) `consent.granted`, `consent.revoked`
+    - [ ] (L1) `client.created`, `client.updated`
 *   **Component:** Delivery
-    - [ ] HTTP POST with JSON payload
-    - [ ] HMAC signature header
-    - [ ] Exponential backoff retry
+    - [ ] (L2) HTTP POST with JSON payload
+    - [ ] (L2) HMAC signature header
+    - [ ] (L3) Exponential backoff retry
 *   **Test Case:**
-    - [ ] Webhooks fire on events
-    - [ ] Retry logic works correctly
-    - [ ] Signature verification works
+    - [ ] (L2) Webhooks fire on events
+    - [ ] (L3) Retry logic works correctly
+    - [ ] (L2) Signature verification works
 *   **Documentation:**
-    - [ ] Webhook integration guide
+    - [ ] (L1) Webhook integration guide
 
 ---
 
 ### Feature 3.11: OIDC Conformance Testing
 
 *   **Component:** Conformance Test Integration
-    - [ ] Set up OIDC conformance test suite
-    - [ ] Document test results
-    - [ ] Fix any conformance issues
+    - [ ] (L2) Set up OIDC conformance test suite
+    - [ ] (L1) Document test results
+    - [ ] (L3) Fix any conformance issues
 *   **Documentation:**
-    - [ ] Publish conformance status
+    - [ ] (L1) Publish conformance status
 
 ---
 
@@ -944,90 +942,90 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 4.1: `CoreIdent.UI.Web` Package
 
 *   **Component:** Package Setup
-    - [ ] Create Razor Class Library project
-    - [ ] Define themeable components
+    - [ ] (L1) Create Razor Class Library project
+    - [ ] (L2) Define themeable components
 *   **Component:** Login Page
-    - [ ] Username/password form
-    - [ ] Passwordless options (email, passkey)
-    - [ ] External provider buttons
+    - [ ] (L2) Username/password form
+    - [ ] (L2) Passwordless options (email, passkey)
+    - [ ] (L2) External provider buttons
 *   **Component:** Registration Page
-    - [ ] Registration form
-    - [ ] Email verification flow
+    - [ ] (L2) Registration form
+    - [ ] (L2) Email verification flow
 *   **Component:** Consent Page
-    - [ ] Scope display
-    - [ ] Allow/Deny buttons
+    - [ ] (L2) Scope display
+    - [ ] (L1) Allow/Deny buttons
 *   **Component:** Account Management
-    - [ ] Change email
-    - [ ] Manage passkeys
-    - [ ] View active sessions
+    - [ ] (L2) Change email
+    - [ ] (L2) Manage passkeys
+    - [ ] (L2) View active sessions
 *   **Documentation:**
-    - [ ] UI customization guide
+    - [ ] (L1) UI customization guide
 
 ---
 
 ### Feature 4.2: Self-Service User Portal
 
 *   **Component:** Account Settings
-    - [ ] Change email (with verification)
-    - [ ] Change password
-    - [ ] Enable/disable MFA
+    - [ ] (L2) Change email (with verification)
+    - [ ] (L2) Change password
+    - [ ] (L2) Enable/disable MFA
 *   **Component:** Session Management
-    - [ ] List active sessions (device, location, time)
-    - [ ] Revoke individual sessions
-    - [ ] "Sign out everywhere" option
+    - [ ] (L2) List active sessions (device, location, time)
+    - [ ] (L2) Revoke individual sessions
+    - [ ] (L2) "Sign out everywhere" option
 *   **Component:** Linked Accounts
-    - [ ] View linked external providers
-    - [ ] Link new provider
-    - [ ] Unlink provider (if other auth method exists)
+    - [ ] (L2) View linked external providers
+    - [ ] (L2) Link new provider
+    - [ ] (L3) Unlink provider (if other auth method exists)
 *   **Component:** Activity Log
-    - [ ] View own login history
-    - [ ] View consent grants
-    - [ ] View security events
+    - [ ] (L2) View own login history
+    - [ ] (L1) View consent grants
+    - [ ] (L2) View security events
 *   **Test Case:**
-    - [ ] User can manage own account
-    - [ ] Session revocation works
+    - [ ] (L2) User can manage own account
+    - [ ] (L2) Session revocation works
 *   **Documentation:**
-    - [ ] User portal customization guide
+    - [ ] (L1) User portal customization guide
 
 ---
 
 ### Feature 4.3: Admin API
 
 *   **Component:** User Management Endpoints
-    - [ ] CRUD operations for users
-    - [ ] Search and pagination
+    - [ ] (L2) CRUD operations for users
+    - [ ] (L2) Search and pagination
 *   **Component:** Client Management Endpoints
-    - [ ] CRUD operations for clients
+    - [ ] (L2) CRUD operations for clients
 *   **Component:** Authorization
-    - [ ] Admin role/scope requirements
+    - [ ] (L2) Admin role/scope requirements
 *   **Documentation:**
-    - [ ] Admin API reference
+    - [ ] (L1) Admin API reference
 
 ---
 
 ### Feature 4.4: Multi-tenancy Support
 
 *   **Component:** Tenant Model
-    - [ ] `CoreIdentTenant` entity
-    - [ ] Tenant-scoped configuration
+    - [ ] (L1) `CoreIdentTenant` entity
+    - [ ] (L2) Tenant-scoped configuration
 *   **Component:** Tenant Resolution
-    - [ ] `ITenantResolver` interface
-    - [ ] Host-based resolution (subdomain)
-    - [ ] Path-based resolution
-    - [ ] Header-based resolution
+    - [ ] (L1) `ITenantResolver` interface
+    - [ ] (L2) Host-based resolution (subdomain)
+    - [ ] (L2) Path-based resolution
+    - [ ] (L1) Header-based resolution
 *   **Component:** Tenant Isolation
-    - [ ] Per-tenant signing keys
-    - [ ] Per-tenant user stores
-    - [ ] Per-tenant client registrations
+    - [ ] (L3) Per-tenant signing keys
+    - [ ] (L3) Per-tenant user stores
+    - [ ] (L2) Per-tenant client registrations
 *   **Component:** Tenant Configuration
-    - [ ] Per-tenant branding (logo, colors)
-    - [ ] Per-tenant enabled providers
-    - [ ] Per-tenant policies
+    - [ ] (L2) Per-tenant branding (logo, colors)
+    - [ ] (L2) Per-tenant enabled providers
+    - [ ] (L2) Per-tenant policies
 *   **Test Case:**
-    - [ ] Tenants are isolated
-    - [ ] Cross-tenant access is prevented
+    - [ ] (L3) Tenants are isolated
+    - [ ] (L3) Cross-tenant access is prevented
 *   **Documentation:**
-    - [ ] Multi-tenancy setup guide
+    - [ ] (L1) Multi-tenancy setup guide
 
 ---
 
@@ -1041,127 +1039,127 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 5.1: MFA Framework
 
-*   **Component:** TOTP Support
-*   **Component:** Backup Codes
-*   **Component:** MFA Enforcement Policies
+*   **Component:** TOTP Support (L2)
+*   **Component:** Backup Codes (L2)
+*   **Component:** MFA Enforcement Policies (L2)
 
 ---
 
 ### Feature 5.2: Fine-Grained Authorization Integration
 
-*   **Component:** FGA/RBAC Hooks
-*   **Component:** Policy evaluation interface
+*   **Component:** FGA/RBAC Hooks (L3)
+*   **Component:** Policy evaluation interface (L2)
 
 ---
 
 ### Feature 5.3: Audit Logging
 
-*   **Component:** `IAuditLogger` Interface
-*   **Component:** Structured event logging
-*   **Component:** Default console/file implementation
+*   **Component:** `IAuditLogger` Interface (L1)
+*   **Component:** Structured event logging (L2)
+*   **Component:** Default console/file implementation (L1)
 
 ---
 
 ### Feature 5.4: SCIM Support (RFC 7643/7644)
 
-*   **Component:** SCIM User endpoints
-*   **Component:** SCIM Group endpoints
+*   **Component:** SCIM User endpoints (L3)
+*   **Component:** SCIM Group endpoints (L3)
 
 ---
 
 ### Feature 5.5: SPIFFE/SPIRE Integration
 
-*   **Component:** `CoreIdent.Identity.Spiffe` package
-*   **Component:** Workload identity validation
-*   **Component:** SVID integration
+*   **Component:** `CoreIdent.Identity.Spiffe` package (L2)
+*   **Component:** Workload identity validation (L3)
+*   **Component:** SVID integration (L3)
 
 ---
 
 ### Feature 5.6: Risk-Based Authentication
 
 *   **Component:** Device Fingerprinting
-    - [ ] Collect device characteristics
-    - [ ] Store known devices per user
-    - [ ] Flag unknown devices
+    - [ ] (L2) Collect device characteristics
+    - [ ] (L2) Store known devices per user
+    - [ ] (L1) Flag unknown devices
 *   **Component:** Geo-location Checks
-    - [ ] IP-based location lookup
-    - [ ] Impossible travel detection
-    - [ ] Location-based policies
+    - [ ] (L2) IP-based location lookup
+    - [ ] (L3) Impossible travel detection
+    - [ ] (L2) Location-based policies
 *   **Component:** Step-up Authentication
-    - [ ] Define step-up triggers
-    - [ ] Force MFA for sensitive operations
-    - [ ] Re-authentication prompts
+    - [ ] (L2) Define step-up triggers
+    - [ ] (L2) Force MFA for sensitive operations
+    - [ ] (L2) Re-authentication prompts
 *   **Component:** Risk Scoring
-    - [ ] `IRiskScorer` interface
-    - [ ] Configurable risk thresholds
+    - [ ] (L1) `IRiskScorer` interface
+    - [ ] (L2) Configurable risk thresholds
 *   **Test Case:**
-    - [ ] Unknown device triggers step-up
-    - [ ] Impossible travel is detected
+    - [ ] (L2) Unknown device triggers step-up
+    - [ ] (L3) Impossible travel is detected
 *   **Documentation:**
-    - [ ] Risk-based auth configuration guide
+    - [ ] (L1) Risk-based auth configuration guide
 
 ---
 
 ### Feature 5.7: Credential Breach Detection
 
 *   **Component:** HaveIBeenPwned Integration
-    - [ ] k-Anonymity API integration
-    - [ ] Check on registration
-    - [ ] Check on password change
-    - [ ] Optional check on login
+    - [ ] (L2) k-Anonymity API integration
+    - [ ] (L1) Check on registration
+    - [ ] (L1) Check on password change
+    - [ ] (L2) Optional check on login
 *   **Component:** Policy Configuration
-    - [ ] Block compromised passwords
-    - [ ] Warn but allow
-    - [ ] Force password change
+    - [ ] (L1) Block compromised passwords
+    - [ ] (L1) Warn but allow
+    - [ ] (L2) Force password change
 *   **Component:** Alerts
-    - [ ] Notify user of compromised credential
-    - [ ] Admin notification option
+    - [ ] (L2) Notify user of compromised credential
+    - [ ] (L1) Admin notification option
 *   **Test Case:**
-    - [ ] Known compromised password is detected
-    - [ ] Policy enforcement works
+    - [ ] (L2) Known compromised password is detected
+    - [ ] (L2) Policy enforcement works
 *   **Documentation:**
-    - [ ] Breach detection setup guide
+    - [ ] (L1) Breach detection setup guide
 
 ---
 
 ### Feature 5.8: API Gateway Integration
 
 *   **Component:** YARP Integration Examples
-    - [ ] Token validation middleware
-    - [ ] Token transformation
-    - [ ] Rate limiting integration
+    - [ ] (L2) Token validation middleware
+    - [ ] (L2) Token transformation
+    - [ ] (L2) Rate limiting integration
 *   **Component:** Token Exchange for Downstream
-    - [ ] Exchange external token for internal
-    - [ ] Scope downgrade for microservices
+    - [ ] (L3) Exchange external token for internal
+    - [ ] (L2) Scope downgrade for microservices
 *   **Documentation:**
-    - [ ] API gateway patterns guide
+    - [ ] (L1) API gateway patterns guide
 
 ---
 
 ### Feature 5.9: Blazor Server Integration
 
 *   **Component:** `CoreIdent.Client.BlazorServer` Package
-    - [ ] Circuit-aware token storage
-    - [ ] Automatic token refresh in circuit
-    - [ ] Handle circuit disconnection gracefully
+    - [ ] (L3) Circuit-aware token storage
+    - [ ] (L3) Automatic token refresh in circuit
+    - [ ] (L3) Handle circuit disconnection gracefully
 *   **Component:** Server-side Session
-    - [ ] Session state management
-    - [ ] Distributed cache support
+    - [ ] (L2) Session state management
+    - [ ] (L2) Distributed cache support
 *   **Component:** AuthenticationStateProvider
-    - [ ] Custom provider for server-side Blazor
-    - [ ] Cascading auth state
+    - [ ] (L2) Custom provider for server-side Blazor
+    - [ ] (L2) Cascading auth state
 *   **Test Case:**
-    - [ ] Auth persists across circuit reconnection
-    - [ ] Token refresh works in background
+    - [ ] (L3) Auth persists across circuit reconnection
+    - [ ] (L2) Token refresh works in background
 *   **Documentation:**
-    - [ ] Blazor Server integration guide
+    - [ ] (L1) Blazor Server integration guide
 
 ---
 
 ### Feature 5.10: Verifiable Credentials
 
-*   **Component:** W3C VC issuance
-*   **Component:** VC verification
+*   **Component:** W3C VC issuance (L3)
+*   **Component:** VC verification (L3)
 
 ---
 
@@ -1198,22 +1196,24 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-## Preserved from 0.3.x (Already Implemented)
+## Features to Re-implement from 0.3.x
 
-The following features from 0.3.x are preserved and will be maintained:
+The following features were implemented in 0.3.x and will be re-implemented in 0.4 with improvements:
 
-- [x] OAuth2 Authorization Code Flow with PKCE
-- [x] JWT Access Tokens & Refresh Tokens
-- [x] Refresh Token Rotation & Family Tracking
-- [x] Token Theft Detection
-- [x] OIDC Discovery Endpoint
-- [x] JWKS Endpoint (to be updated for asymmetric keys)
-- [x] ID Token Issuance
-- [x] Client Credentials Flow
-- [x] User Consent Mechanism
-- [x] EF Core Storage Provider
-- [x] Delegated User Store Adapter
-- [x] Custom Claims Provider
+- [ ] (L3) OAuth2 Authorization Code Flow with PKCE
+- [ ] (L2) JWT Access Tokens & Refresh Tokens
+- [ ] (L3) Refresh Token Rotation & Family Tracking
+- [ ] (L3) Token Theft Detection
+- [ ] (L2) OIDC Discovery Endpoint
+- [ ] (L2) JWKS Endpoint (now with asymmetric keys)
+- [ ] (L2) ID Token Issuance
+- [ ] (L2) Client Credentials Flow
+- [ ] (L2) User Consent Mechanism
+- [ ] (L2) EF Core Storage Provider
+- [ ] (L2) Delegated User Store Adapter
+- [ ] (L1) Custom Claims Provider
+
+> **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture.
 
 ---
 
