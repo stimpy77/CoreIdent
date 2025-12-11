@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoreIdent Protocol & Feature Roadmap</title>
+    <title>CoreIdent 0.4 Roadmap</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,7 +17,7 @@
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
-                    <li><a href="features.html" class="active">Feature Roadmap</a></li>
+                    <li><a href="features.html" class="active">Roadmap</a></li>
                     <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a></li>
                 </ul>
             </nav>
@@ -26,119 +26,175 @@
 
     <section class="hero gradient-bg">
         <div class="container">
-            <h1>Protocol & Feature Roadmap</h1>
-            <p class="subtitle">A comprehensive overview of CoreIdent's current and planned capabilities</p>
+            <h1>CoreIdent 0.4 Roadmap</h1>
+            <p class="subtitle">Rebuilt from scratch on .NET 10 with passwordless-first authentication</p>
         </div>
     </section>
 
     <section class="container">
         <div class="content-section">
-            <p class="intro-text">The following table summarizes major protocols and features, their status in CoreIdent, and what's coming next. For technical details, see <a href="https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md" target="_blank">DEVPLAN.md</a> and related documentation.</p>
+            <p class="intro-text">CoreIdent 0.4 is a ground-up rebuild focusing on .NET 10, passwordless authentication, and improved developer experience. For full details, see the <a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a>.</p>
             
             <div class="feature-table-wrapper">
                 <table class="feature-table">
                     <thead>
                         <tr>
-                            <th>Protocol / Feature</th>
-                            <th>Description / Notes</th>
-                            <th>Status</th>
+                            <th>Feature</th>
+                            <th>Description</th>
+                            <th>Phase</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 0: Foundation</strong></td></tr>
                         <tr>
-                            <td>OAuth2 Authorization Code Flow (with PKCE)</td>
-                            <td>Secure web-app flow with PKCE for public clients</td>
-                            <td><span class="status-badge complete">Fully implemented</span></td>
+                            <td>.NET 10 Migration</td>
+                            <td>Target net10.0 with net8.0 LTS support, C# 14 features</td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
                         </tr>
                         <tr>
-                            <td>JWT Access Tokens & Refresh Tokens</td>
-                            <td>Standard issuance of JWTs plus refresh grant for long-lived sessions</td>
-                            <td><span class="status-badge complete">Fully implemented</span></td>
-                        </tr>
-                        <tr>
-                            <td>External Identity Providers (Social/Enterprise Login)</td>
-                            <td>OIDC/OAuth federation (Google, Facebook, SAML/WS-Fed)</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Multi-Factor Authentication (MFA) & Passwordless</td>
-                            <td>2nd-factor (TOTP/WebAuthn) and passwordless options</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Dynamic Client Registration (RFC 7591)</td>
-                            <td>Programmatic registration of OAuth clients</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Client-Initiated Backchannel Authentication (CIBA, RFC 9126)</td>
-                            <td>Asynchronous user-approval flow for critical AI actions</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Pushed Authorization Requests (PAR, RFC 9121)</td>
-                            <td>Secure "push" of auth requests to avoid leaking request parameters</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Device Authorization Flow (RFC 8628)</td>
-                            <td>Grant for devices with limited input (e.g. IoT, consoles)</td>
-                            <td><span class="status-badge planned">Planned</span></td>
-                        </tr>
-                        <tr>
-                            <td>Token Introspection (RFC 7662)</td>
-                            <td>Endpoint for resource servers to validate token metadata</td>
-                            <td><span class="status-badge planned">Planned</span></td>
+                            <td>Asymmetric Keys (RS256/ES256)</td>
+                            <td>Production-ready token signing with key management</td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
                         </tr>
                         <tr>
                             <td>Token Revocation (RFC 7009)</td>
                             <td>Endpoint to revoke tokens on logout or compromise</td>
-                            <td><span class="status-badge planned">Planned</span></td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
                         </tr>
                         <tr>
-                            <td>JWKS & Key Rotation</td>
-                            <td>JWKS endpoint and automated key-rotation for signing keys</td>
-                            <td><span class="status-badge planned">JWKS endpoint (HS256 only currently). Asymmetric key (RSA/ECDSA) support & rotation planned.</span></td>
+                            <td>Token Introspection (RFC 7662)</td>
+                            <td>Endpoint for resource servers to validate tokens</td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
                         </tr>
                         <tr>
-                            <td>Consent Screen (OIDC)</td>
-                            <td>User-facing UI to approve scopes/permissions</td>
-                            <td><span class="status-badge planned">Planned</span></td>
+                            <td>Test Infrastructure</td>
+                            <td>CoreIdent.Testing package with fixtures, builders, assertions</td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
                         </tr>
                         <tr>
-                            <td>Audit Logging</td>
-                            <td>Structured logging of login, consent, token events</td>
-                            <td><span class="status-badge planned">Planned</span></td>
+                            <td>OpenTelemetry Metrics</td>
+                            <td>Integration with .NET 10's built-in auth metrics</td>
+                            <td><span class="status-badge planned">Phase 0</span></td>
+                        </tr>
+                        
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 1: Passwordless</strong></td></tr>
+                        <tr>
+                            <td>Email Magic Links</td>
+                            <td>Passwordless login via email token</td>
+                            <td><span class="status-badge planned">Phase 1</span></td>
                         </tr>
                         <tr>
-                            <td>Fine-Grained Authorization (FGA/RBAC)</td>
-                            <td>Relationship-based or attribute-based access control for per-document/data enforcement</td>
-                            <td><span class="status-badge under-consideration">Under consideration</span></td>
+                            <td>Passkeys (WebAuthn)</td>
+                            <td>Wrapper around .NET 10's built-in passkey support</td>
+                            <td><span class="status-badge planned">Phase 1</span></td>
                         </tr>
                         <tr>
-                            <td>Token Vault / Secrets Management</td>
-                            <td>Secure storage of 3rd-party API tokens (so secrets never go into prompts)</td>
-                            <td><span class="status-badge under-consideration">Under consideration</span></td>
+                            <td>SMS OTP</td>
+                            <td>Pluggable SMS provider interface</td>
+                            <td><span class="status-badge planned">Phase 1</span></td>
                         </tr>
                         <tr>
-                            <td>Out-of-Band Approvals for AI Actions</td>
-                            <td>Human-in-the-loop confirmation for high-risk AI requests (beyond CIBA)</td>
-                            <td><span class="status-badge under-consideration">Under consideration</span></td>
+                            <td>dotnet new Templates</td>
+                            <td>coreident-api and coreident-server templates</td>
+                            <td><span class="status-badge planned">Phase 1</span></td>
+                        </tr>
+                        
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 1.5: Client Libraries</strong></td></tr>
+                        <tr>
+                            <td>CoreIdent.Client</td>
+                            <td>Core OAuth client for any .NET app</td>
+                            <td><span class="status-badge planned">Phase 1.5</span></td>
                         </tr>
                         <tr>
-                            <td>AI-Framework SDK Integrations</td>
-                            <td>Turn-key libraries (LangChain, LlamaIndex, Vercel AI SDK, etc.)</td>
-                            <td><span class="status-badge under-consideration">Under consideration</span></td>
+                            <td>CoreIdent.Client.Maui</td>
+                            <td>MAUI with SecureStorage and WebAuthenticator</td>
+                            <td><span class="status-badge planned">Phase 1.5</span></td>
                         </tr>
                         <tr>
-                            <td>Management Dashboard & Admin UI</td>
-                            <td>Web UI to configure connections, policies, guardrails, logs</td>
-                            <td><span class="status-badge planned">Planned</span></td>
+                            <td>CoreIdent.Client.Wpf</td>
+                            <td>WPF/WinForms with DPAPI and WebView2</td>
+                            <td><span class="status-badge planned">Phase 1.5</span></td>
                         </tr>
                         <tr>
-                            <td>Anomaly Detection & Alerts</td>
-                            <td>Automated detection of suspicious auth behaviors (brute-force, credential stuffing, etc.)</td>
-                            <td><span class="status-badge under-consideration">Under consideration</span></td>
+                            <td>CoreIdent.Client.Blazor</td>
+                            <td>Blazor WASM with AuthenticationStateProvider</td>
+                            <td><span class="status-badge planned">Phase 1.5</span></td>
+                        </tr>
+                        
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 2: External Providers</strong></td></tr>
+                        <tr>
+                            <td>Google Provider</td>
+                            <td>Google OAuth integration</td>
+                            <td><span class="status-badge planned">Phase 2</span></td>
+                        </tr>
+                        <tr>
+                            <td>Microsoft Provider</td>
+                            <td>Microsoft/Entra ID integration</td>
+                            <td><span class="status-badge planned">Phase 2</span></td>
+                        </tr>
+                        <tr>
+                            <td>GitHub Provider</td>
+                            <td>GitHub OAuth integration</td>
+                            <td><span class="status-badge planned">Phase 2</span></td>
+                        </tr>
+                        
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 3: OAuth/OIDC Hardening</strong></td></tr>
+                        <tr>
+                            <td>Key Rotation</td>
+                            <td>Automated rotation with grace period</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        <tr>
+                            <td>DPoP (RFC 9449)</td>
+                            <td>Demonstrating Proof of Possession</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        <tr>
+                            <td>RAR (RFC 9396)</td>
+                            <td>Rich Authorization Requests</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        <tr>
+                            <td>Device Flow (RFC 8628)</td>
+                            <td>For IoT/TV apps with limited input</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        <tr>
+                            <td>PAR (RFC 9126)</td>
+                            <td>Pushed Authorization Requests</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        <tr>
+                            <td>Dynamic Client Registration</td>
+                            <td>RFC 7591 client registration</td>
+                            <td><span class="status-badge planned">Phase 3</span></td>
+                        </tr>
+                        
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 4-5: Advanced</strong></td></tr>
+                        <tr>
+                            <td>UI Package</td>
+                            <td>Razor/Blazor components for auth flows</td>
+                            <td><span class="status-badge planned">Phase 4</span></td>
+                        </tr>
+                        <tr>
+                            <td>Admin API</td>
+                            <td>User and client management endpoints</td>
+                            <td><span class="status-badge planned">Phase 4</span></td>
+                        </tr>
+                        <tr>
+                            <td>MFA Framework</td>
+                            <td>TOTP, backup codes</td>
+                            <td><span class="status-badge planned">Phase 5</span></td>
+                        </tr>
+                        <tr>
+                            <td>SCIM (RFC 7643/7644)</td>
+                            <td>Enterprise user provisioning</td>
+                            <td><span class="status-badge planned">Phase 5</span></td>
+                        </tr>
+                        <tr>
+                            <td>SPIFFE/SPIRE</td>
+                            <td>Workload identity for service mesh</td>
+                            <td><span class="status-badge planned">Phase 5</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -147,10 +203,9 @@
             <div class="document-links">
                 <p>For implementation details, see these documents:</p>
                 <ul>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/DEVPLAN.md" target="_blank">Development Plan</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/README.md" target="_blank">README</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/Project_Overview.md" target="_blank">Project Overview</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/Technical_Plan.md" target="_blank">Technical Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Project_Overview.md" target="_blank">Project Overview</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Technical_Plan.md" target="_blank">Technical Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a></li>
                 </ul>
             </div>
         </div>
@@ -164,9 +219,7 @@
                 </div>
                 <div class="footer-links">
                     <a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a> |
-                    <a href="https://www.nuget.org/packages/CoreIdent.Core/" target="_blank">NuGet</a> |
-                    <a href="#">Docs</a> |
-                    <a href="features.html">Feature Roadmap</a> |
+                    <a href="features.html">Roadmap</a> |
                     <a href="https://jondavis.net" target="_blank">Consulting</a>
                 </div>
                 <div class="footer-text">
