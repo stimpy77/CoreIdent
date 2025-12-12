@@ -1,4 +1,11 @@
-# CoreIdent: Developer Training Guide
+# CoreIdent: Developer Training Guide (Legacy 0.3.x)
+
+> **Legacy notice:** This guide describes the archived **0.3.x** implementation (which remains on the `main` branch and is tagged `legacy-0.3.x-main`).
+>
+> CoreIdent **0.4 is a clean-slate rewrite on .NET 10 (`net10.0`)**. For the current plan/specs, use:
+> - `docs/0.4/Project_Overview.md`
+> - `docs/0.4/Technical_Plan.md`
+> - `docs/0.4/DEVPLAN.md`
 
 Welcome to the CoreIdent Developer Training Guide. This document aims to provide developers with the foundational knowledge required to understand, use, and potentially contribute to the CoreIdent project.
 

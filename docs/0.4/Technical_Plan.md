@@ -8,13 +8,14 @@ This document provides detailed technical specifications, architecture decisions
 
 | Component | Technology | Notes |
 |-----------|------------|-------|
-| **Runtime** | .NET 10 (LTS), multi-target .NET 8 | Primary: net10.0, Secondary: net8.0 |
+| **Runtime** | .NET 10 (LTS) | Target: `net10.0` |
 | **Web Framework** | ASP.NET Core Minimal APIs | Endpoints via `MapCoreIdentEndpoints()` |
 | **Token Format** | JWT (RFC 7519) | Access tokens, ID tokens |
 | **Signing** | RS256 (default), ES256, HS256 (dev only) | Asymmetric keys for production |
 | **Storage** | EF Core (pluggable), In-Memory (dev) | SQL Server, PostgreSQL, SQLite |
 | **Testing** | xUnit, Shouldly, Moq | WebApplicationFactory for integration |
 | **Logging** | Microsoft.Extensions.Logging | Structured logging throughout |
+| **Language** | C# 14 | Use extension members for `ClaimsPrincipal` helpers |
 
 ---
 
@@ -22,7 +23,9 @@ This document provides detailed technical specifications, architecture decisions
 
 ### 0.1 Asymmetric Key Support
 
-**Current State:** HS256 only (symmetric key shared between issuer and validators)
+**Legacy (0.3.x) State:** HS256 only (symmetric key shared between issuer and validators)
+
+**0.4 State:** Clean-slate rewrite on .NET 10, with RS256/ES256 as the production default.
 
 **Target State:** RS256/ES256 default with proper key management
 
@@ -114,15 +117,22 @@ public record TokenRevocationRequest
 
 **Implementation:**
 - For refresh tokens: Mark as revoked in `IRefreshTokenStore`
-- For access tokens: Add to revocation list (short TTL cache matching token lifetime)
+- For access tokens: Add `jti` to revocation list (short TTL cache matching token lifetime)
 - Client authentication required for confidential clients
+
+> **Important (JWT access tokens):** Revoking a JWT does **not** automatically revoke it everywhere.
+> A revoked access token is only rejected by **resource servers that perform an online check**
+> (e.g., via introspection and/or a shared revocation store).
+>
+> **Default approach:** keep access tokens short-lived, and rely on refresh token rotation + revocation.
+> **Controlled distributed systems:** plan to add a “revocable access” mode (opaque/reference access tokens + introspection middleware + caching) in Phase 3.
 
 **Store Interface Addition:**
 ```csharp
 public interface ITokenRevocationStore
 {
-    Task RevokeTokenAsync(string tokenId, DateTime expiry, CancellationToken ct = default);
-    Task<bool> IsRevokedAsync(string tokenId, CancellationToken ct = default);
+    Task RevokeTokenAsync(string jti, string tokenType, DateTime expiry, CancellationToken ct = default);
+    Task<bool> IsRevokedAsync(string jti, CancellationToken ct = default);
     Task CleanupExpiredAsync(CancellationToken ct = default);
 }
 ```
@@ -804,6 +814,11 @@ src/
 - [ ] Implement fixtures and builders
 - [ ] Refactor existing tests to use new infrastructure
 - [ ] Ensure all existing tests pass
+
+### Week 4-5: Phase 0 DevEx & Tooling
+- [ ] OpenTelemetry metrics integration
+- [ ] CLI tool (`dotnet coreident`)
+- [ ] `.devcontainer` configuration
 
 ### Week 5-6: Passwordless
 - [ ] Email magic link flow
