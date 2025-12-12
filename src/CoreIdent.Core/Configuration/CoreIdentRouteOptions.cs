@@ -25,7 +25,7 @@ public sealed class CoreIdentRouteOptions
             throw new ArgumentException("Path cannot be null or whitespace.", nameof(path));
         }
 
-        if (path.StartsWith('/', StringComparison.Ordinal))
+        if (path.StartsWith("/", StringComparison.Ordinal))
         {
             return NormalizeRouteTemplate(path);
         }
@@ -83,7 +83,7 @@ public sealed class CoreIdentRouteOptions
 
     private static string NormalizeBasePath(string basePath)
     {
-        if (string.IsNullOrWhiteSpace(basePath) || !basePath.StartsWith('/', StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(basePath) || !basePath.StartsWith("/", StringComparison.Ordinal))
         {
             throw new InvalidOperationException($"{nameof(BasePath)} must be configured and start with '/'. Current value: '{basePath}'");
         }
@@ -95,7 +95,7 @@ public sealed class CoreIdentRouteOptions
     {
         var trimmed = template.Trim();
 
-        if (!trimmed.StartsWith('/', StringComparison.Ordinal))
+        if (!trimmed.StartsWith("/", StringComparison.Ordinal))
         {
             trimmed = "/" + trimmed;
         }
@@ -105,7 +105,7 @@ public sealed class CoreIdentRouteOptions
             trimmed = trimmed.Replace("//", "/", StringComparison.Ordinal);
         }
 
-        if (trimmed.Length > 1 && trimmed.EndsWith('/', StringComparison.Ordinal))
+        if (trimmed.Length > 1 && trimmed.EndsWith("/", StringComparison.Ordinal))
         {
             trimmed = trimmed.TrimEnd('/');
         }
