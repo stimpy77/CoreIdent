@@ -12,6 +12,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 > **Note:** This is a ground-up rewrite. References to "creating" components mean building from scratch. The 0.3.x codebase is archived for reference only.
 
+**Checklist Legend:**
+- `[x]` — Complete
+- `[ ]` — Not started
+- `[~]` — Partial / needs revisit after prior feature is implemented
+
 ---
 
 ## Phase 0: Foundation Reset
@@ -24,8 +29,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Phase 0 Milestones (to keep scope executable)
 
-- **Milestone 0A — Crypto + Core Token Lifecycle**: Features **0.1–0.4**
-- **Milestone 0B — Quality & DevEx (Testing + Observability + Tooling)**: Features **0.5–0.8**
+- **Milestone 0A — Foundation & Crypto**: Features **0.1–0.2** (project setup, asymmetric keys)
+- **Milestone 0B — Core Models & Stores**: Features **0.3–0.4** (client, scope, user, refresh token infrastructure)
+- **Milestone 0C — Token Lifecycle Endpoints**: Features **0.5–0.7** (token issuance, revocation, introspection)
+- **Milestone 0D — Quality & DevEx**: Features **0.8–0.11** (testing, metrics, CLI, dev container)
 
 ---
 
@@ -127,10 +134,197 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 0.3: Token Revocation Endpoint (RFC 7009)
+### Feature 0.3: Client Store & Model
+
+*   **Component:** `CoreIdentClient` Model
+    - [x] (L1) Create `CoreIdent.Core/Models/CoreIdentClient.cs`
+        ```csharp
+        public class CoreIdentClient
+        {
+            public string ClientId { get; set; } = string.Empty;
+            public string? ClientSecret { get; set; } // Hashed for confidential clients
+            public string ClientName { get; set; } = string.Empty;
+            public ClientType ClientType { get; set; } = ClientType.Confidential;
+            public ICollection<string> RedirectUris { get; set; } = [];
+            public ICollection<string> PostLogoutRedirectUris { get; set; } = [];
+            public ICollection<string> AllowedScopes { get; set; } = [];
+            public ICollection<string> AllowedGrantTypes { get; set; } = [];
+            public int AccessTokenLifetimeSeconds { get; set; } = 3600;
+            public int RefreshTokenLifetimeSeconds { get; set; } = 86400;
+            public bool RequirePkce { get; set; } = true;
+            public bool AllowOfflineAccess { get; set; } = false;
+            public bool Enabled { get; set; } = true;
+            public DateTime CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+        }
+        
+        public enum ClientType { Public, Confidential }
+        ```
+*   **Component:** `IClientStore` Interface
+    - [x] (L1) Create `CoreIdent.Core/Stores/IClientStore.cs`
+        ```csharp
+        public interface IClientStore
+        {
+            Task<CoreIdentClient?> FindByClientIdAsync(string clientId, CancellationToken ct = default);
+            Task<bool> ValidateClientSecretAsync(string clientId, string clientSecret, CancellationToken ct = default);
+            Task CreateAsync(CoreIdentClient client, CancellationToken ct = default);
+            Task UpdateAsync(CoreIdentClient client, CancellationToken ct = default);
+            Task DeleteAsync(string clientId, CancellationToken ct = default);
+        }
+        ```
+*   **Component:** `InMemoryClientStore`
+    - [x] (L2) Create in-memory implementation using `ConcurrentDictionary`
+    - [x] (L2) Support seeding clients at startup
+*   **Component:** `EfClientStore`
+    - [x] (L2) Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
+    - [x] (L1) Add `ClientEntity` entity configuration to `CoreIdentDbContext`
+*   **Component:** Client Secret Hashing
+    - [x] (L2) Create `IClientSecretHasher` interface and `DefaultClientSecretHasher` implementation
+    - [x] (L2) Use secure hashing (PBKDF2 with SHA256) for client secrets
+*   **Component:** DI Registration
+    - [x] (L1) Add `AddInMemoryClientStore()` extension method
+    - [x] (L1) Add `AddInMemoryClients(IEnumerable<CoreIdentClient>)` extension
+    - [x] (L1) Add `AddEntityFrameworkCoreClientStore()` extension method
+*   **Test Case (Unit):**
+    - [x] (L1) `InMemoryClientStore` CRUD operations work correctly
+    - [x] (L1) Client secret validation works correctly
+    - [x] (L1) `EfClientStore` CRUD operations work correctly
+---
+
+### Feature 0.4: Scope & Core Models
+
+*   **Component:** `CoreIdentScope` Model
+    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentScope.cs`
+        ```csharp
+        public class CoreIdentScope
+        {
+            public string Name { get; set; } = string.Empty;
+            public string? DisplayName { get; set; }
+            public string? Description { get; set; }
+            public bool Required { get; set; } = false;
+            public bool Emphasize { get; set; } = false;
+            public bool ShowInDiscoveryDocument { get; set; } = true;
+            public ICollection<string> UserClaims { get; set; } = [];
+        }
+        ```
+*   **Component:** `IScopeStore` Interface
+    - [ ] (L1) Create `CoreIdent.Core/Stores/IScopeStore.cs`
+        ```csharp
+        public interface IScopeStore
+        {
+            Task<CoreIdentScope?> FindByNameAsync(string name, CancellationToken ct = default);
+            Task<IEnumerable<CoreIdentScope>> FindByScopesAsync(IEnumerable<string> scopeNames, CancellationToken ct = default);
+            Task<IEnumerable<CoreIdentScope>> GetAllAsync(CancellationToken ct = default);
+        }
+        ```
+*   **Component:** `InMemoryScopeStore`
+    - [ ] (L2) Create in-memory implementation
+    - [ ] (L2) Pre-seed standard OIDC scopes (openid, profile, email, address, phone, offline_access)
+*   **Component:** `EfScopeStore`
+    - [ ] (L2) Create EF Core implementation
+    - [ ] (L1) Add entity configuration and migration
+*   **Component:** `CoreIdentRefreshToken` Model
+    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentRefreshToken.cs`
+        ```csharp
+        public class CoreIdentRefreshToken
+        {
+            public string Handle { get; set; } = string.Empty;
+            public string SubjectId { get; set; } = string.Empty;
+            public string ClientId { get; set; } = string.Empty;
+            public string? FamilyId { get; set; } // For rotation tracking
+            public ICollection<string> Scopes { get; set; } = [];
+            public DateTime CreatedAt { get; set; }
+            public DateTime ExpiresAt { get; set; }
+            public DateTime? ConsumedAt { get; set; }
+            public bool IsRevoked { get; set; } = false;
+        }
+        ```
+*   **Component:** `IRefreshTokenStore` Interface (Full)
+    - [ ] (L1) Expand `CoreIdent.Core/Stores/IRefreshTokenStore.cs`
+        ```csharp
+        public interface IRefreshTokenStore
+        {
+            Task<string> StoreAsync(CoreIdentRefreshToken token, CancellationToken ct = default);
+            Task<CoreIdentRefreshToken?> GetAsync(string handle, CancellationToken ct = default);
+            Task<bool> RevokeAsync(string handle, CancellationToken ct = default);
+            Task RevokeFamilyAsync(string familyId, CancellationToken ct = default);
+            Task<bool> ConsumeAsync(string handle, CancellationToken ct = default);
+            Task CleanupExpiredAsync(CancellationToken ct = default);
+        }
+        ```
+*   **Component:** `InMemoryRefreshTokenStore`
+    - [ ] (L2) Create in-memory implementation with `ConcurrentDictionary`
+*   **Component:** `EfRefreshTokenStore`
+    - [ ] (L2) Create EF Core implementation
+    - [ ] (L1) Add entity configuration and migration
+*   **Component:** Standard Scope Helpers
+    - [ ] (L1) Create `StandardScopes` static class with predefined OIDC scopes
+*   **Component:** DI Registration
+    - [ ] (L1) Add `AddScopeStore()` and `AddRefreshTokenStore()` extension methods
+    - [ ] (L1) Add `AddInMemoryScopes(IEnumerable<CoreIdentScope>)` extension
+*   **Test Case (Unit):**
+    - [ ] (L1) Scope store operations work correctly
+    - [ ] (L1) Refresh token store CRUD and family revocation work correctly
+*   **Documentation:**
+    - [ ] (L1) Document scope configuration
+
+---
+
+### Feature 0.5: Token Issuance Endpoint
+
+*   **Component:** Token Endpoint
+    - [ ] (L3) Create `POST /auth/token` endpoint in `TokenEndpointExtensions.cs`
+        *   *Guidance:* Support `grant_type=client_credentials`
+        *   *Guidance:* Support `grant_type=refresh_token`
+        *   *Guidance:* Validate client authentication
+        *   *Guidance:* Validate requested scopes against client's allowed scopes
+        *   *Guidance:* Issue JWT access tokens using `ITokenService`
+        *   *Guidance:* Issue refresh tokens using `IRefreshTokenStore`
+        *   *Guidance:* Implement refresh token rotation (new token on each use)
+*   **Component:** Token Response Models
+    - [ ] (L1) Create `TokenRequest` record
+    - [ ] (L1) Create `TokenResponse` record
+        ```csharp
+        public record TokenResponse(
+            string AccessToken,
+            string TokenType,
+            int ExpiresIn,
+            string? RefreshToken = null,
+            string? Scope = null,
+            string? IdToken = null
+        );
+        ```
+*   **Component:** Token Service Enhancement
+    - [ ] (L2) Extend `ITokenService` to support scope claims
+    - [ ] (L2) Add `jti` claim generation for all tokens
+    - [ ] (L2) Add configurable token lifetimes per client
+*   **Component:** Refresh Token Rotation
+    - [ ] (L3) Implement rotation: consume old token, issue new token with same family
+    - [ ] (L3) Implement theft detection: if consumed token is reused, revoke entire family
+*   **Test Case (Unit):**
+    - [ ] (L1) Token response includes all required fields
+    - [ ] (L2) Refresh token rotation creates new token in same family
+*   **Test Case (Integration):**
+    - [ ] (L2) `POST /auth/token` with `client_credentials` returns access token
+    - [ ] (L2) `POST /auth/token` with `refresh_token` returns new tokens
+    - [ ] (L3) Refresh token rotation works correctly
+    - [ ] (L3) Reusing consumed refresh token revokes family (theft detection)
+    - [ ] (L1) Invalid client credentials return 401
+    - [ ] (L1) Invalid grant returns 400
+    - [ ] (L2) Client authentication works in token endpoints *(from Feature 0.3)*
+*   **Documentation:**
+    - [ ] (L1) Document token endpoint usage
+    - [ ] (L2) Document refresh token rotation behavior
+    - [ ] (L1) Document client configuration options *(from Feature 0.3)*
+
+---
+
+### Feature 0.6: Token Revocation Endpoint (RFC 7009)
+
+> **Status:** Access token revocation complete. Refresh token revocation to be completed after Feature 0.5 (Token Issuance).
 
 *   **Component:** `ITokenRevocationStore` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Stores/ITokenRevocationStore.cs`
+    - [x] (L1) Create `CoreIdent.Core/Stores/ITokenRevocationStore.cs`
         ```csharp
         public interface ITokenRevocationStore
         {
@@ -140,14 +334,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `InMemoryTokenRevocationStore`
-    - [ ] (L2) Create in-memory implementation using `ConcurrentDictionary`
-    - [ ] (L2) Implement automatic cleanup of expired entries
+    - [x] (L2) Create in-memory implementation using `ConcurrentDictionary`
+    - [x] (L2) Implement automatic cleanup of expired entries
 *   **Component:** `EfTokenRevocationStore`
-    - [ ] (L2) Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
-    - [ ] (L1) Add `RevokedToken` entity to `CoreIdentDbContext`
-    - [ ] (L1) Add migration
+    - [x] (L2) Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
+    - [x] (L1) Add `RevokedToken` entity to `CoreIdentDbContext`
 *   **Component:** Revocation Endpoint
-    - [ ] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs`
+    - [~] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs` *(endpoint exists; client auth validation requires Feature 0.3)*
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Support both access tokens and refresh tokens
         *   *Guidance:* For refresh tokens: mark as consumed in `IRefreshTokenStore`
@@ -156,31 +349,37 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Always return 200 OK (per RFC 7009 - don't leak token validity)
         *   *Guidance:* **JWT revocation reality:** revoked JWT access tokens are only rejected by resource servers that perform an online check (introspection and/or shared revocation store). Default posture is short-lived access tokens + refresh token revocation/rotation.
 *   **Component:** Token Validation Integration
-    - [ ] (L3) Create token validation middleware that checks revocation store
-    - [ ] (L3) Integrate `ITokenRevocationStore` check in protected endpoint middleware
+    - [x] (L3) Create token validation middleware that checks revocation store
+    - [x] (L3) Integrate `ITokenRevocationStore` check in protected endpoint middleware
+*   **Component:** Revocation Endpoint Enhancement (Post-0.5)
+    - [ ] (L2) Update revocation endpoint to use full `IRefreshTokenStore` for refresh token revocation
+    - [ ] (L2) Validate client owns the token being revoked
 *   **Test Case (Unit):**
-    - [ ] (L1) `InMemoryTokenRevocationStore` stores and retrieves revocations correctly
-    - [ ] (L1) Cleanup removes only expired entries
+    - [x] (L1) `InMemoryTokenRevocationStore` stores and retrieves revocations correctly
+    - [x] (L1) Cleanup removes only expired entries
 *   **Test Case (Integration):**
-    - [ ] (L2) `POST /auth/revoke` with valid refresh token invalidates it
-    - [ ] (L2) `POST /auth/revoke` with valid access token adds to revocation list
-    - [ ] (L3) Revoked access token is rejected by protected endpoints
-    - [ ] (L2) Revoked refresh token cannot be used for token refresh
-    - [ ] (L1) Invalid token revocation returns 200 OK (no information leakage)
-    - [ ] (L2) Confidential client must authenticate to revoke tokens
+    - [ ] (L2) `POST /auth/revoke` with valid refresh token invalidates it *(requires Feature 0.5)*
+    - [x] (L2) `POST /auth/revoke` with valid access token adds to revocation list
+    - [x] (L3) Revoked access token is rejected by protected endpoints
+    - [ ] (L2) Revoked refresh token cannot be used for token refresh *(requires Feature 0.5)*
+    - [x] (L1) Invalid token revocation returns 200 OK (no information leakage)
+    - [~] (L2) Confidential client must authenticate to revoke tokens *(checks credentials exist; validation against IClientStore requires Feature 0.3)*
 *   **Documentation:**
     - [ ] (L1) Add revocation endpoint to README.md
     - [ ] (L1) Document revocation behavior and client requirements
 
 ---
 
-### Feature 0.4: Token Introspection Endpoint (RFC 7662)
+### Feature 0.7: Token Introspection Endpoint (RFC 7662)
+
+> **Note:** Introspection of refresh tokens requires Feature 0.5 (Token Issuance) to be complete.
 
 *   **Component:** Introspection Endpoint
     - [ ] (L3) Create `POST /auth/introspect` endpoint in `TokenManagementEndpointsExtensions.cs`
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Require client authentication (resource server credentials)
         *   *Guidance:* Validate token signature, expiry, revocation status
+        *   *Guidance:* Check `IRefreshTokenStore` for refresh token introspection
         *   *Guidance:* Return standardized response:
             ```json
             {
@@ -206,13 +405,17 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) Invalid token returns `active: false`
     - [ ] (L1) Unauthenticated request returns 401
     - [ ] (L2) Response includes all standard claims
+    - [ ] (L2) Valid refresh token returns `active: true` *(requires Feature 0.5)*
+    - [ ] (L2) Revoked/consumed refresh token returns `active: false` *(requires Feature 0.5)*
 *   **Documentation:**
     - [ ] (L1) Add introspection endpoint to README.md
     - [ ] (L2) Document resource server integration pattern
 
 ---
 
-### Feature 0.5: Test Infrastructure Overhaul
+### Feature 0.8: Test Infrastructure Overhaul
+
+> **Note:** Entity builders (UserBuilder, ClientBuilder, ScopeBuilder) require Features 0.3-0.4 to be complete.
 
 *   **Component:** `CoreIdent.Testing` Package
     - [ ] (L1) Create new project `tests/CoreIdent.Testing/CoreIdent.Testing.csproj`
@@ -256,9 +459,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 0.6: OpenTelemetry Metrics Integration
+### Feature 0.9: OpenTelemetry Metrics Integration
 
-> **Note:** .NET 10 provides built-in metrics (`aspnetcore.authentication.*`, `aspnetcore.identity.*`). CoreIdent adds supplementary metrics for OAuth/OIDC-specific operations.
+> **Note:** .NET 10 provides built-in metrics (`aspnetcore.authentication.*`, `aspnetcore.identity.*`). CoreIdent adds supplementary metrics for OAuth/OIDC-specific operations. Requires Feature 0.5 (Token Issuance) for `coreident.token.issued` metric.
 
 *   **Component:** Metrics Instrumentation
     - [ ] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
@@ -278,7 +481,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 0.7: CLI Tool (`dotnet coreident`)
+### Feature 0.10: CLI Tool (`dotnet coreident`)
+
+> **Note:** `client add` command requires Feature 0.3 (Client Store) to be complete.
 
 *   **Component:** CLI Package (`CoreIdent.Cli`)
     - [ ] (L2) Create .NET tool package
@@ -305,7 +510,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 0.8: Dev Container Configuration
+### Feature 0.11: Dev Container Configuration
 
 *   **Component:** `.devcontainer/` Setup
     - [ ] (L1) Create `devcontainer.json`
@@ -1172,34 +1377,41 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ## Protocol & Feature Status Summary
 
-| Protocol / Feature | Phase | Status |
-|-------------------|-------|--------|
-| .NET 10 Migration | 0 | Planned |
-| Asymmetric Keys (RS256/ES256) | 0 | Planned |
-| Token Revocation (RFC 7009) | 0 | Planned |
-| Token Introspection (RFC 7662) | 0 | Planned |
-| Test Infrastructure | 0 | Planned |
-| Email Magic Link | 1 | Planned |
-| Passkey/WebAuthn | 1 | Planned |
-| SMS OTP | 1 | Planned |
-| ClaimsPrincipal Extensions | 1 | Planned |
-| `dotnet new` Templates | 1 | Planned |
-| Google Provider | 2 | Planned |
-| Microsoft Provider | 2 | Planned |
-| GitHub Provider | 2 | Planned |
-| Key Rotation | 3 | Planned |
-| OIDC Logout | 3 | Planned |
-| Dynamic Client Registration | 3 | Planned |
-| Device Authorization Flow | 3 | Planned |
-| PAR (RFC 9126) | 3 | Planned |
-| DPoP (RFC 9449) | 3 | Planned |
-| RAR (RFC 9396) | 3 | Planned |
-| UI Package | 4 | Planned |
-| Admin API | 4 | Planned |
-| MFA Framework | 5 | Planned |
-| SCIM | 5 | Planned |
-| SPIFFE/SPIRE | 5 | Planned |
-| Verifiable Credentials | 5 | Planned |
+| Protocol / Feature | Phase | Feature | Status |
+|-------------------|-------|---------|--------|
+| .NET 10 Migration | 0 | 0.1 | ✅ Complete |
+| Asymmetric Keys (RS256/ES256) | 0 | 0.2 | ✅ Complete |
+| Client Store & Model | 0 | 0.3 | ✅ Complete |
+| Scope & Core Models | 0 | 0.4 | 🔲 Planned |
+| Token Issuance Endpoint | 0 | 0.5 | 🔲 Planned |
+| Token Revocation (RFC 7009) | 0 | 0.6 | 🟡 Partial (access tokens done; refresh tokens pending 0.4-0.5) |
+| Token Introspection (RFC 7662) | 0 | 0.7 | 🔲 Planned |
+| Test Infrastructure | 0 | 0.8 | 🔲 Planned |
+| OpenTelemetry Metrics | 0 | 0.9 | 🔲 Planned |
+| CLI Tool | 0 | 0.10 | 🔲 Planned |
+| Dev Container | 0 | 0.11 | 🔲 Planned |
+| Email Magic Link | 1 | 1.1 | 🔲 Planned |
+| Passkey/WebAuthn | 1 | 1.2 | 🔲 Planned |
+| SMS OTP | 1 | 1.3 | 🔲 Planned |
+| F# Compatibility | 1 | 1.4 | 🔲 Planned |
+| `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
+| Aspire Integration | 1 | 1.6 | 🔲 Planned |
+| Google Provider | 2 | 2.2 | 🔲 Planned |
+| Microsoft Provider | 2 | 2.3 | 🔲 Planned |
+| GitHub Provider | 2 | 2.4 | 🔲 Planned |
+| Key Rotation | 3 | 3.1 | 🔲 Planned |
+| OIDC Logout | 3 | 3.2 | 🔲 Planned |
+| Dynamic Client Registration | 3 | 3.3 | 🔲 Planned |
+| Device Authorization Flow | 3 | 3.4 | 🔲 Planned |
+| PAR (RFC 9126) | 3 | 3.5 | 🔲 Planned |
+| DPoP (RFC 9449) | 3 | 3.6 | 🔲 Planned |
+| RAR (RFC 9396) | 3 | 3.7 | 🔲 Planned |
+| UI Package | 4 | 4.1 | 🔲 Planned |
+| Admin API | 4 | 4.3 | 🔲 Planned |
+| MFA Framework | 5 | 5.1 | 🔲 Planned |
+| SCIM | 5 | 5.4 | 🔲 Planned |
+| SPIFFE/SPIRE | 5 | 5.5 | 🔲 Planned |
+| Verifiable Credentials | 5 | 5.10 | 🔲 Planned |
 
 ---
 
@@ -1207,20 +1419,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 The following features were implemented in 0.3.x and will be re-implemented in 0.4 with improvements:
 
-- [ ] (L3) OAuth2 Authorization Code Flow with PKCE
-- [ ] (L2) JWT Access Tokens & Refresh Tokens
-- [ ] (L3) Refresh Token Rotation & Family Tracking
-- [ ] (L3) Token Theft Detection
-- [ ] (L2) OIDC Discovery Endpoint
-- [ ] (L2) JWKS Endpoint (now with asymmetric keys)
-- [ ] (L2) ID Token Issuance
-- [ ] (L2) Client Credentials Flow
-- [ ] (L2) User Consent Mechanism
-- [ ] (L2) EF Core Storage Provider
-- [ ] (L2) Delegated User Store Adapter
-- [ ] (L1) Custom Claims Provider
+- [x] (L2) JWKS Endpoint (now with asymmetric keys) — *Covered in Feature 0.2*
+- [x] (L2) JWT Access Tokens — *Covered in Feature 0.2 (JwtTokenService)*
+- [ ] (L2) Refresh Tokens — *Covered in Features 0.4-0.5*
+- [ ] (L3) Refresh Token Rotation & Family Tracking — *Covered in Feature 0.5*
+- [ ] (L3) Token Theft Detection — *Covered in Feature 0.5*
+- [ ] (L2) Client Credentials Flow — *Covered in Feature 0.5*
+- [ ] (L3) OAuth2 Authorization Code Flow with PKCE — *Phase 1 or later (requires user authentication)*
+- [ ] (L2) ID Token Issuance — *Phase 1 or later (requires user authentication)*
+- [ ] (L2) OIDC Discovery Endpoint — *To be added (/.well-known/openid-configuration)*
+- [ ] (L2) User Consent Mechanism — *Phase 1 or later*
+- [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
+- [ ] (L2) Delegated User Store Adapter — *Phase 1 (requires user model)*
+- [ ] (L1) Custom Claims Provider — *To be added to Feature 0.5*
 
-> **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture.
+> **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture. Many items are now explicitly covered in Phase 0 features.
 
 ---
 
