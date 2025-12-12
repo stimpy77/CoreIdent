@@ -35,6 +35,7 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - Write tests *before* or *alongside* implementation, not after
 - If a feature cannot be tested automatically, document why and what manual verification was done
 - Never commit code that breaks existing tests
+- **Use Shouldly assertions with explicit messages** — every assertion should include a descriptive message clarifying expected vs. actual
 
 ## Code Priorities
 

@@ -26,6 +26,8 @@ CoreIdent is a **unified authentication solution** for the .NET ecosystem. Wheth
 
 🚧 **Rescoping for 0.4** — Planning complete, implementation starting fresh on .NET 10.
 
+**Prerequisites:** .NET 10 SDK installed (required for all projects and tests)
+
 The previous 0.3.x implementation has been archived. Version 0.4 is a ground-up rebuild focusing on:
 
 - **.NET 10** only (`net10.0`)
