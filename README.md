@@ -59,6 +59,46 @@ These documents include:
 
 ---
 
+## Asymmetric Key Configuration (0.4)
+
+CoreIdent 0.4 signs JWTs using **asymmetric keys by default**:
+
+- **RS256** (RSA) — default
+- **ES256** (ECDSA P-256)
+
+### RSA (PEM string)
+
+```csharp
+builder.Services.AddSigningKey(o => o.UseRsaPem(rsaPrivateKeyPem));
+```
+
+### RSA (PEM file)
+
+```csharp
+builder.Services.AddSigningKey(o => o.UseRsa("/path/to/private-key.pem"));
+```
+
+### ECDSA (PEM file)
+
+```csharp
+builder.Services.AddSigningKey(o => o.UseEcdsa("/path/to/ec-private-key.pem"));
+```
+
+### Development-only HS256 (Deprecated)
+
+```csharp
+builder.Services.AddSigningKey(o => o.UseSymmetric("your-32+byte-dev-secret"));
+```
+
+### Security Guidance
+
+- **Do not use HS256 in production.** It requires distributing a shared secret to all token validators.
+- **Do not publish symmetric keys in JWKS.** CoreIdent does not emit symmetric keys from `/.well-known/jwks.json`.
+- Prefer loading keys from **files or certificates** and managing them using your platform’s secret management.
+- Treat private keys as secrets: do not log them and do not commit them to source control.
+
+---
+
 ## Key Principles
 
 | Principle | Description |

@@ -37,6 +37,12 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - Never commit code that breaks existing tests
 - **Use Shouldly assertions with explicit messages** — every assertion should include a descriptive message clarifying expected vs. actual
 
+### Package Management
+
+- Prefer the `dotnet` CLI over manually editing `*.csproj` XML
+- Before changing package versions, run `dotnet list <proj> package --outdated`
+- Upgrade using `dotnet add <proj> package <PackageId> --version <latest>` and keep versions on the latest stable unless the plan requires otherwise
+
 ## Code Priorities
 
 **In order of importance:**

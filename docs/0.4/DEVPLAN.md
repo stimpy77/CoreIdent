@@ -55,7 +55,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.2: Asymmetric Key Support (RS256/ES256)
 
 *   **Component:** `ISigningKeyProvider` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Services/ISigningKeyProvider.cs`
+    - [x] (L1) Create `CoreIdent.Core/Services/ISigningKeyProvider.cs`
         ```csharp
         public interface ISigningKeyProvider
         {
@@ -67,7 +67,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public record SecurityKeyInfo(string KeyId, SecurityKey Key, DateTime? ExpiresAt);
         ```
 *   **Component:** `CoreIdentKeyOptions` Configuration
-    - [ ] (L1) Create `CoreIdent.Core/Configuration/CoreIdentKeyOptions.cs`
+    - [x] (L1) Create `CoreIdent.Core/Configuration/CoreIdentKeyOptions.cs`
         ```csharp
         public class CoreIdentKeyOptions
         {
@@ -82,28 +82,28 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public enum KeyType { RSA, ECDSA, Symmetric }
         ```
 *   **Component:** `RsaSigningKeyProvider` Implementation
-    - [ ] (L3) Create `CoreIdent.Core/Services/RsaSigningKeyProvider.cs`
+    - [x] (L3) Create `CoreIdent.Core/Services/RsaSigningKeyProvider.cs`
         *   *Guidance:* Load RSA key from PEM string, PEM file, or X509 certificate
         *   *Guidance:* Generate key on startup if none configured (dev mode only, log warning)
         *   *Guidance:* Support `kid` (key ID) generation based on key thumbprint
 *   **Component:** `EcdsaSigningKeyProvider` Implementation
-    - [ ] (L3) Create `CoreIdent.Core/Services/EcdsaSigningKeyProvider.cs`
+    - [x] (L3) Create `CoreIdent.Core/Services/EcdsaSigningKeyProvider.cs`
         *   *Guidance:* Support ES256 (P-256 curve)
         *   *Guidance:* Similar loading patterns as RSA
 *   **Component:** `SymmetricSigningKeyProvider` Implementation (Legacy/Dev)
-    - [ ] (L2) Create `CoreIdent.Core/Services/SymmetricSigningKeyProvider.cs`
+    - [x] (L2) Create `CoreIdent.Core/Services/SymmetricSigningKeyProvider.cs`
         *   *Guidance:* Implement HS256 logic (for dev/testing only)
         *   *Guidance:* Log deprecation warning when used
 *   **Component:** `JwtTokenService`
-    - [ ] (L2) Create `JwtTokenService` using `ISigningKeyProvider`
-    - [ ] (L2) Use `SigningCredentials` from provider for all token generation
-    - [ ] (L2) Include `kid` claim in JWT header
+    - [x] (L2) Create `JwtTokenService` using `ISigningKeyProvider`
+    - [x] (L2) Use `SigningCredentials` from provider for all token generation
+    - [x] (L2) Include `kid` claim in JWT header
 *   **Component:** JWKS Endpoint
-    - [ ] (L2) Create `DiscoveryEndpointsExtensions.cs` with JWKS endpoint using `ISigningKeyProvider.GetValidationKeysAsync()`
-    - [ ] (L3) Return proper RSA key format (`kty: "RSA"`, `n`, `e`, `kid`, `use: "sig"`, `alg`)
-    - [ ] (L2) Support multiple keys in JWKS (for rotation)
+    - [x] (L2) Create `DiscoveryEndpointsExtensions.cs` with JWKS endpoint using `ISigningKeyProvider.GetValidationKeysAsync()`
+    - [x] (L3) Return proper RSA key format (`kty: "RSA"`, `n`, `e`, `kid`, `use: "sig"`, `alg`)
+    - [x] (L2) Support multiple keys in JWKS (for rotation)
 *   **Component:** DI Registration
-    - [ ] (L2) Add `AddSigningKey()` extension method with overloads:
+    - [x] (L2) Add `AddSigningKey()` extension method with overloads:
         ```csharp
         .AddSigningKey(options => options.UseRsa(keyPath))
         .AddSigningKey(options => options.UseRsaPem(pemString))
@@ -111,19 +111,19 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         .AddSigningKey(options => options.UseSymmetric(secret)) // Dev only
         ```
 *   **Test Case (Unit):**
-    - [ ] (L2) `RsaSigningKeyProvider` loads key from PEM file correctly
-    - [ ] (L2) `RsaSigningKeyProvider` loads key from PEM string correctly
-    - [ ] (L2) `RsaSigningKeyProvider` generates key when none configured
-    - [ ] (L2) `EcdsaSigningKeyProvider` loads ES256 key correctly
-    - [ ] (L1) Generated tokens include `kid` in header
-    - [ ] (L2) JWKS endpoint returns valid RSA public key structure
+    - [x] (L2) `RsaSigningKeyProvider` loads key from PEM file correctly
+    - [x] (L2) `RsaSigningKeyProvider` loads key from PEM string correctly
+    - [x] (L2) `RsaSigningKeyProvider` generates key when none configured
+    - [x] (L2) `EcdsaSigningKeyProvider` loads ES256 key correctly
+    - [x] (L1) Generated tokens include `kid` in header
+    - [x] (L2) JWKS endpoint returns valid RSA public key structure
 *   **Test Case (Integration):**
-    - [ ] (L3) Token signed with RSA can be validated using JWKS public key
-    - [ ] (L3) Token signed with ECDSA can be validated using JWKS public key
-    - [ ] (L2) External JWT library can validate tokens using published JWKS
+    - [x] (L3) Token signed with RSA can be validated using JWKS public key
+    - [x] (L3) Token signed with ECDSA can be validated using JWKS public key
+    - [x] (L2) External JWT library can validate tokens using published JWKS
 *   **Documentation:**
-    - [ ] (L1) Update README.md with asymmetric key configuration examples
-    - [ ] (L2) Add security guidance for key management
+    - [x] (L1) Update README.md with asymmetric key configuration examples
+    - [x] (L2) Add security guidance for key management
 
 ---
 
