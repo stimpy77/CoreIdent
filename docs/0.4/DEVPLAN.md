@@ -222,7 +222,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L2) Pre-seed standard OIDC scopes (openid, profile, email, address, phone, offline_access)
 *   **Component:** `EfScopeStore`
     - [x] (L2) Create EF Core implementation
-    - [x] (L1) Add entity configuration and migration
+    - [x] (L1) Add entity + DbContext schema configuration *(migrations are app-owned)*
 *   **Component:** `CoreIdentRefreshToken` Model
     - [x] (L1) Create `CoreIdent.Core/Models/CoreIdentRefreshToken.cs`
         ```csharp
@@ -256,7 +256,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L2) Create in-memory implementation with `ConcurrentDictionary`
 *   **Component:** `EfRefreshTokenStore`
     - [x] (L2) Create EF Core implementation
-    - [x] (L1) Add entity configuration and migration
+    - [x] (L1) Add entity + DbContext schema configuration *(migrations are app-owned)*
 *   **Component:** Standard Scope Helpers
     - [x] (L1) Create `StandardScopes` static class with predefined OIDC scopes
 *   **Component:** DI Registration
@@ -270,12 +270,92 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 0.4.1: Core Registration & Routing (Unambiguous Host Integration)
+
+*   **Component:** `CoreIdentOptions` Configuration
+    - [ ] (L1) Create `CoreIdentOptions` with required issuer/audience settings and safe defaults
+        *   *Guidance:* Include at minimum: `Issuer`, `Audience`, `AccessTokenLifetime`, `RefreshTokenLifetime`
+    - [ ] (L1) Add startup validation (fail fast)
+        *   *Guidance:* Validate required fields (issuer/audience), validate lifetimes are positive
+*   **Component:** `CoreIdentRouteOptions`
+    - [ ] (L1) Create route options to remove all ambiguity around endpoint mapping
+        *   *Guidance:* Include `BasePath` (default `/auth`), `TokenPath` (default `token`)
+        *   *Guidance:* Include root-relative `DiscoveryPath` (default `/.well-known/openid-configuration`)
+        *   *Guidance:* Include root-relative `JwksPath` (default `/.well-known/jwks.json`)
+        *   *Guidance:* Include `ConsentPath` (default `/auth/consent`) for future consent UI
+        *   *Guidance:* Include `UserInfoPath` (default `/auth/userinfo`) for OIDC userinfo
+        *   *Guidance:* Include `UserProfilePath` (default `/me`) for host-friendly “who am I” endpoint
+*   **Component:** DI Registration (`AddCoreIdent`)
+    - [ ] (L2) Create `AddCoreIdent()` extension method that registers:
+        *   `CoreIdentOptions` + validation
+        *   `CoreIdentRouteOptions`
+        *   `ITokenService` and related core services
+        *   Default stores when not overridden (in-memory)
+    - [ ] (L1) Document registration order for EF Core
+        *   *Guidance:* `AddCoreIdent()` -> `AddDbContext(...)` -> `AddEntityFrameworkCore*Store()`
+*   **Component:** Endpoint Mapping (`MapCoreIdentEndpoints`)
+    - [ ] (L2) Create `MapCoreIdentEndpoints()` extension method that maps all CoreIdent endpoints
+        *   *Guidance:* Map endpoints under `BasePath` unless explicitly root-relative
+        *   *Guidance:* Ensure discovery and JWKS endpoints are always root-relative (per OIDC spec)
+*   **Test Case (Integration):**
+    - [ ] (L2) App can boot with `AddCoreIdent()` + `MapCoreIdentEndpoints()` and responds on required routes
+
+---
+
+### Feature 0.4.2: OIDC Discovery Metadata (Unambiguous `/.well-known/openid-configuration`)
+
+*   **Component:** Discovery Document Endpoint
+    - [ ] (L2) Add `/.well-known/openid-configuration` endpoint
+        *   *Guidance:* Always root-relative, ignore `BasePath`
+        *   *Guidance:* `issuer` must exactly match configured `CoreIdentOptions.Issuer`
+        *   *Guidance:* Advertise endpoints using `CoreIdentRouteOptions` (token, revocation, introspection, JWKS)
+        *   *Guidance:* Include supported `grant_types_supported` based on implemented features
+        *   *Guidance:* Include `scopes_supported` based on `IScopeStore.GetAllAsync()` (filter `ShowInDiscoveryDocument`)
+        *   *Guidance:* Include signing algs from `ISigningKeyProvider.Algorithm`
+*   **Component:** Discovery Document Model
+    - [ ] (L1) Create a response model (record/class) for discovery document serialization
+*   **Test Case (Integration):**
+    - [ ] (L2) Discovery endpoint returns valid JSON with correct issuer and endpoint URLs
+    - [ ] (L2) Discovery `jwks_uri` matches configured JWKS path and is reachable
+*   **Documentation:**
+    - [ ] (L1) Document discovery endpoint and issuer requirements
+
+---
+
+### Feature 0.4.3: User Model & Store Foundation (Required for All User-Based Flows)
+
+*   **Component:** `CoreIdentUser` Model
+    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentUser.cs`
+        *   *Guidance:* Include at minimum: `Id`, `UserName`, `NormalizedUserName`, `CreatedAt`, `UpdatedAt`
+*   **Component:** `IUserStore` Interface
+    - [ ] (L1) Create `CoreIdent.Core/Stores/IUserStore.cs`
+        *   *Guidance:* Include at minimum: `FindByIdAsync`, `FindByUsernameAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync`
+        *   *Guidance:* Include claims support to power token issuance: `GetClaimsAsync(subjectId)`
+*   **Component:** In-Memory User Store
+    - [ ] (L2) Create `InMemoryUserStore` using `ConcurrentDictionary`
+        *   *Guidance:* Normalize usernames consistently
+*   **Component:** EF Core User Store
+    - [ ] (L2) Create `EfUserStore` in `CoreIdent.Storage.EntityFrameworkCore`
+    - [ ] (L1) Add `UserEntity` + DbContext configuration
+*   **Component:** Password Hashing
+    - [ ] (L1) Create `IPasswordHasher` interface and default implementation using ASP.NET Core Identity hasher
+        *   *Guidance:* Password support is optional in Phase 1 flows, but needed for password-based auth where enabled
+*   **Component:** DI Registration
+    - [ ] (L1) Add `AddInMemoryUserStore()` extension method
+    - [ ] (L1) Add `AddEntityFrameworkCoreUserStore()` extension method
+*   **Test Case (Unit):**
+    - [ ] (L1) `InMemoryUserStore` CRUD operations work correctly
+    - [ ] (L1) `EfUserStore` CRUD operations work correctly
+
+---
+
 ### Feature 0.5: Token Issuance Endpoint
 
 *   **Component:** Token Endpoint
     - [ ] (L3) Create `POST /auth/token` endpoint in `TokenEndpointExtensions.cs`
         *   *Guidance:* Support `grant_type=client_credentials`
         *   *Guidance:* Support `grant_type=refresh_token`
+        *   *Guidance:* `grant_type=authorization_code` is implemented in Feature 1.7 (requires `/auth/authorize`)
         *   *Guidance:* Validate client authentication
         *   *Guidance:* Validate requested scopes against client's allowed scopes
         *   *Guidance:* Issue JWT access tokens using `ITokenService`
@@ -298,6 +378,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L2) Extend `ITokenService` to support scope claims
     - [ ] (L2) Add `jti` claim generation for all tokens
     - [ ] (L2) Add configurable token lifetimes per client
+*   **Component:** Custom Claims Provider
+    - [ ] (L1) Create `ICustomClaimsProvider` interface
+        *   *Guidance:* Provide a hook to add/transform claims based on subject, client, and granted scopes
+    - [ ] (L2) Integrate `ICustomClaimsProvider` into token issuance
 *   **Component:** Refresh Token Rotation
     - [ ] (L3) Implement rotation: consume old token, issue new token with same family
     - [ ] (L3) Implement theft detection: if consumed token is reused, revoke entire family
@@ -738,6 +822,127 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) Health checks report correctly
 *   **Documentation:**
     - [ ] (L1) Aspire integration guide
+
+---
+
+### Feature 1.7: OAuth 2.0 Authorization Code Flow (PKCE Required)
+
+*   **Component:** Authorization Code Model
+    - [ ] (L1) Create `CoreIdentAuthorizationCode` model
+        *   *Guidance:* Include code handle, client_id, subject_id, redirect_uri, scopes, created/expires, consumed, nonce, code_challenge, code_challenge_method
+*   **Component:** `IAuthorizationCodeStore` Interface
+    - [ ] (L1) Create store interface
+        *   *Guidance:* `CreateAsync`, `GetAsync`, `ConsumeAsync`, `CleanupExpiredAsync`
+*   **Component:** In-Memory Store
+    - [ ] (L2) Implement `InMemoryAuthorizationCodeStore` using `ConcurrentDictionary`
+*   **Component:** EF Core Store
+    - [ ] (L2) Implement `EfAuthorizationCodeStore` in `CoreIdent.Storage.EntityFrameworkCore`
+    - [ ] (L1) Add `AuthorizationCodeEntity` + DbContext configuration
+*   **Component:** Authorization Code Cleanup
+    - [ ] (L2) Add hosted service that periodically calls `CleanupExpiredAsync`
+        *   *Guidance:* Must be opt-out via options
+*   **Component:** Authorize Endpoint
+    - [ ] (L3) Implement `GET /auth/authorize`
+        *   *Guidance:* Validate `client_id`, `redirect_uri`, `response_type=code`, and requested scopes
+        *   *Guidance:* Enforce PKCE: require `code_challenge` + `code_challenge_method=S256`
+        *   *Guidance:* Require `state` round-trip
+        *   *Guidance:* Require authenticated user (`HttpContext.User.Identity.IsAuthenticated`); otherwise challenge
+        *   *Guidance:* Persist authorization code via `IAuthorizationCodeStore`
+        *   *Guidance:* Redirect back to client with `code` and `state` or `error` and `error_description`
+*   **Component:** Token Endpoint (`authorization_code` grant)
+    - [ ] (L3) Extend `POST /auth/token` to support `grant_type=authorization_code`
+        *   *Guidance:* Validate code exists and not expired/consumed
+        *   *Guidance:* Validate `redirect_uri` matches the one stored in the code
+        *   *Guidance:* Validate PKCE `code_verifier` against stored challenge
+        *   *Guidance:* Consume code atomically (single-use)
+        *   *Guidance:* Issue access token and (optionally) refresh token
+*   **Component:** OpenID Connect ID Token (when `openid` scope is granted)
+    - [ ] (L2) Issue `id_token` in token response for `authorization_code` when `openid` scope is granted
+        *   *Guidance:* Include `nonce` (if provided), set `aud` to `client_id`, and include scope-derived claims
+        *   *Guidance:* Use signing key provider / `ITokenService` consistently
+*   **Component:** DI Registration
+    - [ ] (L1) Add store registration extensions for authorization code store (in-memory + EF)
+*   **Test Case (Integration):**
+    - [ ] (L3) Authorization code flow works end-to-end (authorize -> token)
+    - [ ] (L2) PKCE failure returns `invalid_grant`
+    - [ ] (L2) Redirect URI mismatch returns `invalid_request`
+    - [ ] (L2) Consumed code cannot be reused
+*   **Documentation:**
+    - [ ] (L1) Document Authorization Code + PKCE flow and required parameters
+
+---
+
+### Feature 1.8: User Consent & Grants
+
+*   **Component:** User Grant Model
+    - [ ] (L1) Create `CoreIdentUserGrant` model
+        *   *Guidance:* Include subject_id, client_id, granted scopes, created/expires
+*   **Component:** `IUserGrantStore` Interface
+    - [ ] (L1) Create interface for consent persistence
+        *   *Guidance:* Include `FindAsync(subjectId, clientId)`, `SaveAsync(grant)`, `RevokeAsync(...)`, `HasUserGrantedConsentAsync(...)`
+*   **Component:** In-Memory Store
+    - [ ] (L2) Implement `InMemoryUserGrantStore`
+*   **Component:** EF Core Store
+    - [ ] (L2) Implement `EfUserGrantStore`
+    - [ ] (L1) Add `UserGrantEntity` + DbContext configuration
+*   **Component:** Consent UX Endpoints
+    - [ ] (L3) Implement `GET /auth/consent` (default minimal HTML)
+        *   *Guidance:* Must be replaceable by host app; driven by `CoreIdentRouteOptions.ConsentPath`
+    - [ ] (L3) Implement `POST /auth/consent` to persist grant or deny
+        *   *Guidance:* Deny returns `access_denied` back to client redirect_uri
+*   **Component:** Authorize Endpoint Consent Integration
+    - [ ] (L3) Integrate consent checks into `/auth/authorize`
+        *   *Guidance:* If client requires consent and no existing grant satisfies requested scopes, redirect to consent UI
+*   **Test Case (Integration):**
+    - [ ] (L3) Consent required redirects to consent UI
+    - [ ] (L3) Allow persists grant and completes code flow
+    - [ ] (L2) Deny returns `access_denied`
+*   **Documentation:**
+    - [ ] (L1) Document consent behavior and how to replace the default consent UI
+
+---
+
+### Feature 1.9: Delegated User Store Adapter (Integrate Existing User Systems)
+
+*   **Component:** Delegated User Store Options
+    - [ ] (L1) Create `DelegatedUserStoreOptions` with required delegates:
+        *   `FindUserByIdAsync`
+        *   `FindUserByUsernameAsync`
+        *   `ValidateCredentialsAsync`
+        *   optional: `GetClaimsAsync`
+*   **Component:** `DelegatedUserStore` Implementation
+    - [ ] (L2) Implement `IUserStore` via configured delegates
+        *   *Guidance:* Must never store password hashes; credential validation is delegated
+*   **Component:** Validation
+    - [ ] (L1) Add startup validation to ensure required delegates are provided
+*   **Component:** DI Registration
+    - [ ] (L1) Add `AddCoreIdentDelegatedUserStore(...)` extension method
+        *   *Guidance:* Should replace any previously-registered `IUserStore`
+*   **Test Case (Unit):**
+    - [ ] (L2) Missing required delegates fails validation on startup
+    - [ ] (L2) Delegates are invoked correctly for find + credential validation
+*   **Documentation:**
+    - [ ] (L1) Document integration pattern and security responsibilities
+
+---
+
+### Feature 1.10: OIDC UserInfo Endpoint
+
+*   **Component:** UserInfo Endpoint
+    - [ ] (L3) Implement `GET /auth/userinfo`
+        *   *Guidance:* Path must be configurable via `CoreIdentRouteOptions.UserInfoPath`
+        *   *Guidance:* Require a valid access token (bearer auth)
+        *   *Guidance:* Use scopes to determine returned claims (e.g., `profile`, `email`, `address`, `phone`)
+        *   *Guidance:* Source claims from `IUserStore` and/or `ICustomClaimsProvider`
+        *   *Guidance:* Return standard OIDC claims when present; omit claims not granted by scope
+*   **Component:** UserInfo Response Model
+    - [ ] (L1) Define a response model (record/dictionary) suitable for OIDC userinfo
+*   **Test Case (Integration):**
+    - [ ] (L2) Unauthenticated request returns 401
+    - [ ] (L3) With `openid profile` scope, userinfo returns `sub` and profile claims
+    - [ ] (L2) With `openid email` scope, userinfo returns `email`
+*   **Documentation:**
+    - [ ] (L1) Document userinfo endpoint behavior and scope-to-claims mapping
 
 ---
 
@@ -1382,7 +1587,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | .NET 10 Migration | 0 | 0.1 | ✅ Complete |
 | Asymmetric Keys (RS256/ES256) | 0 | 0.2 | ✅ Complete |
 | Client Store & Model | 0 | 0.3 | ✅ Complete |
-| Scope & Core Models | 0 | 0.4 | 🔲 Planned |
+| Scope & Core Models | 0 | 0.4 | ✅ Complete |
+| Core Registration & Routing | 0 | 0.4.1 | 🔲 Planned |
+| OIDC Discovery Metadata | 0 | 0.4.2 | 🔲 Planned |
+| User Model & Stores | 0 | 0.4.3 | 🔲 Planned |
 | Token Issuance Endpoint | 0 | 0.5 | 🔲 Planned |
 | Token Revocation (RFC 7009) | 0 | 0.6 | 🟡 Partial (access tokens done; refresh tokens pending 0.4-0.5) |
 | Token Introspection (RFC 7662) | 0 | 0.7 | 🔲 Planned |
@@ -1396,6 +1604,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | F# Compatibility | 1 | 1.4 | 🔲 Planned |
 | `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
 | Aspire Integration | 1 | 1.6 | 🔲 Planned |
+| Authorization Code + PKCE | 1 | 1.7 | 🔲 Planned |
+| Consent & Grants | 1 | 1.8 | 🔲 Planned |
+| Delegated User Store | 1 | 1.9 | 🔲 Planned |
+| OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
 | Google Provider | 2 | 2.2 | 🔲 Planned |
 | Microsoft Provider | 2 | 2.3 | 🔲 Planned |
 | GitHub Provider | 2 | 2.4 | 🔲 Planned |
@@ -1425,13 +1637,14 @@ The following features were implemented in 0.3.x and will be re-implemented in 0
 - [ ] (L3) Refresh Token Rotation & Family Tracking — *Covered in Feature 0.5*
 - [ ] (L3) Token Theft Detection — *Covered in Feature 0.5*
 - [ ] (L2) Client Credentials Flow — *Covered in Feature 0.5*
-- [ ] (L3) OAuth2 Authorization Code Flow with PKCE — *Phase 1 or later (requires user authentication)*
-- [ ] (L2) ID Token Issuance — *Phase 1 or later (requires user authentication)*
-- [ ] (L2) OIDC Discovery Endpoint — *To be added (/.well-known/openid-configuration)*
-- [ ] (L2) User Consent Mechanism — *Phase 1 or later*
+- [ ] (L3) OAuth2 Authorization Code Flow with PKCE — *Covered in Feature 1.7*
+- [ ] (L2) ID Token Issuance — *Covered in Feature 1.7 (OIDC ID token)*
+- [ ] (L2) OIDC Discovery Endpoint — *Covered in Feature 0.4.2*
+- [ ] (L2) OIDC UserInfo Endpoint — *Covered in Feature 1.10*
+- [ ] (L2) User Consent Mechanism — *Covered in Feature 1.8*
 - [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
-- [ ] (L2) Delegated User Store Adapter — *Phase 1 (requires user model)*
-- [ ] (L1) Custom Claims Provider — *To be added to Feature 0.5*
+- [ ] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
+- [ ] (L1) Custom Claims Provider — *Covered in Feature 0.5*
 
 > **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture. Many items are now explicitly covered in Phase 0 features.
 
