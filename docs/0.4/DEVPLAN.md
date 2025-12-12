@@ -274,14 +274,14 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.4.1: Core Registration & Routing (Unambiguous Host Integration)
 
 *   **Component:** `CoreIdentOptions` Configuration
-    - [ ] (L1) Create `CoreIdentOptions` with required issuer/audience settings and safe defaults
+    - [x] (L1) Create `CoreIdentOptions` with required issuer/audience settings and safe defaults
         *   *Guidance:* Include at minimum: `Issuer`, `Audience`, `AccessTokenLifetime`, `RefreshTokenLifetime`
         *   *Guidance:* Options should provide **sane defaults** where possible, but still allow **fail-fast validation** for required values (e.g., issuer/audience).
         *   *Guidance:* Keep `ITokenService` as a low-level primitive (caller provides issuer/audience/expires). Higher-level endpoints/features should read from `IOptions<CoreIdentOptions>` and pass values into `ITokenService`.
-    - [ ] (L1) Add startup validation (fail fast)
+    - [x] (L1) Add startup validation (fail fast)
         *   *Guidance:* Validate required fields (issuer/audience), validate lifetimes are positive
 *   **Component:** `CoreIdentRouteOptions`
-    - [ ] (L1) Create route options to remove all ambiguity around endpoint mapping
+    - [x] (L1) Create route options to remove all ambiguity around endpoint mapping
         *   *Guidance:* Include `BasePath` (default `/auth`), `TokenPath` (default `token`)
         *   *Guidance:* Include root-relative `DiscoveryPath` (default `/.well-known/openid-configuration`)
         *   *Guidance:* Include root-relative `JwksPath` (default `/.well-known/jwks.json`)
@@ -293,7 +293,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Any non-root-relative route should be composed as `BasePath + "/" + <RelativePath>` (normalized for leading/trailing slashes).
         *   *Guidance:* Route option values may be stored either with or without leading/trailing slashes, but endpoint mapping must normalize to valid ASP.NET route templates (single leading slash, no double slashes).
 *   **Component:** DI Registration (`AddCoreIdent`)
-    - [ ] (L2) Create `AddCoreIdent()` extension method that registers:
+    - [x] (L2) Create `AddCoreIdent()` extension method that registers:
         *   `CoreIdentOptions` + validation
         *   `CoreIdentRouteOptions`
         *   `ITokenService` and related core services
