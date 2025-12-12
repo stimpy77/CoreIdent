@@ -1,5 +1,8 @@
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Stores;
+using CoreIdent.Core.Stores.InMemory;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -9,6 +12,68 @@ namespace CoreIdent.Core.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddCoreIdent(this IServiceCollection services)
+    {
+        return services.AddCoreIdent(configureOptions: null, configureRoutes: null);
+    }
+
+    public static IServiceCollection AddCoreIdent(this IServiceCollection services, Action<CoreIdentOptions> configureOptions)
+    {
+        return services.AddCoreIdent(configureOptions, configureRoutes: null);
+    }
+
+    public static IServiceCollection AddCoreIdent(
+        this IServiceCollection services,
+        Action<CoreIdentOptions>? configureOptions,
+        Action<CoreIdentRouteOptions>? configureRoutes)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (configureOptions is not null)
+        {
+            services.Configure(configureOptions);
+        }
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<CoreIdentOptions>, CoreIdentOptionsValidator>());
+        services.AddOptions<CoreIdentOptions>().ValidateOnStart();
+
+        services.AddOptions<CoreIdentRouteOptions>();
+
+        if (configureRoutes is not null)
+        {
+            services.Configure(configureRoutes);
+        }
+
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+
+        services.TryAddSingleton<ITokenService, JwtTokenService>();
+
+        services.TryAddSingleton<IClientSecretHasher, DefaultClientSecretHasher>();
+
+        services.TryAdd(ServiceDescriptor.Singleton<InMemoryClientStore>(sp =>
+            new InMemoryClientStore(sp.GetRequiredService<IClientSecretHasher>())));
+        services.TryAdd(ServiceDescriptor.Singleton<IClientStore>(sp => sp.GetRequiredService<InMemoryClientStore>()));
+
+        services.TryAddSingleton<InMemoryScopeStore>(sp =>
+        {
+            var store = new InMemoryScopeStore();
+            store.SeedStandardScopes();
+            return store;
+        });
+        services.TryAddSingleton<IScopeStore>(sp => sp.GetRequiredService<InMemoryScopeStore>());
+
+        services.TryAddSingleton<InMemoryRefreshTokenStore>(sp =>
+            new InMemoryRefreshTokenStore(sp.GetService<TimeProvider>()));
+        services.TryAddSingleton<IRefreshTokenStore>(sp => sp.GetRequiredService<InMemoryRefreshTokenStore>());
+
+        services.TryAddSingleton<ITokenRevocationStore>(sp =>
+            new InMemoryTokenRevocationStore(sp.GetService<TimeProvider>()));
+
+        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        return services;
+    }
+
     public static IServiceCollection AddSigningKey(this IServiceCollection services, Action<CoreIdentKeyOptionsBuilder> configure)
     {
         if (services is null)
