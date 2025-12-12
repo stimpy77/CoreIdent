@@ -61,8 +61,10 @@ public static class DiscoveryEndpointsExtensions
 
                         var crv = parameters.Curve.Oid.Value switch
                         {
-                            "1.2.840.10045.3.1.7" => "P-256",
-                            _ => "P-256"
+                            "1.2.840.10045.3.1.7" => "P-256",  // secp256r1 / prime256v1
+                            "1.3.132.0.34" => "P-384",         // secp384r1
+                            "1.3.132.0.35" => "P-521",         // secp521r1
+                            _ => throw new NotSupportedException($"Unsupported EC curve OID: {parameters.Curve.Oid.Value}")
                         };
 
                         jwksKeys.Add(new

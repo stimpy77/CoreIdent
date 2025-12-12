@@ -257,6 +257,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** `EfRefreshTokenStore`
     - [x] (L2) Create EF Core implementation
     - [x] (L1) Add entity + DbContext schema configuration *(migrations are app-owned)*
+    - [ ] (L2) Inject `TimeProvider` for testability (consistent with in-memory store)
 *   **Component:** Standard Scope Helpers
     - [x] (L1) Create `StandardScopes` static class with predefined OIDC scopes
 *   **Component:** DI Registration
@@ -423,6 +424,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** `EfTokenRevocationStore`
     - [x] (L2) Create EF Core implementation in `CoreIdent.Storage.EntityFrameworkCore`
     - [x] (L1) Add `RevokedToken` entity to `CoreIdentDbContext`
+    - [ ] (L2) Inject `TimeProvider` for testability (consistent with in-memory store)
 *   **Component:** Revocation Endpoint
     - [~] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs` *(endpoint exists; client auth validation requires Feature 0.3)*
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
