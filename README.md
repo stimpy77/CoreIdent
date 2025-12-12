@@ -139,6 +139,19 @@ If you're using `CoreIdent.Storage.EntityFrameworkCore`, register the EF scope s
 builder.Services.AddEntityFrameworkCoreScopeStore();
 ```
 
+### EF Core store registration order
+
+When using EF Core-backed stores, register CoreIdent first, then your EF `DbContext`, then CoreIdent’s EF Core stores:
+
+```csharp
+builder.Services.AddCoreIdent();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddEntityFrameworkCoreStores();
+```
+
 You are responsible for applying EF Core migrations / ensuring the schema is created.
 
 ---
