@@ -156,6 +156,18 @@ You are responsible for applying EF Core migrations / ensuring the schema is cre
 
 ---
 
+## OIDC Discovery Metadata (0.4)
+
+CoreIdent exposes an OpenID Connect discovery document endpoint at:
+
+- `/.well-known/openid-configuration`
+
+**Issuer requirement:** the `issuer` value in the discovery document **exactly matches** your configured `CoreIdentOptions.Issuer`.
+
+CoreIdent advertises its endpoints (JWKS, token, revocation, introspection) based on the configured route options and issuer.
+
+---
+
 ## Key Principles
 
 | Principle | Description |

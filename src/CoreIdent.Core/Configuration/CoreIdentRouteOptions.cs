@@ -8,6 +8,10 @@ public sealed class CoreIdentRouteOptions
 
     public string TokenPath { get; set; } = "token";
 
+    public string RevocationPath { get; set; } = "revoke";
+
+    public string IntrospectionPath { get; set; } = "introspect";
+
     public string? DiscoveryPath { get; set; }
 
     public string? JwksPath { get; set; }

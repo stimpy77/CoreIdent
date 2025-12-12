@@ -1,15 +1,69 @@
+using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
+using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using CoreIdent.Core.Services;
 
 namespace CoreIdent.Core.Endpoints;
 
 public static class DiscoveryEndpointsExtensions
 {
+    public static IEndpointRouteBuilder MapCoreIdentOpenIdConfigurationEndpoint(
+        this IEndpointRouteBuilder endpoints,
+        CoreIdentOptions coreOptions,
+        CoreIdentRouteOptions routeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentNullException.ThrowIfNull(coreOptions);
+        ArgumentNullException.ThrowIfNull(routeOptions);
+
+        var discoveryPath = routeOptions.GetDiscoveryPath(coreOptions);
+
+        endpoints.MapGet(discoveryPath, async (
+            ISigningKeyProvider signingKeyProvider,
+            IScopeStore scopeStore,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(coreOptions.Issuer))
+            {
+                return Results.Problem(title: "Configuration error", detail: "Issuer is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+            }
+
+            var issuerUri = new Uri(coreOptions.Issuer, UriKind.Absolute);
+
+            var jwksUri = new Uri(issuerUri, routeOptions.GetJwksPath(coreOptions)).ToString();
+            var tokenEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.TokenPath)).ToString();
+            var revocationEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.RevocationPath)).ToString();
+            var introspectionEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.IntrospectionPath)).ToString();
+
+            var scopes = (await scopeStore.GetAllAsync(ct))
+                .Where(s => s.ShowInDiscoveryDocument)
+                .Select(s => s.Name)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToList();
+
+            var document = new OpenIdConfigurationDocument(
+                Issuer: coreOptions.Issuer,
+                JwksUri: jwksUri,
+                TokenEndpoint: tokenEndpoint,
+                RevocationEndpoint: revocationEndpoint,
+                IntrospectionEndpoint: introspectionEndpoint,
+                GrantTypesSupported: [],
+                ScopesSupported: scopes,
+                IdTokenSigningAlgValuesSupported: [signingKeyProvider.Algorithm]);
+
+            return Results.Json(document);
+        });
+
+        return endpoints;
+    }
+
     public static IEndpointRouteBuilder MapCoreIdentDiscoveryEndpoints(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapCoreIdentDiscoveryEndpoints("/.well-known/jwks.json");
