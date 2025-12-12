@@ -43,10 +43,12 @@ public static class EndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(coreOptions);
         ArgumentNullException.ThrowIfNull(routeOptions);
 
+        endpoints.MapCoreIdentOpenIdConfigurationEndpoint(coreOptions, routeOptions);
+
         var jwksPath = routeOptions.GetJwksPath(coreOptions);
         endpoints.MapCoreIdentDiscoveryEndpoints(jwksPath);
 
-        var revokePath = routeOptions.CombineWithBase("revoke");
+        var revokePath = routeOptions.CombineWithBase(routeOptions.RevocationPath);
         endpoints.MapCoreIdentTokenManagementEndpoints(revokePath);
 
         return endpoints;

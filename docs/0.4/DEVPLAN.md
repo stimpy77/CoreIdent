@@ -319,7 +319,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.4.2: OIDC Discovery Metadata (Unambiguous `/.well-known/openid-configuration`)
 
 *   **Component:** Discovery Document Endpoint
-    - [ ] (L2) Add `/.well-known/openid-configuration` endpoint
+    - [x] (L2) Add `/.well-known/openid-configuration` endpoint
         *   *Guidance:* Always root-relative, ignore `BasePath`
         *   *Guidance:* `issuer` must exactly match configured `CoreIdentOptions.Issuer`
         *   *Guidance:* Advertise endpoints using `CoreIdentRouteOptions` (token, revocation, introspection, JWKS)
@@ -327,12 +327,12 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Include `scopes_supported` based on `IScopeStore.GetAllAsync()` (filter `ShowInDiscoveryDocument`)
         *   *Guidance:* Include signing algs from `ISigningKeyProvider.Algorithm`
 *   **Component:** Discovery Document Model
-    - [ ] (L1) Create a response model (record/class) for discovery document serialization
+    - [x] (L1) Create a response model (record/class) for discovery document serialization
 *   **Test Case (Integration):**
-    - [ ] (L2) Discovery endpoint returns valid JSON with correct issuer and endpoint URLs
-    - [ ] (L2) Discovery `jwks_uri` matches configured JWKS path and is reachable
+    - [x] (L2) Discovery endpoint returns valid JSON with correct issuer and endpoint URLs
+    - [x] (L2) Discovery `jwks_uri` matches configured JWKS path and is reachable
 *   **Documentation:**
-    - [ ] (L1) Document discovery endpoint and issuer requirements
+    - [x] (L1) Document discovery endpoint and issuer requirements
 
 ---
 
