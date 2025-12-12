@@ -5,16 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Services;
 
-public interface ITokenService
-{
-    Task<string> CreateJwtAsync(
-        string issuer,
-        string audience,
-        IEnumerable<Claim> claims,
-        DateTimeOffset expiresAt,
-        CancellationToken ct = default);
-}
-
 public class JwtTokenService : ITokenService
 {
     private readonly ISigningKeyProvider _signingKeyProvider;
@@ -44,6 +34,8 @@ public class JwtTokenService : ITokenService
             throw new ArgumentException("Audience is required.", nameof(audience));
         }
 
+        ArgumentNullException.ThrowIfNull(claims);
+
         var signingCredentials = await _signingKeyProvider.GetSigningCredentialsAsync(ct);
 
         if (string.IsNullOrWhiteSpace(signingCredentials.Key.KeyId))
@@ -51,11 +43,18 @@ public class JwtTokenService : ITokenService
             throw new InvalidOperationException("Signing key must have a non-empty KeyId (kid).");
         }
 
+        // Ensure jti claim is present for revocation support
+        var claimsList = claims.ToList();
+        if (!claimsList.Any(c => c.Type == JwtRegisteredClaimNames.Jti))
+        {
+            claimsList.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")));
+        }
+
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = issuer,
             Audience = audience,
-            Subject = new ClaimsIdentity(claims ?? throw new ArgumentNullException(nameof(claims))),
+            Subject = new ClaimsIdentity(claimsList),
             Expires = expiresAt.UtcDateTime,
             SigningCredentials = signingCredentials
         };

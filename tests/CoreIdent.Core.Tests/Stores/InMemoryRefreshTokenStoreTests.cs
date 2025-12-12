@@ -1,5 +1,6 @@
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores.InMemory;
+using CoreIdent.Core.Tests.TestUtilities;
 using Shouldly;
 
 namespace CoreIdent.Core.Tests.Stores;
@@ -170,20 +171,4 @@ public class InMemoryRefreshTokenStoreTests
         (await store.GetAsync(validHandle)).ShouldNotBeNull("valid token should remain");
     }
 
-    private sealed class MutableTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _utcNow;
-
-        public MutableTimeProvider(DateTimeOffset utcNow)
-        {
-            _utcNow = utcNow;
-        }
-
-        public void Advance(TimeSpan delta)
-        {
-            _utcNow = _utcNow.Add(delta);
-        }
-
-        public override DateTimeOffset GetUtcNow() => _utcNow;
-    }
 }

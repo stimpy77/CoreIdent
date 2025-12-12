@@ -74,6 +74,41 @@ public class ClaimsPrincipalExtensionsTests
         principal.IsInRole("admin", StringComparison.Ordinal).ShouldBeFalse("Should not match role with different case when using Ordinal.");
     }
 
+    [Fact]
+    public void Email_returns_null_when_no_email_claim_exists()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Name, "John"));
+        principal.Email.ShouldBeNull("Email should be null when no email claim exists.");
+    }
+
+    [Fact]
+    public void UserId_returns_null_when_no_identifier_claim_exists()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Name, "John"));
+        principal.UserId.ShouldBeNull("UserId should be null when no identifier claim exists.");
+    }
+
+    [Fact]
+    public void Name_returns_null_when_no_name_claim_exists()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Email, "test@example.com"));
+        principal.Name.ShouldBeNull("Name should be null when no name claim exists.");
+    }
+
+    [Fact]
+    public void GetUserIdAsGuid_throws_when_UserId_is_null()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Name, "John"));
+        Should.Throw<InvalidOperationException>(() => principal.GetUserIdAsGuid(), "Should throw when UserId is null.");
+    }
+
+    [Fact]
+    public void GetRoles_returns_empty_when_no_role_claims_exist()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Name, "John"));
+        principal.GetRoles().ShouldBeEmpty("GetRoles should return empty when no role claims exist.");
+    }
+
     private static ClaimsPrincipal CreatePrincipal(params (string type, string value)[] claims)
     {
         var identity = new ClaimsIdentity(
