@@ -1,4 +1,5 @@
 using CoreIdent.Core.Stores.InMemory;
+using CoreIdent.Core.Tests.TestUtilities;
 using Shouldly;
 using Xunit;
 
@@ -48,20 +49,4 @@ public class InMemoryTokenRevocationStoreTests
         longLived.ShouldBeTrue("Non-expired revoked token entry should not be removed by cleanup.");
     }
 
-    private sealed class MutableTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _utcNow;
-
-        public MutableTimeProvider(DateTimeOffset utcNow)
-        {
-            _utcNow = utcNow;
-        }
-
-        public void Advance(TimeSpan delta)
-        {
-            _utcNow = _utcNow.Add(delta);
-        }
-
-        public override DateTimeOffset GetUtcNow() => _utcNow;
-    }
 }
