@@ -12,7 +12,15 @@ public static class DiscoveryEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentDiscoveryEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/.well-known/jwks.json", async (
+        return endpoints.MapCoreIdentDiscoveryEndpoints("/.well-known/jwks.json");
+    }
+
+    public static IEndpointRouteBuilder MapCoreIdentDiscoveryEndpoints(this IEndpointRouteBuilder endpoints, string jwksPath)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentException.ThrowIfNullOrWhiteSpace(jwksPath);
+
+        endpoints.MapGet(jwksPath, async (
             ISigningKeyProvider signingKeyProvider,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>

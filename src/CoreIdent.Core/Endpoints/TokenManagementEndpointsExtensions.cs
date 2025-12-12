@@ -14,7 +14,15 @@ public static class TokenManagementEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/auth/revoke", async (
+        return endpoints.MapCoreIdentTokenManagementEndpoints("/auth/revoke");
+    }
+
+    public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints, string revokePath)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentException.ThrowIfNullOrWhiteSpace(revokePath);
+
+        endpoints.MapPost(revokePath, async (
             HttpRequest request,
             ISigningKeyProvider signingKeyProvider,
             ITokenRevocationStore tokenRevocationStore,

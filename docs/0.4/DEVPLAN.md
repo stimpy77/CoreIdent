@@ -300,16 +300,16 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   Default stores when not overridden (in-memory)
         *   *Guidance:* Provide parameterless and parameterized overloads (e.g. `AddCoreIdent()` and `AddCoreIdent(Action<CoreIdentOptions> configure, Action<CoreIdentRouteOptions>? configureRoutes = null)`), where the parameterless version uses defaults.
         *   *Guidance:* Parameterless `AddCoreIdent()` still requires issuer/audience to be configured (e.g., via `appsettings.json` binding to `CoreIdentOptions`). Validation will fail at startup if required values are missing.
-    - [ ] (L1) Document registration order for EF Core
+    - [x] (L1) Document registration order for EF Core
         *   *Guidance:* `AddCoreIdent()` -> `AddDbContext(...)` -> `AddEntityFrameworkCore*Store()`
 *   **Component:** Endpoint Mapping (`MapCoreIdentEndpoints`)
-    - [ ] (L2) Create `MapCoreIdentEndpoints()` extension method that maps all CoreIdent endpoints
+    - [x] (L2) Create `MapCoreIdentEndpoints()` extension method that maps all CoreIdent endpoints
         *   *Guidance:* Map endpoints under `BasePath` unless explicitly root-relative
         *   *Guidance:* Ensure discovery and JWKS endpoints are always root-relative (per OIDC spec)
         *   *Guidance:* Provide parameterless and parameterized overloads. Parameterless should use configured options from DI; parameterized overload(s) should accept an options instance or configuration delegate and then cascade those settings down to the granular mappers.
         *   *Guidance:* Granular endpoint mappers remain public and convention-based; `MapCoreIdentEndpoints()` is the authoritative aggregation.
 *   **Test Case (Integration):**
-    - [ ] (L2) App can boot with `AddCoreIdent()` + `MapCoreIdentEndpoints()` and responds on required routes
+    - [x] (L2) App can boot with `AddCoreIdent()` + `MapCoreIdentEndpoints()` and responds on required routes
         *   *Guidance:* Test should only rely on defaults + minimal required configuration (issuer/audience, signing key) and validate that:
             *   Root-relative `/.well-known/*` endpoints respond (ignoring `BasePath`)
             *   Base-path endpoints respond under the configured default `BasePath`
