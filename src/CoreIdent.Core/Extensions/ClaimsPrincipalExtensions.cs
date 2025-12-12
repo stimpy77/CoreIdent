@@ -26,12 +26,12 @@ public static class ClaimsPrincipalExtensions
             return guid;
         }
 
-        public T? GetClaim<T>(string claimType) where T : struct, IParsable<T>
+        public T? GetClaim<T>(string claimType) where T : IParsable<T>
         {
             var value = principal.FindFirstValue(claimType);
             if (string.IsNullOrWhiteSpace(value))
             {
-                return null;
+                return default;
             }
 
             try
@@ -53,8 +53,19 @@ public static class ClaimsPrincipalExtensions
                 .Select(c => c.Value);
         }
 
-        public bool HasRole(string role, StringComparison comparisonType = StringComparison.OrdinalIgnoreCase) =>
-            !string.IsNullOrWhiteSpace(role) &&
-            principal.GetRoles().Any(r => string.Equals(r, role, comparisonType));
+        public bool IsInRole(string role, StringComparison comparisonType)
+        {
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
+            var roleClaimType = (principal.Identity as ClaimsIdentity)?.RoleClaimType ?? ClaimTypes.Role;
+            var roles = principal.Claims
+                .Where(c => c.Type == roleClaimType || c.Type == ClaimTypes.Role || c.Type == "role")
+                .Select(c => c.Value);
+
+            return roles.Any(r => string.Equals(r, role, comparisonType));
+        }
     }
 }

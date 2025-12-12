@@ -7,10 +7,17 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 public sealed class EfTokenRevocationStore : ITokenRevocationStore
 {
     private readonly CoreIdentDbContext _db;
+    private readonly TimeProvider _timeProvider;
 
     public EfTokenRevocationStore(CoreIdentDbContext db)
+        : this(db, timeProvider: null)
+    {
+    }
+
+    public EfTokenRevocationStore(CoreIdentDbContext db, TimeProvider? timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task RevokeTokenAsync(string jti, string tokenType, DateTime expiry, CancellationToken ct = default)
@@ -25,7 +32,7 @@ public sealed class EfTokenRevocationStore : ITokenRevocationStore
             throw new ArgumentException("Token type is required.", nameof(tokenType));
         }
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (expiry <= now)
         {
@@ -67,7 +74,7 @@ public sealed class EfTokenRevocationStore : ITokenRevocationStore
             return false;
         }
 
-        if (record.ExpiresAtUtc <= DateTime.UtcNow)
+        if (record.ExpiresAtUtc <= _timeProvider.GetUtcNow().UtcDateTime)
         {
             return false;
         }
@@ -77,7 +84,7 @@ public sealed class EfTokenRevocationStore : ITokenRevocationStore
 
     public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _db.RevokedTokens
             .Where(x => x.ExpiresAtUtc <= now)

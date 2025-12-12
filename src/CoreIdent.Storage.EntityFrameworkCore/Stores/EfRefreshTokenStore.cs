@@ -13,10 +13,17 @@ namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 public sealed class EfRefreshTokenStore : IRefreshTokenStore
 {
     private readonly CoreIdentDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
     public EfRefreshTokenStore(CoreIdentDbContext context)
+        : this(context, timeProvider: null)
+    {
+    }
+
+    public EfRefreshTokenStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <inheritdoc />
@@ -97,7 +104,7 @@ public sealed class EfRefreshTokenStore : IRefreshTokenStore
             return false;
         }
 
-        entity.ConsumedAt = DateTime.UtcNow;
+        entity.ConsumedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _context.SaveChangesAsync(ct);
         return true;
     }
@@ -105,7 +112,7 @@ public sealed class EfRefreshTokenStore : IRefreshTokenStore
     /// <inheritdoc />
     public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         await _context.RefreshTokens
             .Where(t => t.ExpiresAt <= now)
             .ExecuteDeleteAsync(ct);

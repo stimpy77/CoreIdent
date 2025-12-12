@@ -41,7 +41,7 @@ public class ClaimsPrincipalExtensionsTests
         var principal = CreatePrincipal(("age", "42"));
         principal.GetClaim<int>("age").ShouldBe(42, "Should parse typed claim.");
         var missing = principal.GetClaim<int>("missing");
-        missing.ShouldBe((int?)null, "Missing claim should return null.");
+        missing.ShouldBe(0, "Missing claim should return default (0 for int).");
     }
 
     [Fact]
@@ -59,11 +59,19 @@ public class ClaimsPrincipalExtensionsTests
     }
 
     [Fact]
-    public void IsInRole_ignores_case()
+    public void IsInRole_with_comparison_ignores_case()
     {
         var principal = CreatePrincipal((ClaimTypes.Role, "Admin"));
-        principal.HasRole("admin").ShouldBeTrue("Should match role ignoring case.");
-        principal.HasRole("user").ShouldBeFalse("Should not match absent role.");
+        principal.IsInRole("admin", StringComparison.OrdinalIgnoreCase).ShouldBeTrue("Should match role ignoring case.");
+        principal.IsInRole("user", StringComparison.OrdinalIgnoreCase).ShouldBeFalse("Should not match absent role.");
+    }
+
+    [Fact]
+    public void IsInRole_with_ordinal_is_case_sensitive()
+    {
+        var principal = CreatePrincipal((ClaimTypes.Role, "Admin"));
+        principal.IsInRole("Admin", StringComparison.Ordinal).ShouldBeTrue("Should match role with exact case.");
+        principal.IsInRole("admin", StringComparison.Ordinal).ShouldBeFalse("Should not match role with different case when using Ordinal.");
     }
 
     private static ClaimsPrincipal CreatePrincipal(params (string type, string value)[] claims)
