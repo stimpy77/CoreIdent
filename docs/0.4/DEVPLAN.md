@@ -22,6 +22,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 **Prerequisites:** .NET 10 SDK installed
 
+### Phase 0 Milestones (to keep scope executable)
+
+- **Milestone 0A — Crypto + Core Token Lifecycle**: Features **0.1–0.4**
+- **Milestone 0B — Quality & DevEx (Testing + Observability + Tooling)**: Features **0.5–0.8**
+
 ---
 
 ### Feature 0.1: .NET 10 Migration
@@ -155,6 +160,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* For access tokens: add JTI to revocation store
         *   *Guidance:* Require client authentication for confidential clients
         *   *Guidance:* Always return 200 OK (per RFC 7009 - don't leak token validity)
+        *   *Guidance:* **JWT revocation reality:** revoked JWT access tokens are only rejected by resource servers that perform an online check (introspection and/or shared revocation store). Default posture is short-lived access tokens + refresh token revocation/rotation.
 *   **Component:** Token Validation Integration
     - [ ] (L3) Create token validation middleware that checks revocation store
     - [ ] (L3) Integrate `ITokenRevocationStore` check in protected endpoint middleware
@@ -934,6 +940,25 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) Publish conformance status
 
 ---
+
+### Feature 3.12: Revocable Access in Controlled Distributed Systems
+
+> **Goal:** Provide a first-class “revocable access token” story for distributed resource servers that you control.
+> This complements Phase 0’s revocation + introspection endpoints.
+
+*   **Component:** Resource Server Validation Package
+    - [ ] (L2) Create `CoreIdent.ResourceServer` package
+    - [ ] (L3) Implement introspection-based authentication handler/middleware (RFC 7662) for APIs
+    - [ ] (L2) Add caching strategy and guidance (fail-closed by default; configurable TTL; protect introspection endpoint)
+*   **Component:** Optional Opaque/Reference Access Tokens
+    - [ ] (L3) Add configuration to issue opaque/reference access tokens (instead of JWT) for APIs that require immediate revocation
+    - [ ] (L2) Ensure introspection becomes the validation path for opaque tokens
+*   **Test Case (Integration):**
+    - [ ] (L3) Revoked access token becomes inactive via introspection across services
+    - [ ] (L2) Cache behaves correctly (revocation latency bounded by cache TTL)
+*   **Documentation:**
+    - [ ] (L2) Document validation modes: offline JWT vs introspection vs opaque/reference tokens
+    - [ ] (L2) Document when to choose which mode (embedded vs distributed)
 
 ## Phase 4: UI & Administration
 

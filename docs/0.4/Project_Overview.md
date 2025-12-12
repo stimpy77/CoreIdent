@@ -147,6 +147,8 @@ For implementers unfamiliar with .NET 10's auth features, start here:
 
 **Third-party analysis:**
 - [Auth0: .NET 10 Authentication & Authorization Enhancements](https://auth0.com/blog/authentication-authorization-enhancements-dotnet-10/)
+- [InfoQ: ASP.NET Core 10 Release](https://www.infoq.com/news/2025/12/asp-net-core-10-release/)
+- [Leading EDJE: What's New in .NET 10](https://blog.leadingedje.com/post/whatsnewindotnet/10.html)
 - [Duende: Most Anticipated .NET 10 Auth Features](https://duendesoftware.com/blog/20250916-duende-most-anticipated-dotnet-10-auth-features)
 
 ---
@@ -182,7 +184,7 @@ let configureServices (services: IServiceCollection) =
 **`CoreIdent.Client`** — Core client library for authenticating against CoreIdent (or any OAuth/OIDC server):
 
 ```csharp
-// Works in ANY .NET app: MAUI, WPF, WinForms, Console, Blazor WASM
+// Works in any .NET 10 app: MAUI, WPF, WinForms, Console, Blazor WASM
 var authClient = new CoreIdentClient(new CoreIdentClientOptions
 {
     Authority = "https://auth.myapp.com",
@@ -202,7 +204,7 @@ var accessToken = await authClient.GetAccessTokenAsync();
 
 | Package | Platform | Secure Storage | Browser Integration |
 |---------|----------|----------------|--------------------|
-| `CoreIdent.Client` | .NET Standard 2.0+ | Pluggable | Pluggable |
+| `CoreIdent.Client` | .NET 10 (`net10.0`) | Pluggable | Pluggable |
 | `CoreIdent.Client.Maui` | .NET MAUI | SecureStorage | WebAuthenticator |
 | `CoreIdent.Client.Wpf` | WPF | DPAPI | WebView2 / System Browser |
 | `CoreIdent.Client.WinForms` | WinForms | DPAPI | WebView2 / System Browser |
@@ -263,20 +265,30 @@ var accessToken = await authClient.GetAccessTokenAsync();
 
 ## Phased Development Plan
 
-### Phase 0: Foundation Reset (This Release - 0.4)
-**Goal:** Establish production-ready cryptographic foundation and .NET 10 baseline.
+### Phase 0A: Foundation Reset — Crypto + Core Token Lifecycle (0.4)
+**Goal:** Establish production-ready cryptographic foundation and essential OAuth/OIDC token lifecycle endpoints on **.NET 10**.
 
 **Deliverables:**
-- [ ] Migrate to .NET 10 (multi-target `net8.0;net10.0`)
+- [ ] Migrate to .NET 10 (`net10.0` only)
 - [ ] **Asymmetric key support (RS256, ES256)** — Non-negotiable for production
 - [ ] Key management infrastructure (loading, rotation preparation)
 - [ ] Update JWKS endpoint for asymmetric keys
 - [ ] Token Revocation endpoint (RFC 7009)
 - [ ] Token Introspection endpoint (RFC 7662)
-- [ ] **Unified test infrastructure** — Reusable `WebApplicationFactory` base, fixtures, seeders
 - [ ] Remove/deprecate HS256-only code paths (keep as opt-in for dev/testing)
+
+> **Note on JWT revocation:** Revoking a JWT access token only works for resource servers that perform an online check (e.g., introspection or a shared revocation store). Default guidance is short-lived access tokens + refresh token rotation/revocation. See Phase 3 for “revocable access” in controlled distributed systems.
+
+---
+
+### Phase 0B: Quality & DevEx — Testing, Observability, Tooling (0.4)
+**Goal:** Make CoreIdent easy to test, ship, and contribute to.
+
+**Deliverables:**
+- [ ] **Unified test infrastructure** — Reusable `WebApplicationFactory` base, fixtures, seeders
 - [ ] **CLI Tool (`dotnet coreident`)** — `init`, `keys generate`, `client add` commands
 - [ ] **.devcontainer configuration** — One-click dev environment for contributors
+- [ ] OpenTelemetry metrics integration (leverage .NET 10 built-in authentication/identity metrics)
 
 **Why This First:** Nothing else matters if tokens can't be validated securely in production.
 
@@ -339,6 +351,7 @@ var accessToken = await authClient.GetAccessTokenAsync();
 - [ ] **Rich Authorization Requests** (RFC 9396) — Fine-grained authorization
 - [ ] **Token Exchange** (RFC 8693) — Impersonation, delegation, cross-service auth
 - [ ] **JWT-Secured Authorization Request (JAR)** — Signed/encrypted auth requests
+- [ ] **Revocable access for controlled distributed systems** — Introspection-first validation middleware + optional opaque/reference access tokens (for resource servers you control)
 - [ ] **Webhook System** — Events for user.created, login, token.issued, consent.granted
 - [ ] OIDC Conformance test suite integration
 - [ ] Rate limiting and abuse prevention
@@ -494,7 +507,7 @@ public class LoginTests : CoreIdentTestFixture
 
 Existing 0.3.x users will need to:
 
-1. **Update target framework** to `net10.0` (or `net8.0` if multi-targeting)
+1. **Update target framework** to `net10.0`
 2. **Configure asymmetric keys** — HS256 will be deprecated for production
 3. **Update token validation** — Resource servers need public key, not shared secret
 4. **Review breaking changes** in `MIGRATION.md` (to be created)

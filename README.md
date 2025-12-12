@@ -28,12 +28,14 @@ CoreIdent is a **unified authentication solution** for the .NET ecosystem. Wheth
 
 The previous 0.3.x implementation has been archived. Version 0.4 is a ground-up rebuild focusing on:
 
-- **.NET 10** as the primary target (with .NET 8 LTS support)
+- **.NET 10** only (`net10.0`)
 - **Passwordless-first** authentication (email magic links, passkeys)
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
 - **Improved developer experience** with better test infrastructure and templates
 - **F# first-class support**
 - **Client libraries** for any .NET application type
+
+> Legacy note: the 0.3.x codebase remains on the `main` branch and is tagged `legacy-0.3.x-main` for reference.
 
 ---
 
@@ -90,11 +92,12 @@ CoreIdent.Testing                 # Test fixtures and utilities
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| **0** | Foundation (asymmetric keys, revocation, introspection, test infra) | 🔜 Next |
+| **0A** | Foundation (crypto + token lifecycle: keys, JWKS, revocation, introspection) | 🔜 Next |
+| **0B** | Quality & DevEx (test infra, metrics, CLI, devcontainer) | Planned |
 | **1** | Passwordless (email magic link, passkeys, SMS OTP) | Planned |
 | **1.5** | Client libraries (MAUI, WPF, Console, Blazor) | Planned |
 | **2** | External providers (Google, Microsoft, GitHub) | Planned |
-| **3** | OAuth/OIDC hardening (key rotation, DPoP, RAR, device flow) | Planned |
+| **3** | OAuth/OIDC hardening (key rotation, DPoP, RAR, device flow, revocable access for controlled distributed systems) | Planned |
 | **4** | UI & Administration | Planned |
 | **5** | Advanced (MFA, SCIM, SPIFFE/SPIRE) | Future |
 
@@ -127,3 +130,4 @@ Key areas for future contribution:
 - [Technical Plan](docs/0.4/Technical_Plan.md)
 - [Development Plan](docs/0.4/DEVPLAN.md)
 - [.NET 10 What's New](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/overview)
+- [.NET 10: What’s New for Authentication and Authorization (Auth0)](https://auth0.com/blog/authentication-authorization-enhancements-dotnet-10/)
