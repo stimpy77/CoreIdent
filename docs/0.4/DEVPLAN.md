@@ -32,29 +32,23 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.1: .NET 10 Migration
 
 *   **Component:** Solution & Project Setup
-    - [ ] (L1) Create `CoreIdent.sln` solution file
-    - [ ] (L1) Create `CoreIdent.Core.csproj` targeting `net10.0`
-    - [ ] (L1) Create `CoreIdent.Storage.EntityFrameworkCore.csproj` targeting `net10.0`
-    - [ ] (L1) Create `CoreIdent.Adapters.DelegatedUserStore.csproj` targeting `net10.0`
-    - [ ] (L1) Create test projects targeting `net10.0`
-    - [ ] (L2) Configure NuGet package references for .NET 10
+    - [x] (L1) Create `CoreIdent.sln` solution file
+    - [x] (L1) Create `CoreIdent.Core.csproj` targeting `net10.0`
+    - [x] (L1) Create `CoreIdent.Storage.EntityFrameworkCore.csproj` targeting `net10.0`
+    - [x] (L1) Create `CoreIdent.Adapters.DelegatedUserStore.csproj` targeting `net10.0`
+    - [x] (L1) Create test projects targeting `net10.0`
+    - [x] (L2) Configure NuGet package references for .NET 10
         - `Microsoft.AspNetCore.Authentication.JwtBearer` → 10.x
         - `Microsoft.Extensions.Identity.Core` → 10.x
         - `Microsoft.EntityFrameworkCore` → 10.x
         - `Microsoft.IdentityModel.Tokens` → latest stable
 *   **Component:** C# 14 Features
-    - [ ] (L1) Enable C# 14 in all projects (`<LangVersion>14</LangVersion>`)
-    - [ ] (L2) Add `ClaimsPrincipalExtensions` using extension members syntax
-*   **Component:** F# Compatibility
-    - [ ] (L2) Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
-    - [ ] (L2) Create F# sample project using Giraffe/Saturn
-    - [ ] (L2) Add F# template (`coreident-api-fsharp`)
-    - [ ] (L1) Document F# usage patterns
+    - [x] (L1) Enable C# 14 in all projects (`<LangVersion>14</LangVersion>`)
+    - [x] (L2) Add `ClaimsPrincipalExtensions` using extension members syntax
 *   **Test Case:**
-    - [ ] (L1) Solution builds without warnings on .NET 10
-    - [ ] (L1) Basic smoke test passes
+    - [x] (L1) Solution builds without warnings on .NET 10
 *   **Documentation:**
-    - [ ] (L1) Update README.md with .NET 10 requirement
+    - [x] (L1) Update README.md with .NET 10 requirement
 
 ---
 
@@ -258,6 +252,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Test Case:**
     - [ ] (L1) Fixture-based tests are simple and readable
     - [ ] (L1) Test execution time is reasonable
+    - [ ] (L1) Integration smoke test implemented and passing (app boots with test fixture, health/check endpoint returns 200)
 
 ---
 
@@ -269,8 +264,6 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
     - [ ] (L2) Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
     - [ ] (L2) Add CoreIdent-specific metrics:
-        - `coreident.passwordless.email.sent` — Email magic links sent
-        - `coreident.passwordless.email.verified` — Successful email verifications
         - `coreident.token.issued` — Tokens issued (by type)
         - `coreident.token.revoked` — Tokens revoked
         - `coreident.client.authenticated` — Client authentications
@@ -482,37 +475,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.4: ClaimsPrincipal Extensions (C# 14)
+### Feature 1.4: F# Compatibility
 
-> **Note:** C# 14 extension members syntax is a language feature. CoreIdent provides a convenience library of common claim accessors using this syntax.
+> **Note:** Moved from Feature 0.1 — verification is more meaningful once core APIs exist.
 
-*   **Component:** Extension Members
-    - [ ] (L2) Create `CoreIdent.Core/Extensions/ClaimsPrincipalExtensions.cs`
-        ```csharp
-        public static class ClaimsPrincipalExtensions
-        {
-            extension(ClaimsPrincipal principal)
-            {
-                public string? Email => principal.FindFirstValue(ClaimTypes.Email) 
-                                      ?? principal.FindFirstValue("email");
-                public string? UserId => principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                                       ?? principal.FindFirstValue("sub");
-                public string? Name => principal.FindFirstValue(ClaimTypes.Name)
-                                     ?? principal.FindFirstValue("name");
-                public Guid GetUserIdAsGuid() { /* ... */ }
-                public T? GetClaim<T>(string type) where T : IParsable<T> { /* ... */ }
-                public IEnumerable<string> GetRoles() { /* ... */ }
-            }
-        }
-        ```
-*   **Test Case (Unit):**
-    - [ ] (L1) `Email` property returns correct value from various claim types
-    - [ ] (L1) `UserId` property returns correct value
-    - [ ] (L1) `GetUserIdAsGuid()` parses correctly or throws
-    - [ ] (L2) `GetClaim<T>()` parses various types correctly
+*   **Component:** F# Compatibility Verification
+    - [ ] (L2) Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
+    - [ ] (L2) Create F# sample project using Giraffe/Saturn
+    - [ ] (L2) Add F# template (`coreident-api-fsharp`)
+    - [ ] (L1) Document F# usage patterns
+*   **Test Case:**
+    - [ ] (L1) F# sample project compiles and runs
+    - [ ] (L2) All core interfaces are usable from F#
 *   **Documentation:**
-    - [ ] (L1) Add usage examples to README
-    - [ ] (L1) Document available extension properties/methods
+    - [ ] (L1) F# usage guide
 
 ---
 
