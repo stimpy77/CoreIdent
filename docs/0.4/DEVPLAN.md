@@ -194,7 +194,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.4: Scope & Core Models
 
 *   **Component:** `CoreIdentScope` Model
-    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentScope.cs`
+    - [x] (L1) Create `CoreIdent.Core/Models/CoreIdentScope.cs`
         ```csharp
         public class CoreIdentScope
         {
@@ -208,7 +208,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `IScopeStore` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Stores/IScopeStore.cs`
+    - [x] (L1) Create `CoreIdent.Core/Stores/IScopeStore.cs`
         ```csharp
         public interface IScopeStore
         {
@@ -218,13 +218,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `InMemoryScopeStore`
-    - [ ] (L2) Create in-memory implementation
-    - [ ] (L2) Pre-seed standard OIDC scopes (openid, profile, email, address, phone, offline_access)
+    - [x] (L2) Create in-memory implementation
+    - [x] (L2) Pre-seed standard OIDC scopes (openid, profile, email, address, phone, offline_access)
 *   **Component:** `EfScopeStore`
-    - [ ] (L2) Create EF Core implementation
-    - [ ] (L1) Add entity configuration and migration
+    - [x] (L2) Create EF Core implementation
+    - [x] (L1) Add entity configuration and migration
 *   **Component:** `CoreIdentRefreshToken` Model
-    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentRefreshToken.cs`
+    - [x] (L1) Create `CoreIdent.Core/Models/CoreIdentRefreshToken.cs`
         ```csharp
         public class CoreIdentRefreshToken
         {
@@ -240,7 +240,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `IRefreshTokenStore` Interface (Full)
-    - [ ] (L1) Expand `CoreIdent.Core/Stores/IRefreshTokenStore.cs`
+    - [x] (L1) Expand `CoreIdent.Core/Stores/IRefreshTokenStore.cs`
         ```csharp
         public interface IRefreshTokenStore
         {
@@ -253,20 +253,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `InMemoryRefreshTokenStore`
-    - [ ] (L2) Create in-memory implementation with `ConcurrentDictionary`
+    - [x] (L2) Create in-memory implementation with `ConcurrentDictionary`
 *   **Component:** `EfRefreshTokenStore`
-    - [ ] (L2) Create EF Core implementation
-    - [ ] (L1) Add entity configuration and migration
+    - [x] (L2) Create EF Core implementation
+    - [x] (L1) Add entity configuration and migration
 *   **Component:** Standard Scope Helpers
-    - [ ] (L1) Create `StandardScopes` static class with predefined OIDC scopes
+    - [x] (L1) Create `StandardScopes` static class with predefined OIDC scopes
 *   **Component:** DI Registration
-    - [ ] (L1) Add `AddScopeStore()` and `AddRefreshTokenStore()` extension methods
-    - [ ] (L1) Add `AddInMemoryScopes(IEnumerable<CoreIdentScope>)` extension
+    - [x] (L1) Add `AddScopeStore()` and `AddRefreshTokenStore()` extension methods
+    - [x] (L1) Add `AddInMemoryScopes(IEnumerable<CoreIdentScope>)` extension
 *   **Test Case (Unit):**
-    - [ ] (L1) Scope store operations work correctly
-    - [ ] (L1) Refresh token store CRUD and family revocation work correctly
+    - [x] (L1) Scope store operations work correctly
+    - [x] (L1) Refresh token store CRUD and family revocation work correctly
 *   **Documentation:**
-    - [ ] (L1) Document scope configuration
+    - [x] (L1) Document scope configuration
 
 ---
 
