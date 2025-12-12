@@ -276,6 +276,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** `CoreIdentOptions` Configuration
     - [ ] (L1) Create `CoreIdentOptions` with required issuer/audience settings and safe defaults
         *   *Guidance:* Include at minimum: `Issuer`, `Audience`, `AccessTokenLifetime`, `RefreshTokenLifetime`
+        *   *Guidance:* Options should provide **sane defaults** where possible, but still allow **fail-fast validation** for required values (e.g., issuer/audience).
+        *   *Guidance:* Keep `ITokenService` as a low-level primitive (caller provides issuer/audience/expires). Higher-level endpoints/features should read from `IOptions<CoreIdentOptions>` and pass values into `ITokenService`.
     - [ ] (L1) Add startup validation (fail fast)
         *   *Guidance:* Validate required fields (issuer/audience), validate lifetimes are positive
 *   **Component:** `CoreIdentRouteOptions`
@@ -283,23 +285,34 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Include `BasePath` (default `/auth`), `TokenPath` (default `token`)
         *   *Guidance:* Include root-relative `DiscoveryPath` (default `/.well-known/openid-configuration`)
         *   *Guidance:* Include root-relative `JwksPath` (default `/.well-known/jwks.json`)
-        *   *Guidance:* Include `ConsentPath` (default `/auth/consent`) for future consent UI
-        *   *Guidance:* Include `UserInfoPath` (default `/auth/userinfo`) for OIDC userinfo
-        *   *Guidance:* Include `UserProfilePath` (default `/me`) for host-friendly “who am I” endpoint
+        *   *Guidance:* Include `ConsentPath` (default `consent`, relative to `BasePath`) for future consent UI
+        *   *Guidance:* Include `UserInfoPath` (default `userinfo`, relative to `BasePath`) for OIDC userinfo
+        *   *Guidance:* Include `UserProfilePath` (default `/me`, root-relative) for host-friendly "who am I" endpoint
+        *   *Guidance:* Routes must have **hardcoded defaults** that can be overridden via configuration/DI (convention over configuration).
+        *   *Guidance:* Root-relative OIDC endpoints **must remain root-relative** even when `BasePath` changes.
+        *   *Guidance:* Any non-root-relative route should be composed as `BasePath + "/" + <RelativePath>` (normalized for leading/trailing slashes).
+        *   *Guidance:* Route option values may be stored either with or without leading/trailing slashes, but endpoint mapping must normalize to valid ASP.NET route templates (single leading slash, no double slashes).
 *   **Component:** DI Registration (`AddCoreIdent`)
     - [ ] (L2) Create `AddCoreIdent()` extension method that registers:
         *   `CoreIdentOptions` + validation
         *   `CoreIdentRouteOptions`
         *   `ITokenService` and related core services
         *   Default stores when not overridden (in-memory)
+        *   *Guidance:* Provide parameterless and parameterized overloads (e.g. `AddCoreIdent()` and `AddCoreIdent(Action<CoreIdentOptions> configure, Action<CoreIdentRouteOptions>? configureRoutes = null)`), where the parameterless version uses defaults.
+        *   *Guidance:* Parameterless `AddCoreIdent()` still requires issuer/audience to be configured (e.g., via `appsettings.json` binding to `CoreIdentOptions`). Validation will fail at startup if required values are missing.
     - [ ] (L1) Document registration order for EF Core
         *   *Guidance:* `AddCoreIdent()` -> `AddDbContext(...)` -> `AddEntityFrameworkCore*Store()`
 *   **Component:** Endpoint Mapping (`MapCoreIdentEndpoints`)
     - [ ] (L2) Create `MapCoreIdentEndpoints()` extension method that maps all CoreIdent endpoints
         *   *Guidance:* Map endpoints under `BasePath` unless explicitly root-relative
         *   *Guidance:* Ensure discovery and JWKS endpoints are always root-relative (per OIDC spec)
+        *   *Guidance:* Provide parameterless and parameterized overloads. Parameterless should use configured options from DI; parameterized overload(s) should accept an options instance or configuration delegate and then cascade those settings down to the granular mappers.
+        *   *Guidance:* Granular endpoint mappers remain public and convention-based; `MapCoreIdentEndpoints()` is the authoritative aggregation.
 *   **Test Case (Integration):**
     - [ ] (L2) App can boot with `AddCoreIdent()` + `MapCoreIdentEndpoints()` and responds on required routes
+        *   *Guidance:* Test should only rely on defaults + minimal required configuration (issuer/audience, signing key) and validate that:
+            *   Root-relative `/.well-known/*` endpoints respond (ignoring `BasePath`)
+            *   Base-path endpoints respond under the configured default `BasePath`
 
 ---
 
