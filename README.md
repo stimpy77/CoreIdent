@@ -99,6 +99,50 @@ builder.Services.AddSigningKey(o => o.UseSymmetric("your-32+byte-dev-secret"));
 
 ---
 
+## Scope Configuration (0.4)
+
+CoreIdent defines OAuth/OIDC scopes via `CoreIdentScope` and resolves them using `IScopeStore`.
+
+### Standard OIDC scopes
+
+The library includes standard scope name constants in `StandardScopes`:
+
+- `openid`
+- `profile`
+- `email`
+- `address`
+- `phone`
+- `offline_access`
+
+### In-memory scope store
+
+For development and tests, you can use the in-memory scope store.
+
+```csharp
+builder.Services.AddInMemoryStandardScopes();
+```
+
+Or, to seed custom scopes:
+
+```csharp
+builder.Services.AddInMemoryScopes(new[]
+{
+    new CoreIdentScope { Name = "api", DisplayName = "API", UserClaims = ["role"] }
+});
+```
+
+### EF Core scope store
+
+If you're using `CoreIdent.Storage.EntityFrameworkCore`, register the EF scope store:
+
+```csharp
+builder.Services.AddEntityFrameworkCoreScopeStore();
+```
+
+You are responsible for applying EF Core migrations / ensuring the schema is created.
+
+---
+
 ## Key Principles
 
 | Principle | Description |

@@ -30,13 +30,35 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds all EF Core stores (token revocation, client).
+    /// Adds EF Core scope store.
+    /// </summary>
+    public static IServiceCollection AddEntityFrameworkCoreScopeStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<IScopeStore, EfScopeStore>();
+        return services;
+    }
+
+    /// <summary>
+    /// Adds EF Core refresh token store.
+    /// </summary>
+    public static IServiceCollection AddEntityFrameworkCoreRefreshTokenStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
+        return services;
+    }
+
+    /// <summary>
+    /// Adds all EF Core stores (token revocation, client, scope, refresh token).
     /// </summary>
     public static IServiceCollection AddEntityFrameworkCoreStores(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
         services.AddEntityFrameworkCoreTokenRevocation();
         services.AddEntityFrameworkCoreClientStore();
+        services.AddEntityFrameworkCoreScopeStore();
+        services.AddEntityFrameworkCoreRefreshTokenStore();
         return services;
     }
 }
