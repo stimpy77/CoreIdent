@@ -640,7 +640,8 @@ public static class ClaimsPrincipalExtensions
             .Where(c => c.Type == ClaimTypes.Role || c.Type == "role")
             .Select(c => c.Value);
         
-        public bool IsInRole(string role) => GetRoles().Contains(role, StringComparer.OrdinalIgnoreCase);
+        public bool IsInRole(string role, StringComparison comparisonType) =>
+            GetRoles().Any(r => string.Equals(r, role, comparisonType));
     }
 }
 ```
