@@ -5,6 +5,7 @@ using CoreIdent.Core.Stores.InMemory;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -39,6 +40,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<CoreIdentRouteOptions>();
 
+        services.AddOptions<CoreIdentAuthorizationCodeOptions>();
+
         if (configureRoutes is not null)
         {
             services.Configure(configureRoutes);
@@ -66,6 +69,14 @@ public static class ServiceCollectionExtensions
             new InMemoryRefreshTokenStore(sp.GetService<TimeProvider>()));
         services.TryAddSingleton<IRefreshTokenStore>(sp => sp.GetRequiredService<InMemoryRefreshTokenStore>());
 
+        services.TryAddSingleton<InMemoryAuthorizationCodeStore>(sp =>
+            new InMemoryAuthorizationCodeStore(sp.GetService<TimeProvider>()));
+        services.TryAddSingleton<IAuthorizationCodeStore>(sp => sp.GetRequiredService<InMemoryAuthorizationCodeStore>());
+
+        services.TryAddSingleton<InMemoryUserGrantStore>(sp =>
+            new InMemoryUserGrantStore(sp.GetService<TimeProvider>()));
+        services.TryAddSingleton<IUserGrantStore>(sp => sp.GetRequiredService<InMemoryUserGrantStore>());
+
         services.TryAddSingleton<ITokenRevocationStore>(sp =>
             new InMemoryTokenRevocationStore(sp.GetService<TimeProvider>()));
 
@@ -76,6 +87,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ICustomClaimsProvider, NullCustomClaimsProvider>();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AuthorizationCodeCleanupHostedService>());
 
         return services;
     }

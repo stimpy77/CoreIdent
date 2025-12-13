@@ -48,6 +48,12 @@ public static class EndpointRouteBuilderExtensions
         var jwksPath = routeOptions.GetJwksPath(coreOptions);
         endpoints.MapCoreIdentDiscoveryEndpoints(jwksPath);
 
+        var authorizePath = routeOptions.CombineWithBase(routeOptions.AuthorizePath);
+        endpoints.MapCoreIdentAuthorizeEndpoint(authorizePath);
+
+        var consentPath = routeOptions.CombineWithBase(routeOptions.ConsentPath);
+        endpoints.MapCoreIdentConsentEndpoints(consentPath);
+
         var tokenPath = routeOptions.CombineWithBase(routeOptions.TokenPath);
         endpoints.MapCoreIdentTokenEndpoint(tokenPath);
 

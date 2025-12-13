@@ -839,21 +839,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.7: OAuth 2.0 Authorization Code Flow (PKCE Required)
 
 *   **Component:** Authorization Code Model
-    - [ ] (L1) Create `CoreIdentAuthorizationCode` model
+    - [x] (L1) Create `CoreIdentAuthorizationCode` model
         *   *Guidance:* Include code handle, client_id, subject_id, redirect_uri, scopes, created/expires, consumed, nonce, code_challenge, code_challenge_method
 *   **Component:** `IAuthorizationCodeStore` Interface
-    - [ ] (L1) Create store interface
+    - [x] (L1) Create store interface
         *   *Guidance:* `CreateAsync`, `GetAsync`, `ConsumeAsync`, `CleanupExpiredAsync`
 *   **Component:** In-Memory Store
-    - [ ] (L2) Implement `InMemoryAuthorizationCodeStore` using `ConcurrentDictionary`
+    - [x] (L2) Implement `InMemoryAuthorizationCodeStore` using `ConcurrentDictionary`
 *   **Component:** EF Core Store
-    - [ ] (L2) Implement `EfAuthorizationCodeStore` in `CoreIdent.Storage.EntityFrameworkCore`
-    - [ ] (L1) Add `AuthorizationCodeEntity` + DbContext configuration
+    - [x] (L2) Implement `EfAuthorizationCodeStore` in `CoreIdent.Storage.EntityFrameworkCore`
+    - [x] (L1) Add `AuthorizationCodeEntity` + DbContext configuration
 *   **Component:** Authorization Code Cleanup
-    - [ ] (L2) Add hosted service that periodically calls `CleanupExpiredAsync`
+    - [x] (L2) Add hosted service that periodically calls `CleanupExpiredAsync`
         *   *Guidance:* Must be opt-out via options
 *   **Component:** Authorize Endpoint
-    - [ ] (L3) Implement `GET /auth/authorize`
+    - [x] (L3) Implement `GET /auth/authorize`
         *   *Guidance:* Validate `client_id`, `redirect_uri`, `response_type=code`, and requested scopes
         *   *Guidance:* Enforce PKCE: require `code_challenge` + `code_challenge_method=S256`
         *   *Guidance:* Require `state` round-trip
@@ -861,55 +861,55 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Persist authorization code via `IAuthorizationCodeStore`
         *   *Guidance:* Redirect back to client with `code` and `state` or `error` and `error_description`
 *   **Component:** Token Endpoint (`authorization_code` grant)
-    - [ ] (L3) Extend `POST /auth/token` to support `grant_type=authorization_code`
+    - [x] (L3) Extend `POST /auth/token` to support `grant_type=authorization_code`
         *   *Guidance:* Validate code exists and not expired/consumed
         *   *Guidance:* Validate `redirect_uri` matches the one stored in the code
         *   *Guidance:* Validate PKCE `code_verifier` against stored challenge
         *   *Guidance:* Consume code atomically (single-use)
         *   *Guidance:* Issue access token and (optionally) refresh token
 *   **Component:** OpenID Connect ID Token (when `openid` scope is granted)
-    - [ ] (L2) Issue `id_token` in token response for `authorization_code` when `openid` scope is granted
+    - [x] (L2) Issue `id_token` in token response for `authorization_code` when `openid` scope is granted
         *   *Guidance:* Include `nonce` (if provided), set `aud` to `client_id`, and include scope-derived claims
         *   *Guidance:* Use signing key provider / `ITokenService` consistently
 *   **Component:** DI Registration
-    - [ ] (L1) Add store registration extensions for authorization code store (in-memory + EF)
+    - [x] (L1) Add store registration extensions for authorization code store (in-memory + EF)
 *   **Test Case (Integration):**
-    - [ ] (L3) Authorization code flow works end-to-end (authorize -> token)
-    - [ ] (L2) PKCE failure returns `invalid_grant`
-    - [ ] (L2) Redirect URI mismatch returns `invalid_request`
-    - [ ] (L2) Consumed code cannot be reused
+    - [x] (L3) Authorization code flow works end-to-end (authorize -> token)
+    - [x] (L2) PKCE failure returns `invalid_grant`
+    - [x] (L2) Redirect URI mismatch returns `invalid_request`
+    - [x] (L2) Consumed code cannot be reused
 *   **Documentation:**
-    - [ ] (L1) Document Authorization Code + PKCE flow and required parameters
+    - [x] (L1) Document Authorization Code + PKCE flow and required parameters
 
 ---
 
 ### Feature 1.8: User Consent & Grants
 
 *   **Component:** User Grant Model
-    - [ ] (L1) Create `CoreIdentUserGrant` model
+    - [x] (L1) Create `CoreIdentUserGrant` model
         *   *Guidance:* Include subject_id, client_id, granted scopes, created/expires
 *   **Component:** `IUserGrantStore` Interface
-    - [ ] (L1) Create interface for consent persistence
+    - [x] (L1) Create interface for consent persistence
         *   *Guidance:* Include `FindAsync(subjectId, clientId)`, `SaveAsync(grant)`, `RevokeAsync(...)`, `HasUserGrantedConsentAsync(...)`
 *   **Component:** In-Memory Store
-    - [ ] (L2) Implement `InMemoryUserGrantStore`
+    - [x] (L2) Implement `InMemoryUserGrantStore`
 *   **Component:** EF Core Store
-    - [ ] (L2) Implement `EfUserGrantStore`
-    - [ ] (L1) Add `UserGrantEntity` + DbContext configuration
+    - [x] (L2) Implement `EfUserGrantStore`
+    - [x] (L1) Add `UserGrantEntity` + DbContext configuration
 *   **Component:** Consent UX Endpoints
-    - [ ] (L3) Implement `GET /auth/consent` (default minimal HTML)
+    - [x] (L3) Implement `GET /auth/consent` (default minimal HTML)
         *   *Guidance:* Must be replaceable by host app; driven by `CoreIdentRouteOptions.ConsentPath`
-    - [ ] (L3) Implement `POST /auth/consent` to persist grant or deny
+    - [x] (L3) Implement `POST /auth/consent` to persist grant or deny
         *   *Guidance:* Deny returns `access_denied` back to client redirect_uri
 *   **Component:** Authorize Endpoint Consent Integration
-    - [ ] (L3) Integrate consent checks into `/auth/authorize`
+    - [x] (L3) Integrate consent checks into `/auth/authorize`
         *   *Guidance:* If client requires consent and no existing grant satisfies requested scopes, redirect to consent UI
 *   **Test Case (Integration):**
-    - [ ] (L3) Consent required redirects to consent UI
-    - [ ] (L3) Allow persists grant and completes code flow
-    - [ ] (L2) Deny returns `access_denied`
+    - [x] (L3) Consent required redirects to consent UI
+    - [x] (L3) Allow persists grant and completes code flow
+    - [x] (L2) Deny returns `access_denied`
 *   **Documentation:**
-    - [ ] (L1) Document consent behavior and how to replace the default consent UI
+    - [x] (L1) Document consent behavior and how to replace the default consent UI
 
 ---
 
@@ -1604,8 +1604,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | User Model & Stores | 0 | 0.4.3 | ✅ Complete |
 | Token Issuance Endpoint | 0 | 0.5 | ✅ Complete |
 | Token Revocation (RFC 7009) | 0 | 0.6 | ✅ Complete |
-| Token Introspection (RFC 7662) | 0 | 0.7 | 🔲 Planned |
-| Test Infrastructure | 0 | 0.8 | 🔲 Planned |
+| Token Introspection (RFC 7662) | 0 | 0.7 | ✅ Complete |
+| Test Infrastructure | 0 | 0.8 | ✅ Complete |
 | OpenTelemetry Metrics | 0 | 0.9 | 🔲 Planned |
 | CLI Tool | 0 | 0.10 | 🔲 Planned |
 | Dev Container | 0 | 0.11 | 🔲 Planned |
@@ -1615,8 +1615,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | F# Compatibility | 1 | 1.4 | 🔲 Planned |
 | `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
 | Aspire Integration | 1 | 1.6 | 🔲 Planned |
-| Authorization Code + PKCE | 1 | 1.7 | 🔲 Planned |
-| Consent & Grants | 1 | 1.8 | 🔲 Planned |
+| Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
+| Consent & Grants | 1 | 1.8 | ✅ Complete |
 | Delegated User Store | 1 | 1.9 | 🔲 Planned |
 | OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
 | Google Provider | 2 | 2.2 | 🔲 Planned |

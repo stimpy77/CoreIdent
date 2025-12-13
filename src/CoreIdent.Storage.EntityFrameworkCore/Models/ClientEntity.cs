@@ -16,6 +16,7 @@ public class ClientEntity
     public int AccessTokenLifetimeSeconds { get; set; } = 3600;
     public int RefreshTokenLifetimeSeconds { get; set; } = 86400;
     public bool RequirePkce { get; set; } = true;
+    public bool RequireConsent { get; set; } = false;
     public bool AllowOfflineAccess { get; set; } = false;
     public bool Enabled { get; set; } = true;
     public DateTime CreatedAt { get; set; }

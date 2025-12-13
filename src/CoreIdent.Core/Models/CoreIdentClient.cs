@@ -61,6 +61,11 @@ public class CoreIdentClient
     public bool RequirePkce { get; set; } = true;
 
     /// <summary>
+    /// Whether the user must explicitly consent before issuing tokens.
+    /// </summary>
+    public bool RequireConsent { get; set; } = false;
+
+    /// <summary>
     /// Whether the client can request offline_access (refresh tokens).
     /// </summary>
     public bool AllowOfflineAccess { get; set; } = false;
