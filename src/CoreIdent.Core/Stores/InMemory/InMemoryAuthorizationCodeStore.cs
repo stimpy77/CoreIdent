@@ -1,67 +1,96 @@
-using CoreIdent.Core.Models;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using CoreIdent.Core.Models;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
-public class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
+public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
 {
-    private readonly ConcurrentDictionary<string, AuthorizationCode> _codes = new();
-    private readonly ILogger<InMemoryAuthorizationCodeStore> _logger;
+    private readonly ConcurrentDictionary<string, CoreIdentAuthorizationCode> _codes = new(StringComparer.Ordinal);
+    private readonly TimeProvider _timeProvider;
 
-    public InMemoryAuthorizationCodeStore(ILogger<InMemoryAuthorizationCodeStore> logger)
+    public InMemoryAuthorizationCodeStore(TimeProvider? timeProvider = null)
     {
-        _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public Task<StoreResult> StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
+    public Task CreateAsync(CoreIdentAuthorizationCode code, CancellationToken ct = default)
     {
-        // Use TryAdd for better concurrency handling, although conflict unlikely with truly random codes
-        if (_codes.TryAdd(code.CodeHandle, code))
+        ArgumentNullException.ThrowIfNull(code);
+
+        if (string.IsNullOrWhiteSpace(code.Handle))
         {
-            _logger.LogDebug("Stored authorization code: {CodeHandle}, Expires: {Expiry}", code.CodeHandle, code.ExpirationTime);
-            // Start a background task to remove expired code (simple cleanup)
-            _ = Task.Delay(code.ExpirationTime - DateTime.UtcNow + TimeSpan.FromSeconds(5), cancellationToken)
-                .ContinueWith(_ =>
-                {
-                    if (_codes.TryRemove(code.CodeHandle, out var removedCode) && removedCode.ExpirationTime <= DateTime.UtcNow)
-                    {
-                        _logger.LogDebug("Removed expired authorization code: {CodeHandle}", code.CodeHandle);
-                    }
-                }, CancellationToken.None); // Use CancellationToken.None for the cleanup task
-            return Task.FromResult(StoreResult.Success);
+            code.Handle = GenerateHandle();
         }
-        else
+
+        if (code.CreatedAt == default)
         {
-            // This case should be rare with good random code generation
-            _logger.LogWarning("Conflict storing authorization code in memory store: {CodeHandle}", code.CodeHandle);
-            return Task.FromResult(StoreResult.Conflict);
+            code.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
+
+        if (!_codes.TryAdd(code.Handle, code))
+        {
+            throw new InvalidOperationException($"Authorization code with handle '{code.Handle}' already exists.");
+        }
+
+        return Task.CompletedTask;
     }
 
-    public Task<AuthorizationCode?> GetAuthorizationCodeAsync(string codeHandle, CancellationToken cancellationToken)
+    public Task<CoreIdentAuthorizationCode?> GetAsync(string handle, CancellationToken ct = default)
     {
-        _codes.TryGetValue(codeHandle, out var code);
-        if (code != null && code.ExpirationTime < DateTime.UtcNow)
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            _logger.LogDebug("Attempted to retrieve expired code: {CodeHandle}", codeHandle);
-            _codes.TryRemove(codeHandle, out _); // Remove expired on retrieval attempt
-            return Task.FromResult<AuthorizationCode?>(null);
+            return Task.FromResult<CoreIdentAuthorizationCode?>(null);
         }
-        _logger.LogDebug("Retrieved authorization code: {CodeHandle} (Found: {Found})", codeHandle, code != null);
+
+        _codes.TryGetValue(handle, out var code);
         return Task.FromResult(code);
     }
 
-    public Task RemoveAuthorizationCodeAsync(string codeHandle, CancellationToken cancellationToken)
+    public Task<bool> ConsumeAsync(string handle, CancellationToken ct = default)
     {
-        if (_codes.TryRemove(codeHandle, out _))
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            _logger.LogDebug("Removed authorization code: {CodeHandle}", codeHandle);
+            return Task.FromResult(false);
         }
-        else
+
+        if (!_codes.TryGetValue(handle, out var code))
         {
-            _logger.LogDebug("Attempted to remove non-existent code: {CodeHandle}", codeHandle);
+            return Task.FromResult(false);
         }
+
+        if (code.ConsumedAt.HasValue)
+        {
+            return Task.FromResult(false);
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (code.ExpiresAt <= now)
+        {
+            return Task.FromResult(false);
+        }
+
+        code.ConsumedAt = now;
+        return Task.FromResult(true);
+    }
+
+    public Task CleanupExpiredAsync(CancellationToken ct = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        foreach (var (handle, code) in _codes)
+        {
+            if (code.ExpiresAt <= now)
+            {
+                _codes.TryRemove(handle, out _);
+            }
+        }
+
         return Task.CompletedTask;
+    }
+
+    private static string GenerateHandle()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     }
 }

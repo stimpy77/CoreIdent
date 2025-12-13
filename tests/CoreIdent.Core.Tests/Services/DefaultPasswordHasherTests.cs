@@ -1,109 +1,84 @@
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using Shouldly;
-using Xunit;
 
 namespace CoreIdent.Core.Tests.Services;
 
 public class DefaultPasswordHasherTests
 {
     private readonly DefaultPasswordHasher _hasher = new();
-    private readonly CoreIdentUser _testUser = new() { Id = "test-user-id", UserName = "test@example.com" };
-    private const string TestPassword = "Password123!";
+
+    private static CoreIdentUser CreateUser() => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        UserName = "test@example.com",
+        NormalizedUserName = "TEST@EXAMPLE.COM",
+        CreatedAt = DateTime.UtcNow
+    };
 
     [Fact]
-    public void HashPassword_WithUser_ShouldReturnNonNullNonEmptyString()
+    public void HashPassword_ReturnsNonEmptyHash()
     {
-        // Arrange
-        var password = TestPassword;
+        var user = CreateUser();
 
-        // Act
-        var hashedPassword = _hasher.HashPassword(_testUser, password);
+        var hash = _hasher.HashPassword(user, "Test123!");
 
-        // Assert
-        Assert.NotNull(hashedPassword);
-        Assert.NotEmpty(hashedPassword);
-        hashedPassword.ShouldNotBe(password);
+        hash.ShouldNotBeNullOrWhiteSpace("hash should not be empty");
     }
 
     [Fact]
-    public void HashPassword_WithNullUser_ShouldReturnNonNullNonEmptyString()
+    public void VerifyHashedPassword_ReturnsTrue_ForValidPassword()
     {
-        // Arrange
-        var password = TestPassword;
+        var user = CreateUser();
+        const string password = "Test123!";
+        var hash = _hasher.HashPassword(user, password);
 
-        // Act
-        var hashedPassword = _hasher.HashPassword(null, password);
+        var result = _hasher.VerifyHashedPassword(user, hash, password);
 
-        // Assert
-        Assert.NotNull(hashedPassword);
-        Assert.NotEmpty(hashedPassword);
-        hashedPassword.ShouldNotBe(password);
+        result.ShouldBeTrue("should verify correct password");
     }
 
     [Fact]
-    public void VerifyHashedPassword_WithCorrectPasswordAndUser_ShouldReturnSuccess()
+    public void VerifyHashedPassword_ReturnsFalse_ForInvalidPassword()
     {
-        // Arrange
-        var password = TestPassword;
-        var hashedPassword = _hasher.HashPassword(_testUser, password);
+        var user = CreateUser();
+        var hash = _hasher.HashPassword(user, "Test123!");
 
-        // Act
-        var result = _hasher.VerifyHashedPassword(_testUser, hashedPassword, password);
+        var result = _hasher.VerifyHashedPassword(user, hash, "WrongPassword!");
 
-        // Assert
-        result.ShouldBe(PasswordVerificationResult.Success);
+        result.ShouldBeFalse("should reject incorrect password");
     }
 
     [Fact]
-    public void VerifyHashedPassword_WithCorrectPasswordAndNullUser_ShouldReturnSuccess()
+    public void HashPassword_ThrowsException_WhenUserIsNull()
     {
-        // Arrange
-        var password = TestPassword;
-        // Hash with null user context initially
-        var hashedPassword = _hasher.HashPassword(null, password);
-
-        // Act
-        // Verify with null user context
-        var result = _hasher.VerifyHashedPassword(null, hashedPassword, password);
-
-        // Assert
-        result.ShouldBe(PasswordVerificationResult.Success);
-    }
-
-
-    [Fact]
-    public void VerifyHashedPassword_WithIncorrectPassword_ShouldReturnFailed()
-    {
-        // Arrange
-        var correctPassword = TestPassword;
-        var incorrectPassword = "WrongPassword!";
-        var hashedPassword = _hasher.HashPassword(_testUser, correctPassword);
-
-        // Act
-        var result = _hasher.VerifyHashedPassword(_testUser, hashedPassword, incorrectPassword);
-
-        // Assert
-        result.ShouldBe(PasswordVerificationResult.Failed);
+        Should.Throw<ArgumentNullException>(() => _hasher.HashPassword(null!, "Test123!"));
     }
 
     [Fact]
-    public void VerifyHashedPassword_WithTamperedHash_ShouldReturnFailed()
+    public void HashPassword_ThrowsException_WhenPasswordIsNullOrEmpty()
     {
-        // Arrange
-        var password = TestPassword;
-        var hashedPassword = _hasher.HashPassword(_testUser, password);
-        // Slightly modify the hash
-        var tamperedHash = "X" + hashedPassword.Substring(1);
+        var user = CreateUser();
 
-        // Act
-        var result = _hasher.VerifyHashedPassword(_testUser, tamperedHash, password);
-
-        // Assert
-        result.ShouldBe(PasswordVerificationResult.Failed);
+        Should.Throw<ArgumentException>(() => _hasher.HashPassword(user, null!));
+        Should.Throw<ArgumentException>(() => _hasher.HashPassword(user, ""));
+        Should.Throw<ArgumentException>(() => _hasher.HashPassword(user, "   "));
     }
 
-    // Note: Testing SuccessRehashNeeded is difficult without controlling the underlying
-    // PasswordHasherOptions or knowing when Identity decides a rehash is needed.
-    // We assume the mapping logic tested implicitly in the success case is sufficient.
+    [Fact]
+    public void VerifyHashedPassword_ThrowsException_WhenArgumentsInvalid()
+    {
+        var user = CreateUser();
+        var hash = _hasher.HashPassword(user, "Test123!");
+
+        Should.Throw<ArgumentNullException>(() => _hasher.VerifyHashedPassword(null!, hash, "Test123!"));
+
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, null!, "Test123!"));
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, "", "Test123!"));
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, "   ", "Test123!"));
+
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, hash, null!));
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, hash, ""));
+        Should.Throw<ArgumentException>(() => _hasher.VerifyHashedPassword(user, hash, "   "));
+    }
 }

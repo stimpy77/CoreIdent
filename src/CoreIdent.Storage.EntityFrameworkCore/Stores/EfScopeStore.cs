@@ -1,46 +1,68 @@
+using System.Text.Json;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
+using CoreIdent.Storage.EntityFrameworkCore.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
 /// <summary>
-/// Entity Framework Core implementation of IScopeStore.
+/// EF Core implementation of <see cref="IScopeStore"/>.
 /// </summary>
-public class EfScopeStore : IScopeStore
+public sealed class EfScopeStore : IScopeStore
 {
-    protected readonly CoreIdentDbContext Context;
+    private readonly CoreIdentDbContext _context;
 
     public EfScopeStore(CoreIdentDbContext context)
     {
-        Context = context ?? throw new ArgumentNullException(nameof(context));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public virtual async Task<IEnumerable<CoreIdentScope>> FindScopesByNameAsync(IEnumerable<string> scopeNames, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<CoreIdentScope?> FindByNameAsync(string name, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        ArgumentNullException.ThrowIfNull(scopeNames);
-
-        var query = Context.Scopes
-            .Include(s => s.UserClaims) // Include associated claims
+        var entity = await _context.Scopes
             .AsNoTracking()
-            .Where(s => scopeNames.Contains(s.Name));
+            .FirstOrDefaultAsync(s => s.Name == name, ct);
 
-        return await query.ToListAsync(cancellationToken);
+        return entity is null ? null : ToModel(entity);
     }
 
-    public virtual async Task<IEnumerable<CoreIdentScope>> GetAllScopesAsync(CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<IEnumerable<CoreIdentScope>> FindByScopesAsync(IEnumerable<string> scopeNames, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        var names = scopeNames.ToList();
+        if (names.Count == 0)
+        {
+            return [];
+        }
 
-        return await Context.Scopes
-            .Include(s => s.UserClaims)
+        var entities = await _context.Scopes
             .AsNoTracking()
-            .ToListAsync(cancellationToken);
+            .Where(s => names.Contains(s.Name))
+            .ToListAsync(ct);
+
+        return entities.Select(ToModel);
     }
-} 
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<CoreIdentScope>> GetAllAsync(CancellationToken ct = default)
+    {
+        var entities = await _context.Scopes
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return entities.Select(ToModel);
+    }
+
+    private static CoreIdentScope ToModel(ScopeEntity entity) => new()
+    {
+        Name = entity.Name,
+        DisplayName = entity.DisplayName,
+        Description = entity.Description,
+        Required = entity.Required,
+        Emphasize = entity.Emphasize,
+        ShowInDiscoveryDocument = entity.ShowInDiscoveryDocument,
+        UserClaims = JsonSerializer.Deserialize<List<string>>(entity.UserClaimsJson) ?? []
+    };
+}

@@ -1,158 +1,146 @@
-using CoreIdent.Core.Models;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.IdentityModel.Tokens.Jwt;
+using CoreIdent.Core.Models;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
-/// Simple in-memory store for OAuth scopes.
+/// In-memory implementation of <see cref="IScopeStore"/> for development and testing.
 /// </summary>
-public class InMemoryScopeStore : IScopeStore
+public sealed class InMemoryScopeStore : IScopeStore
 {
-    private readonly ConcurrentDictionary<string, CoreIdentScope> _scopes = new(StringComparer.Ordinal);
-    private readonly ILogger<InMemoryScopeStore> _logger;
+    private readonly ConcurrentDictionary<string, CoreIdentScope> _scopes = new(StringComparer.OrdinalIgnoreCase);
 
-    // Standard OIDC scopes
-    public static IEnumerable<CoreIdentScope> GetStandardOidcScopes() => new List<CoreIdentScope>
+    public InMemoryScopeStore()
     {
-        new CoreIdentScope
-        {
-            Name = "openid",
-            DisplayName = "Your user identifier",
-            Description = "Access to your unique user ID.",
-            Required = true // OpenID Connect requires the 'openid' scope.
-        },
-        new CoreIdentScope
-        {
-            Name = "profile",
-            DisplayName = "User profile",
-            Description = "Your user profile information (first name, last name, etc.)",
-            Emphasize = true,
-            UserClaims = new List<CoreIdentScopeClaim> // Example standard claims
-            {
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.Name },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.FamilyName },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.GivenName },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.MiddleName },
-                new CoreIdentScopeClaim { Type = "nickname" },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.PreferredUsername },
-                new CoreIdentScopeClaim { Type = "profile" },
-                new CoreIdentScopeClaim { Type = "picture" },
-                new CoreIdentScopeClaim { Type = "website" },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.Gender },
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.Birthdate },
-                new CoreIdentScopeClaim { Type = "zoneinfo" },
-                new CoreIdentScopeClaim { Type = "locale" },
-                new CoreIdentScopeClaim { Type = "updated_at" },
-            }
-        },
-        new CoreIdentScope
-        {
-            Name = "email",
-            DisplayName = "Your email address",
-            Description = "Access to your email address.",
-            Emphasize = true,
-             UserClaims = new List<CoreIdentScopeClaim>
-            {
-                new CoreIdentScopeClaim { Type = JwtRegisteredClaimNames.Email },
-                new CoreIdentScopeClaim { Type = "email_verified" },
-            }
-        },
-         new CoreIdentScope
-        {
-            Name = "address",
-            DisplayName = "Your postal address",
-            Description = "Access to your postal address.",
-            Emphasize = true,
-             UserClaims = new List<CoreIdentScopeClaim>
-            {
-                new CoreIdentScopeClaim { Type = "address" },
-            }
-        },
-         new CoreIdentScope
-        {
-            Name = "phone",
-            DisplayName = "Your phone number",
-            Description = "Access to your phone number.",
-            Emphasize = true,
-             UserClaims = new List<CoreIdentScopeClaim>
-            {
-                new CoreIdentScopeClaim { Type = "phone_number" },
-                new CoreIdentScopeClaim { Type = "phone_number_verified" },
-            }
-        },
-        new CoreIdentScope
-        {
-            Name = "offline_access",
-            DisplayName = "Offline access",
-            Description = "Access to your resources when you are not online.",
-            Emphasize = true
-            // No specific user claims, enables refresh tokens.
-        }
-    };
+    }
+
+    public InMemoryScopeStore(IEnumerable<CoreIdentScope> scopes)
+    {
+        SeedScopes(scopes);
+    }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryScopeStore"/> class.
-    /// Seeds standard OIDC scopes and optionally additional scopes.
+    /// Seeds the store with initial scopes. Useful for testing and development.
     /// </summary>
-    /// <param name="logger">The logger.</param>
-    /// <param name="additionalScopes">Optional list of additional scopes to seed.</param>
-    public InMemoryScopeStore(ILogger<InMemoryScopeStore> logger, IEnumerable<CoreIdentScope>? additionalScopes = null)
+    public void SeedScopes(IEnumerable<CoreIdentScope> scopes)
     {
-        _logger = logger;
-        var initialScopes = GetStandardOidcScopes().ToList();
-        if (additionalScopes != null)
+        foreach (var scope in scopes)
         {
-            initialScopes.AddRange(additionalScopes);
+            _scopes.TryAdd(scope.Name, scope);
         }
+    }
 
-        foreach (var scope in initialScopes)
-        {
-            if (!_scopes.TryAdd(scope.Name, scope))
-            {
-                _logger.LogWarning("Failed to add initial scope with duplicate name: {ScopeName}", scope.Name);
-            }
-            else
-            {
-                _logger.LogDebug("Added initial scope: {ScopeName}", scope.Name);
-            }
-        }
+    /// <summary>
+    /// Seeds the store with standard OIDC scopes.
+    /// </summary>
+    public void SeedStandardScopes()
+    {
+        SeedScopes(StandardOidcScopes.All);
     }
 
     /// <inheritdoc />
-    public Task<IEnumerable<CoreIdentScope>> FindScopesByNameAsync(IEnumerable<string> scopeNames, CancellationToken cancellationToken)
+    public Task<CoreIdentScope?> FindByNameAsync(string name, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(scopeNames);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var foundScopes = new List<CoreIdentScope>();
-        foreach (var name in scopeNames.Distinct()) // Ensure distinct names
-        {
-            if (_scopes.TryGetValue(name, out var scope) && scope.Enabled)
-            {
-                foundScopes.Add(scope);
-                _logger.LogDebug("Found enabled scope: {ScopeName}", name);
-            }
-            else
-            {
-                _logger.LogDebug("Scope not found or disabled: {ScopeName}", name);
-            }
-        }
-
-        // Return copies? For simplicity, returning direct references.
-        return Task.FromResult<IEnumerable<CoreIdentScope>>(foundScopes);
+        _scopes.TryGetValue(name, out var scope);
+        return Task.FromResult(scope);
     }
 
     /// <inheritdoc />
-    public Task<IEnumerable<CoreIdentScope>> GetAllScopesAsync(CancellationToken cancellationToken)
+    public Task<IEnumerable<CoreIdentScope>> FindByScopesAsync(IEnumerable<string> scopeNames, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var allEnabledScopes = _scopes.Values.Where(s => s.Enabled).ToList();
-        _logger.LogDebug("Retrieving all {Count} enabled scopes.", allEnabledScopes.Count);
-        // Return copies? For simplicity, returning direct references.
-        return Task.FromResult<IEnumerable<CoreIdentScope>>(allEnabledScopes);
+        var result = scopeNames
+            .Where(name => _scopes.ContainsKey(name))
+            .Select(name => _scopes[name])
+            .ToList();
+
+        return Task.FromResult<IEnumerable<CoreIdentScope>>(result);
     }
 
-    // Optional: Add methods for managing scopes if needed (e.g., AddScopeAsync, UpdateScopeAsync)
+    /// <inheritdoc />
+    public Task<IEnumerable<CoreIdentScope>> GetAllAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult<IEnumerable<CoreIdentScope>>(_scopes.Values.ToList());
+    }
+}
+
+/// <summary>
+/// Pre-defined standard OIDC scopes with their associated claims.
+/// </summary>
+public static class StandardOidcScopes
+{
+    public static readonly CoreIdentScope OpenId = new()
+    {
+        Name = StandardScopes.OpenId,
+        DisplayName = "OpenID",
+        Description = "Your user identifier",
+        Required = true,
+        Emphasize = false,
+        ShowInDiscoveryDocument = true,
+        UserClaims = ["sub"]
+    };
+
+    public static readonly CoreIdentScope Profile = new()
+    {
+        Name = StandardScopes.Profile,
+        DisplayName = "Profile",
+        Description = "Your profile information (name, picture, etc.)",
+        Required = false,
+        Emphasize = true,
+        ShowInDiscoveryDocument = true,
+        UserClaims = ["name", "family_name", "given_name", "middle_name", "nickname", "preferred_username", "profile", "picture", "website", "gender", "birthdate", "zoneinfo", "locale", "updated_at"]
+    };
+
+    public static readonly CoreIdentScope Email = new()
+    {
+        Name = StandardScopes.Email,
+        DisplayName = "Email",
+        Description = "Your email address",
+        Required = false,
+        Emphasize = true,
+        ShowInDiscoveryDocument = true,
+        UserClaims = ["email", "email_verified"]
+    };
+
+    public static readonly CoreIdentScope Address = new()
+    {
+        Name = StandardScopes.Address,
+        DisplayName = "Address",
+        Description = "Your postal address",
+        Required = false,
+        Emphasize = true,
+        ShowInDiscoveryDocument = true,
+        UserClaims = ["address"]
+    };
+
+    public static readonly CoreIdentScope Phone = new()
+    {
+        Name = StandardScopes.Phone,
+        DisplayName = "Phone",
+        Description = "Your phone number",
+        Required = false,
+        Emphasize = true,
+        ShowInDiscoveryDocument = true,
+        UserClaims = ["phone_number", "phone_number_verified"]
+    };
+
+    public static readonly CoreIdentScope OfflineAccess = new()
+    {
+        Name = StandardScopes.OfflineAccess,
+        DisplayName = "Offline Access",
+        Description = "Access to your data when you are not present",
+        Required = false,
+        Emphasize = true,
+        ShowInDiscoveryDocument = true,
+        UserClaims = []
+    };
+
+    public static readonly IReadOnlyList<CoreIdentScope> All =
+    [
+        OpenId,
+        Profile,
+        Email,
+        Address,
+        Phone,
+        OfflineAccess
+    ];
 }

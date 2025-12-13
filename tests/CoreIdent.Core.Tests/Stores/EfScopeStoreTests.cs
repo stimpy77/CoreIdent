@@ -1,124 +1,99 @@
+using System.Text.Json;
 using CoreIdent.Core.Models;
-using CoreIdent.Core.Tests.Infrastructure;
 using CoreIdent.Storage.EntityFrameworkCore;
+using CoreIdent.Storage.EntityFrameworkCore.Models;
 using CoreIdent.Storage.EntityFrameworkCore.Stores;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Xunit;
-using System.Threading;
 
 namespace CoreIdent.Core.Tests.Stores;
 
-public class EfScopeStoreTests : SqliteInMemoryTestBase
+public class EfScopeStoreTests : IDisposable
 {
-    private readonly EfScopeStore _scopeStore;
+    private readonly CoreIdentDbContext _context;
+    private readonly EfScopeStore _store;
 
     public EfScopeStoreTests()
     {
-        _scopeStore = new EfScopeStore(DbContext);
+        var options = new DbContextOptionsBuilder<CoreIdentDbContext>()
+            .UseSqlite("DataSource=:memory:")
+            .Options;
+
+        _context = new CoreIdentDbContext(options);
+        _context.Database.OpenConnection();
+        _context.Database.EnsureCreated();
+
+        _store = new EfScopeStore(_context);
     }
 
-    private async Task SeedScopesAsync()
+    public void Dispose()
     {
-        DbContext.Scopes.AddRange(
-            new CoreIdentScope
-            {
-                Name = "openid",
-                DisplayName = "Your user identifier",
-                Required = true,
-                UserClaims = new List<CoreIdentScopeClaim> { new CoreIdentScopeClaim { Type = "sub" } }
-            },
-            new CoreIdentScope
-            {
-                Name = "profile",
-                DisplayName = "User profile",
-                Description = "Your user profile information (first name, last name, etc.)",
-                Emphasize = true,
-                UserClaims = new List<CoreIdentScopeClaim> { new CoreIdentScopeClaim { Type = "name" }, new CoreIdentScopeClaim { Type = "family_name" } }
-            },
-            new CoreIdentScope
-            {
-                Name = "email",
-                DisplayName = "Your email address",
-                UserClaims = new List<CoreIdentScopeClaim> { new CoreIdentScopeClaim { Type = "email" }, new CoreIdentScopeClaim { Type = "email_verified" } }
-            },
-            new CoreIdentScope
-            {
-                Name = "api1",
-                DisplayName = "API 1 Access"
-            },
-            new CoreIdentScope
-            {
-                Name = "api2",
-                Enabled = false // Disabled scope
-            }
-        );
-        await DbContext.SaveChangesAsync(CancellationToken.None);
+        _context.Database.CloseConnection();
+        _context.Dispose();
+    }
+
+    private async Task SeedScopesAsync(params ScopeEntity[] entities)
+    {
+        _context.Scopes.AddRange(entities);
+        await _context.SaveChangesAsync();
     }
 
     [Fact]
-    public async Task GetAllScopesAsync_ShouldReturnAllEnabledScopesWithClaims()
+    public async Task FindByNameAsync_ReturnsNull_WhenScopeDoesNotExist()
     {
-        // Arrange
-        await SeedScopesAsync();
+        var result = await _store.FindByNameAsync("nonexistent");
 
-        // Act
-        var scopes = await _scopeStore.GetAllScopesAsync(CancellationToken.None);
-
-        // Assert
-        // Note: Default implementation might return all scopes, including disabled ones. Filter if needed.
-        // The test implementation currently returns all scopes loaded.
-        scopes.ShouldNotBeNull();
-        scopes.Count().ShouldBe(5); // Includes the disabled one as store doesn't filter by default
-
-        var profileScope = scopes.FirstOrDefault(s => s.Name == "profile");
-        profileScope.ShouldNotBeNull();
-        profileScope.DisplayName.ShouldBe("User profile");
-        profileScope.UserClaims.Count.ShouldBe(2);
-        profileScope.UserClaims.ShouldContain(sc => sc.Type == "name");
+        result.ShouldBeNull("should return null for non-existent scope");
     }
 
     [Fact]
-    public async Task FindScopesByNameAsync_ShouldReturnMatchingScopesWithClaims()
+    public async Task FindByNameAsync_ReturnsScope_WhenScopeExists()
     {
-        // Arrange
-        await SeedScopesAsync();
-        var namesToFind = new List<string> { "openid", "email", "api1", "nonexistent" };
+        await SeedScopesAsync(new ScopeEntity
+        {
+            Name = "profile",
+            DisplayName = "Profile",
+            Description = "Profile scope",
+            Required = false,
+            Emphasize = true,
+            ShowInDiscoveryDocument = true,
+            UserClaimsJson = JsonSerializer.Serialize(new[] { "name", "family_name" })
+        });
 
-        // Act
-        var scopes = await _scopeStore.FindScopesByNameAsync(namesToFind, CancellationToken.None);
+        var result = await _store.FindByNameAsync("profile");
 
-        // Assert
-        scopes.ShouldNotBeNull();
-        scopes.Count().ShouldBe(3); // openid, email, api1
-
-        scopes.Select(s => s.Name).ShouldBe(new[] { "openid", "email", "api1" }, ignoreOrder: true);
-
-        var openidScope = scopes.FirstOrDefault(s => s.Name == "openid");
-        openidScope.ShouldNotBeNull();
-        openidScope.UserClaims.Count.ShouldBe(1);
-        openidScope.UserClaims.First().Type.ShouldBe("sub");
-
-        var emailScope = scopes.FirstOrDefault(s => s.Name == "email");
-        emailScope.ShouldNotBeNull();
-        emailScope.UserClaims.Count.ShouldBe(2);
+        result.ShouldNotBeNull("should find seeded scope");
+        result.Name.ShouldBe("profile", "scope name should match");
+        result.DisplayName.ShouldBe("Profile", "display name should match");
+        result.UserClaims.ShouldContain("name", "user claims should be deserialized");
     }
 
     [Fact]
-    public async Task FindScopesByNameAsync_ShouldReturnEmpty_WhenNoMatches()
+    public async Task FindByScopesAsync_ReturnsOnlyRequestedScopesThatExist()
     {
-        // Arrange
-        await SeedScopesAsync();
-        var namesToFind = new List<string> { "nonexistent1", "nonexistent2" };
+        await SeedScopesAsync(
+            new ScopeEntity { Name = "openid", UserClaimsJson = "[]" },
+            new ScopeEntity { Name = "email", UserClaimsJson = JsonSerializer.Serialize(new[] { "email" }) },
+            new ScopeEntity { Name = "profile", UserClaimsJson = JsonSerializer.Serialize(new[] { "name" }) });
 
-        // Act
-        var scopes = await _scopeStore.FindScopesByNameAsync(namesToFind, CancellationToken.None);
+        var result = await _store.FindByScopesAsync(["openid", "profile", "nonexistent"]);
 
-        // Assert
-        scopes.ShouldNotBeNull();
-        scopes.ShouldBeEmpty();
+        var list = result.ToList();
+        list.Count.ShouldBe(2, "should return only existing scopes");
+        list.ShouldContain(s => s.Name == "openid", "should contain openid");
+        list.ShouldContain(s => s.Name == "profile", "should contain profile");
     }
-} 
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsAllScopes()
+    {
+        await SeedScopesAsync(
+            new ScopeEntity { Name = "openid", UserClaimsJson = "[]" },
+            new ScopeEntity { Name = "profile", UserClaimsJson = JsonSerializer.Serialize(new[] { "name" }) });
+
+        var result = await _store.GetAllAsync();
+
+        var list = result.ToList();
+        list.Count.ShouldBe(2, "should return all scopes");
+    }
+}

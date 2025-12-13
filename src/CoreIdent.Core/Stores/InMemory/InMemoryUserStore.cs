@@ -1,263 +1,177 @@
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using CoreIdent.Core.Models;
-using CoreIdent.Core.Services;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
-/// <summary>
-/// An in-memory implementation of IUserStore for testing or simple scenarios.
-/// Note: This implementation is thread-safe.
-/// </summary>
-public class InMemoryUserStore : IUserStore
+public sealed class InMemoryUserStore : IUserStore
 {
-    // Use ConcurrentDictionary for thread safety
-    private readonly ConcurrentDictionary<string, CoreIdentUser> _usersById = new();
-    private readonly ConcurrentDictionary<string, string> _usersByNormalizedUsername = new(StringComparer.OrdinalIgnoreCase); // Case-insensitive username lookup
+    private readonly ConcurrentDictionary<string, CoreIdentUser> _usersById = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, string> _idByNormalizedUsername = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, List<Claim>> _claimsBySubjectId = new(StringComparer.Ordinal);
 
-    /// <inheritdoc />
-    public Task<StoreResult> CreateUserAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    public Task<CoreIdentUser?> FindByIdAsync(string id, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(user);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var normalizedUsername = user.UserName?.ToUpperInvariant(); // Use normalized for lookup
-        if (string.IsNullOrWhiteSpace(normalizedUsername))
+        if (string.IsNullOrWhiteSpace(id))
         {
-            // Or handle normalization elsewhere if needed
-            return Task.FromResult(StoreResult.Failure); // Username is required
+            return Task.FromResult<CoreIdentUser?>(null);
         }
 
-        // Attempt to add username first (atomic check and add)
-        if (!_usersByNormalizedUsername.TryAdd(normalizedUsername, user.Id))
-        {
-            return Task.FromResult(StoreResult.Conflict); // Username already exists
-        }
-
-        // If username added successfully, try adding the user by ID
-        if (!_usersById.TryAdd(user.Id, user))
-        {
-            // This should ideally not happen if IDs are unique and username was added,
-            // but handle potential race condition or logic error by removing the username entry.
-            _usersByNormalizedUsername.TryRemove(normalizedUsername, out _);
-            return Task.FromResult(StoreResult.Conflict); // ID already exists (unexpected)
-        }
-
-        return Task.FromResult(StoreResult.Success);
-    }
-
-    /// <inheritdoc />
-    public Task<CoreIdentUser?> FindUserByIdAsync(string userId, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(userId);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _usersById.TryGetValue(userId, out var user);
-        // Return a copy to prevent external modification of the stored object (optional, depends on desired behavior)
-        // For simplicity here, we return the direct reference. Consider cloning if mutation is a concern.
+        _usersById.TryGetValue(id, out var user);
         return Task.FromResult(user);
     }
 
-    /// <inheritdoc />
-    public Task<CoreIdentUser?> FindUserByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken)
+    public Task<CoreIdentUser?> FindByUsernameAsync(string username, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(normalizedUsername);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (_usersByNormalizedUsername.TryGetValue(normalizedUsername, out var userId))
+        if (string.IsNullOrWhiteSpace(username))
         {
-            _usersById.TryGetValue(userId, out var user);
-            return Task.FromResult(user); // Return direct reference or clone
+            return Task.FromResult<CoreIdentUser?>(null);
         }
 
-        return Task.FromResult<CoreIdentUser?>(null);
+        var normalized = NormalizeUsername(username);
+        if (!_idByNormalizedUsername.TryGetValue(normalized, out var id))
+        {
+            return Task.FromResult<CoreIdentUser?>(null);
+        }
+
+        return FindByIdAsync(id, ct);
     }
 
-    /// <inheritdoc />
-    public Task<StoreResult> UpdateUserAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    public Task CreateAsync(CoreIdentUser user, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
-        cancellationToken.ThrowIfCancellationRequested();
 
-        // Check if user exists by ID
-        if (!_usersById.ContainsKey(user.Id))
+        if (string.IsNullOrWhiteSpace(user.Id))
         {
-            return Task.FromResult(StoreResult.Failure); // User not found
+            user.Id = Guid.NewGuid().ToString("N");
         }
 
-        // Update the user object in the dictionary.
-        // ConcurrentDictionary's indexer handles the update atomically.
+        if (string.IsNullOrWhiteSpace(user.UserName))
+        {
+            throw new ArgumentException("UserName is required.", nameof(user));
+        }
+
+        var normalized = string.IsNullOrWhiteSpace(user.NormalizedUserName)
+            ? NormalizeUsername(user.UserName)
+            : user.NormalizedUserName;
+
+        user.NormalizedUserName = normalized;
+
+        if (!_idByNormalizedUsername.TryAdd(normalized, user.Id))
+        {
+            throw new InvalidOperationException($"User with username '{user.UserName}' already exists.");
+        }
+
+        if (!_usersById.TryAdd(user.Id, user))
+        {
+            _idByNormalizedUsername.TryRemove(normalized, out _);
+            throw new InvalidOperationException($"User with id '{user.Id}' already exists.");
+        }
+
+        if (user.CreatedAt == default)
+        {
+            user.CreatedAt = DateTime.UtcNow;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateAsync(CoreIdentUser user, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(user.Id);
+
+        if (!_usersById.TryGetValue(user.Id, out _))
+        {
+            throw new InvalidOperationException($"User with id '{user.Id}' does not exist.");
+        }
+
+        if (string.IsNullOrWhiteSpace(user.UserName))
+        {
+            throw new ArgumentException("UserName is required.", nameof(user));
+        }
+
+        var normalized = string.IsNullOrWhiteSpace(user.NormalizedUserName)
+            ? NormalizeUsername(user.UserName)
+            : user.NormalizedUserName;
+
+        user.NormalizedUserName = normalized;
+
+        // The user instance in _usersById may be the same reference as the caller is mutating.
+        // Determine the previous username mapping from the index itself.
+        var previousNormalized = _idByNormalizedUsername
+            .FirstOrDefault(kvp => string.Equals(kvp.Value, user.Id, StringComparison.Ordinal))
+            .Key;
+
+        if (!string.IsNullOrWhiteSpace(previousNormalized) &&
+            !string.Equals(previousNormalized, normalized, StringComparison.Ordinal))
+        {
+            _idByNormalizedUsername.TryRemove(previousNormalized, out _);
+        }
+
+        _idByNormalizedUsername.AddOrUpdate(
+            normalized,
+            addValueFactory: _ => user.Id,
+            updateValueFactory: (_, existingId) =>
+            {
+                if (!string.Equals(existingId, user.Id, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"User with username '{user.UserName}' already exists.");
+                }
+
+                return existingId;
+            });
+
         _usersById[user.Id] = user;
-
-        // Note: This simple implementation doesn't handle username changes.
-        // If username could change, we'd need to update _usersByNormalizedUsername too,
-        // which adds complexity (e.g., removing old, adding new, handling conflicts).
-        // For now, assume username is immutable or handled at a higher layer.
-
-        return Task.FromResult(StoreResult.Success);
+        return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
-    public Task<StoreResult> DeleteUserAsync(CoreIdentUser user, CancellationToken cancellationToken)
+    public Task DeleteAsync(string id, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(user);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Try removing by ID first
-        if (!_usersById.TryRemove(user.Id, out var removedUser))
+        if (string.IsNullOrWhiteSpace(id))
         {
-            return Task.FromResult(StoreResult.Failure); // User not found by ID
+            return Task.CompletedTask;
         }
 
-        // If removed by ID, also remove the username lookup entry
-        var normalizedUsername = removedUser.UserName?.ToUpperInvariant();
-        if (!string.IsNullOrWhiteSpace(normalizedUsername))
+        _usersById.TryRemove(id, out _);
+
+        // Remove any username index entries pointing at this user id.
+        foreach (var (normalizedUsername, existingId) in _idByNormalizedUsername)
         {
-            _usersByNormalizedUsername.TryRemove(normalizedUsername, out _);
-            // We don't necessarily care if the username removal succeeds, the primary removal was by ID.
+            if (string.Equals(existingId, id, StringComparison.Ordinal))
+            {
+                _idByNormalizedUsername.TryRemove(normalizedUsername, out _);
+            }
         }
 
-        return Task.FromResult(StoreResult.Success);
-    }
+        _claimsBySubjectId.TryRemove(id, out _);
 
-    /// <inheritdoc />
-    public Task<string?> GetNormalizedUserNameAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(user.UserName?.ToUpperInvariant()); // Basic implementation ok for InMemory
-    }
-
-    /// <inheritdoc />
-    public Task SetNormalizedUserNameAsync(CoreIdentUser user, string? normalizedName, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        user.NormalizedUserName = normalizedName; // Basic implementation ok for InMemory
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
-    public Task SetPasswordHashAsync(CoreIdentUser user, string? passwordHash, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<Claim>> GetClaimsAsync(string subjectId, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(user);
-        user.PasswordHash = passwordHash; // Basic implementation ok for InMemory
+        if (string.IsNullOrWhiteSpace(subjectId))
+        {
+            return Task.FromResult<IReadOnlyList<Claim>>([]);
+        }
+
+        if (_claimsBySubjectId.TryGetValue(subjectId, out var claims))
+        {
+            return Task.FromResult<IReadOnlyList<Claim>>(claims.ToList());
+        }
+
+        return Task.FromResult<IReadOnlyList<Claim>>([]);
+    }
+
+    public Task SetClaimsAsync(string subjectId, IEnumerable<Claim> claims, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentNullException.ThrowIfNull(claims);
+
+        _claimsBySubjectId[subjectId] = claims.ToList();
         return Task.CompletedTask;
     }
 
-    /// <inheritdoc />
-    public Task<string?> GetPasswordHashAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(user.PasswordHash);
-    }
-
-    /// <inheritdoc />
-    public Task<bool> HasPasswordAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
-    }
-
-    /// <inheritdoc />
-    public Task<IList<Claim>> GetClaimsAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        // Note: CoreIdentUser.Claims is ICollection<CoreIdentUserClaim>, not IList<Claim>.
-        // This basic InMemory store doesn't handle claims yet.
-        // Consider adding a ConcurrentDictionary<string, List<CoreIdentUserClaim>> if needed here.
-        return Task.FromResult<IList<Claim>>(new List<Claim>()); // Return empty list for now
-    }
-
-    /// <inheritdoc />
-    public Task AddClaimsAsync(CoreIdentUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
-    {
-        // Basic InMemory store doesn't handle claims yet.
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc />
-    public Task ReplaceClaimAsync(CoreIdentUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
-    {
-        // Basic InMemory store doesn't handle claims yet.
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc />
-    public Task RemoveClaimsAsync(CoreIdentUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
-    {
-        // Basic InMemory store doesn't handle claims yet.
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc />
-    public Task<IList<CoreIdentUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
-    {
-        // Basic InMemory store doesn't handle claims yet.
-        throw new NotImplementedException();
-    }
-
-    /// <inheritdoc />
-    public Task<int> GetAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(user.AccessFailedCount);
-    }
-
-    /// <inheritdoc />
-    public Task<bool> GetLockoutEnabledAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(user.LockoutEnabled);
-    }
-
-    /// <inheritdoc />
-    public Task<DateTimeOffset?> GetLockoutEndDateAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        return Task.FromResult(user.LockoutEnd);
-    }
-
-    /// <inheritdoc />
-    public Task<int> IncrementAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        user.AccessFailedCount++; // Basic implementation ok for InMemory
-        return Task.FromResult(user.AccessFailedCount);
-    }
-
-    /// <inheritdoc />
-    public Task ResetAccessFailedCountAsync(CoreIdentUser user, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        user.AccessFailedCount = 0; // Basic implementation ok for InMemory
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public Task SetLockoutEndDateAsync(CoreIdentUser user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        user.LockoutEnd = lockoutEnd; // Basic implementation ok for InMemory
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public Task SetLockoutEnabledAsync(CoreIdentUser user, bool enabled, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        user.LockoutEnabled = enabled; // Basic implementation ok for InMemory
-        return Task.CompletedTask;
-    }
-
-    // Update signature and implementation
-    public Task<PasswordVerificationResult> ValidateCredentialsAsync(string normalizedUserName, string password, CancellationToken cancellationToken)
-    {
-        // Basic InMemory store doesn't handle credential validation beyond finding the user.
-        // A real implementation might compare hashes, but this store lacks a hasher.
-        // It relies on the higher-level service (like UserManager) to do the hashing/verification.
-        // For now, just return Failed as this store cannot validate passwords itself.
-
-        // No need to check user existence here as higher layer (UserManager) usually does Find first.
-        // If this store were used directly and needed validation, you'd add FindUserByUsernameAsync check.
-        return Task.FromResult(PasswordVerificationResult.Failed);
-    }
+    private static string NormalizeUsername(string username) => username.Trim().ToUpperInvariant();
 }

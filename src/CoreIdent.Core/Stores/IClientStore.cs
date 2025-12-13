@@ -1,21 +1,35 @@
 using CoreIdent.Core.Models;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CoreIdent.Core.Stores;
 
 /// <summary>
-/// Provides an abstraction for retrieving client configuration.
+/// Store for managing OAuth 2.0 / OIDC client applications.
 /// </summary>
 public interface IClientStore
 {
     /// <summary>
     /// Finds a client by its client ID.
     /// </summary>
-    /// <param name="clientId">The client ID.</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>A task that represents the asynchronous operation, containing the client if found, otherwise null.</returns>
-    Task<CoreIdentClient?> FindClientByIdAsync(string clientId, CancellationToken cancellationToken);
+    Task<CoreIdentClient?> FindByClientIdAsync(string clientId, CancellationToken ct = default);
 
-    // Optional: Add methods for managing clients (Create, Update, Delete) if needed outside of direct DB manipulation.
-} 
+    /// <summary>
+    /// Validates a client's secret.
+    /// </summary>
+    /// <returns>True if the secret is valid, false otherwise.</returns>
+    Task<bool> ValidateClientSecretAsync(string clientId, string clientSecret, CancellationToken ct = default);
+
+    /// <summary>
+    /// Creates a new client.
+    /// </summary>
+    Task CreateAsync(CoreIdentClient client, CancellationToken ct = default);
+
+    /// <summary>
+    /// Updates an existing client.
+    /// </summary>
+    Task UpdateAsync(CoreIdentClient client, CancellationToken ct = default);
+
+    /// <summary>
+    /// Deletes a client by its client ID.
+    /// </summary>
+    Task DeleteAsync(string clientId, CancellationToken ct = default);
+}

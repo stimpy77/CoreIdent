@@ -1,41 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework> <!-- Targeting .NET 9 -->
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
-    <!-- NuGet Package Properties -->
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>CoreIdent.Core</PackageId>
-    <Version>0.3.6</Version>
-    <Authors>Jon Davis, and other CoreIdent contributors</Authors>
-    <Description>Core authentication and identity primitives for CoreIdent (Registration, Login, Token Generation, Core Interfaces, Configuration).</Description>
-    <PackageTags>identity;authentication;authorization;security;jwt;netcore;aspnetcore;oidc;oauth2</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://coreident.net</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/stimpy77/CoreIdent.git</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>README.md</PackageReadmeFile> <!-- Include project README -->
-    <PackageReleaseNotesFile>RELEASE_NOTES.md</PackageReleaseNotesFile> <!-- Add Release Notes -->
-
+    <LangVersion>14</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Include README and Release Notes in package -->
-    <None Include="../../README.md" Pack="true" PackagePath="/"/>
-    <None Include="../../RELEASE_NOTES.md" Pack="true" PackagePath="/"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Dependencies -->
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.4" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.8.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.8.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.15.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
   </ItemGroup>
 
 </Project>

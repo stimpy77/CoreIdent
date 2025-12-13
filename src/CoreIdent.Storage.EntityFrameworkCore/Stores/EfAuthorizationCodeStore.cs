@@ -1,146 +1,118 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
+using CoreIdent.Storage.EntityFrameworkCore.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
-/// <summary>
-/// Entity Framework Core implementation for storing authorization codes.
-/// </summary>
-public class EfAuthorizationCodeStore : IAuthorizationCodeStore
+public sealed class EfAuthorizationCodeStore : IAuthorizationCodeStore
 {
     private readonly CoreIdentDbContext _context;
-    private readonly ILogger<EfAuthorizationCodeStore> _logger;
+    private readonly TimeProvider _timeProvider;
 
-    public EfAuthorizationCodeStore(CoreIdentDbContext context, ILogger<EfAuthorizationCodeStore> logger)
+    public EfAuthorizationCodeStore(CoreIdentDbContext context)
+        : this(context, timeProvider: null)
+    {
+    }
+
+    public EfAuthorizationCodeStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    /// <inheritdoc />
-    public async Task<StoreResult> StoreAuthorizationCodeAsync(AuthorizationCode code, CancellationToken cancellationToken)
+    public async Task CreateAsync(CoreIdentAuthorizationCode code, CancellationToken ct = default)
     {
-        if (code == null) throw new ArgumentNullException(nameof(code));
-        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(code);
 
-        _logger.LogDebug("Storing authorization code for ClientId: {ClientId}, SubjectId: {SubjectId}", code.ClientId, code.SubjectId);
-        _context.AuthorizationCodes.Add(code);
-        try
+        if (string.IsNullOrWhiteSpace(code.Handle))
         {
-            await _context.SaveChangesAsync(cancellationToken);
-            return StoreResult.Success;
+            code.Handle = GenerateHandle();
         }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex)) // Catch specific exception for conflicts
+
+        if (code.CreatedAt == default)
         {
-            _logger.LogWarning(ex, "Conflict storing authorization code (likely duplicate CodeHandle) for ClientId: {ClientId}", code.ClientId);
-            // Detach the entity that caused the conflict to avoid issues if retried with the same context instance
-            _context.Entry(code).State = EntityState.Detached;
-            return StoreResult.Conflict; 
+            code.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogError(ex, "Error storing authorization code for ClientId: {ClientId}", code.ClientId);
-            return StoreResult.Failure; // Indicate general storage failure
-        }
-        catch (Exception ex) // Catch broader exceptions
-        {
-            _logger.LogError(ex, "Unexpected error storing authorization code for ClientId: {ClientId}", code.ClientId);
-            return StoreResult.Failure;
-        }
+
+        var entity = ToEntity(code);
+        _context.AuthorizationCodes.Add(entity);
+        await _context.SaveChangesAsync(ct);
     }
 
-    /// <inheritdoc />
-    public async Task<AuthorizationCode?> GetAuthorizationCodeAsync(string codeHandle, CancellationToken cancellationToken)
+    public async Task<CoreIdentAuthorizationCode?> GetAsync(string handle, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(codeHandle)) throw new ArgumentNullException(nameof(codeHandle));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _logger.LogDebug("Retrieving authorization code with handle starting: {CodeHandlePrefix}...", codeHandle.Length > 4 ? codeHandle.Substring(0, 4) : codeHandle);
-
-        var now = DateTime.UtcNow;
-        var code = await _context.AuthorizationCodes
-            .AsNoTracking() // No need to track changes when just retrieving
-            .FirstOrDefaultAsync(ac => ac.CodeHandle == codeHandle, cancellationToken);
-
-        if (code == null)
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            _logger.LogDebug("Authorization code not found.");
             return null;
         }
 
-        if (code.ExpirationTime <= now)
-        {
-            _logger.LogWarning("Retrieved authorization code is expired for ClientId: {ClientId}, SubjectId: {SubjectId}. Expiration: {ExpirationTime}",
-                code.ClientId, code.SubjectId, code.ExpirationTime);
-            // Optionally remove expired code here, though cleanup service is preferred
-            // await RemoveAuthorizationCodeAsync(codeHandle, cancellationToken);
-            return null; // Treat expired codes as not found
-        }
+        var entity = await _context.AuthorizationCodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Handle == handle, ct);
 
-        _logger.LogDebug("Authorization code found for ClientId: {ClientId}, SubjectId: {SubjectId}", code.ClientId, code.SubjectId);
-        return code;
+        return entity is null ? null : ToModel(entity);
     }
 
-    /// <inheritdoc />
-    public async Task RemoveAuthorizationCodeAsync(string codeHandle, CancellationToken cancellationToken)
+    public async Task<bool> ConsumeAsync(string handle, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(codeHandle)) throw new ArgumentNullException(nameof(codeHandle));
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _logger.LogDebug("Removing authorization code with handle starting: {CodeHandlePrefix}...", codeHandle.Length > 4 ? codeHandle.Substring(0, 4) : codeHandle);
-
-        // Use FindAsync instead of FirstOrDefaultAsync for better testability and performance
-        var code = await _context.AuthorizationCodes.FindAsync(new object[] { codeHandle }, cancellationToken);
-
-        if (code != null)
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            _context.AuthorizationCodes.Remove(code);
-            try
-            {
-                await _context.SaveChangesAsync(cancellationToken);
-                _logger.LogDebug("Authorization code removed successfully.");
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                // Handle potential concurrency issues if another process already removed it
-                _logger.LogWarning(ex, "Concurrency conflict removing authorization code with handle starting: {CodeHandlePrefix}", codeHandle.Length > 4 ? codeHandle.Substring(0, 4) : codeHandle);
-                // Swallow or re-throw based on desired behavior
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Error removing authorization code with handle starting: {CodeHandlePrefix}", codeHandle.Length > 4 ? codeHandle.Substring(0, 4) : codeHandle);
-                throw;
-            }
+            return false;
         }
-        else
-        {
-            _logger.LogDebug("Authorization code not found during removal attempt.");
-        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        var affected = await _context.AuthorizationCodes
+            .Where(x => x.Handle == handle && x.ConsumedAt == null && x.ExpiresAt > now)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ConsumedAt, now), ct);
+
+        return affected > 0;
     }
 
-    /// <summary>
-    /// Checks if a DbUpdateException is likely caused by a unique constraint violation.
-    /// Note: This is a best-effort check and might need refinement based on the specific database provider.
-    /// </summary>
-    private bool IsUniqueConstraintViolation(DbUpdateException ex)
+    public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
-        // Check for common SQL error codes or messages indicating unique constraint violations
-        // This might need adjustment for different DB providers (SQL Server, PostgreSQL, SQLite)
-        var innerExceptionMessage = ex.InnerException?.Message?.ToLowerInvariant();
-        if (innerExceptionMessage != null)
-        {
-            // SQLite specific check (adjust if using other providers)
-            if (innerExceptionMessage.Contains("sqlite error 19") && innerExceptionMessage.Contains("constraint failed"))
-            {
-                return true;
-            }
-            // Add checks for other providers if necessary (e.g., SQL Server error 2627 or 2601)
-        }
-        return false;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        await _context.AuthorizationCodes
+            .Where(x => x.ExpiresAt <= now)
+            .ExecuteDeleteAsync(ct);
     }
-} 
+
+    private static CoreIdentAuthorizationCode ToModel(AuthorizationCodeEntity entity) => new()
+    {
+        Handle = entity.Handle,
+        ClientId = entity.ClientId,
+        SubjectId = entity.SubjectId,
+        RedirectUri = entity.RedirectUri,
+        Scopes = JsonSerializer.Deserialize<List<string>>(entity.ScopesJson) ?? [],
+        CreatedAt = entity.CreatedAt,
+        ExpiresAt = entity.ExpiresAt,
+        ConsumedAt = entity.ConsumedAt,
+        Nonce = entity.Nonce,
+        CodeChallenge = entity.CodeChallenge,
+        CodeChallengeMethod = entity.CodeChallengeMethod
+    };
+
+    private static AuthorizationCodeEntity ToEntity(CoreIdentAuthorizationCode code) => new()
+    {
+        Handle = code.Handle,
+        ClientId = code.ClientId,
+        SubjectId = code.SubjectId,
+        RedirectUri = code.RedirectUri,
+        ScopesJson = JsonSerializer.Serialize(code.Scopes),
+        CreatedAt = code.CreatedAt,
+        ExpiresAt = code.ExpiresAt,
+        ConsumedAt = code.ConsumedAt,
+        Nonce = code.Nonce,
+        CodeChallenge = code.CodeChallenge,
+        CodeChallengeMethod = code.CodeChallengeMethod
+    };
+
+    private static string GenerateHandle()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+}
