@@ -6,6 +6,8 @@ public sealed class CoreIdentRouteOptions
 {
     public string BasePath { get; set; } = "/auth";
 
+    public string AuthorizePath { get; set; } = "authorize";
+
     public string TokenPath { get; set; } = "token";
 
     public string RevocationPath { get; set; } = "revoke";

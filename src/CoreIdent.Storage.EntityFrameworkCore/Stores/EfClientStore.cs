@@ -104,6 +104,7 @@ public sealed class EfClientStore : IClientStore
         AccessTokenLifetimeSeconds = entity.AccessTokenLifetimeSeconds,
         RefreshTokenLifetimeSeconds = entity.RefreshTokenLifetimeSeconds,
         RequirePkce = entity.RequirePkce,
+        RequireConsent = entity.RequireConsent,
         AllowOfflineAccess = entity.AllowOfflineAccess,
         Enabled = entity.Enabled,
         CreatedAt = entity.CreatedAt,
@@ -123,6 +124,7 @@ public sealed class EfClientStore : IClientStore
         AccessTokenLifetimeSeconds = client.AccessTokenLifetimeSeconds,
         RefreshTokenLifetimeSeconds = client.RefreshTokenLifetimeSeconds,
         RequirePkce = client.RequirePkce,
+        RequireConsent = client.RequireConsent,
         AllowOfflineAccess = client.AllowOfflineAccess,
         Enabled = client.Enabled,
         CreatedAt = client.CreatedAt,
@@ -141,6 +143,7 @@ public sealed class EfClientStore : IClientStore
         entity.AccessTokenLifetimeSeconds = client.AccessTokenLifetimeSeconds;
         entity.RefreshTokenLifetimeSeconds = client.RefreshTokenLifetimeSeconds;
         entity.RequirePkce = client.RequirePkce;
+        entity.RequireConsent = client.RequireConsent;
         entity.AllowOfflineAccess = client.AllowOfflineAccess;
         entity.Enabled = client.Enabled;
         entity.UpdatedAt = client.UpdatedAt;

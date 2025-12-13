@@ -1,6 +1,8 @@
 using CoreIdent.Core.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
+using CoreIdent.TestHost;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +20,21 @@ builder.Services.AddDbContext<CoreIdentDbContext>(options =>
 
 builder.Services.AddEntityFrameworkCoreStores();
 
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = TestHeaderAuthenticationHandler.SchemeName;
+        options.DefaultChallengeScheme = TestHeaderAuthenticationHandler.SchemeName;
+    })
+    .AddScheme<AuthenticationSchemeOptions, TestHeaderAuthenticationHandler>(
+        TestHeaderAuthenticationHandler.SchemeName,
+        _ => { });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/health/check", () => Results.Ok());
 

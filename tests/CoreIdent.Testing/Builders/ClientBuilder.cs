@@ -8,7 +8,10 @@ public sealed class ClientBuilder
     private string _clientName = "Test Client";
     private ClientType _clientType = ClientType.Confidential;
     private bool _requirePkce;
+    private bool _requireConsent;
     private bool _allowOfflineAccess;
+
+    private readonly List<string> _redirectUris = [];
 
     private readonly List<string> _allowedGrantTypes = [GrantTypes.ClientCredentials];
     private readonly List<string> _allowedScopes = [StandardScopes.OpenId, StandardScopes.Profile];
@@ -48,6 +51,13 @@ public sealed class ClientBuilder
         return this;
     }
 
+    public ClientBuilder WithRedirectUris(params string[] redirectUris)
+    {
+        _redirectUris.Clear();
+        _redirectUris.AddRange(redirectUris);
+        return this;
+    }
+
     public ClientBuilder AsPublicClient()
     {
         _clientType = ClientType.Public;
@@ -69,6 +79,12 @@ public sealed class ClientBuilder
         return this;
     }
 
+    public ClientBuilder RequireConsent(bool require = true)
+    {
+        _requireConsent = require;
+        return this;
+    }
+
     public ClientBuilder AllowOfflineAccess(bool allow = true)
     {
         _allowOfflineAccess = allow;
@@ -80,9 +96,11 @@ public sealed class ClientBuilder
         ClientId = _clientId,
         ClientName = _clientName,
         ClientType = _clientType,
+        RedirectUris = _redirectUris.ToList(),
         AllowedGrantTypes = _allowedGrantTypes.ToList(),
         AllowedScopes = _allowedScopes.ToList(),
         RequirePkce = _requirePkce,
+        RequireConsent = _requireConsent,
         AllowOfflineAccess = _allowOfflineAccess,
         Enabled = true,
         CreatedAt = DateTime.UtcNow

@@ -14,6 +14,8 @@ public class CoreIdentDbContext : DbContext
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
     public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
     public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
+    public DbSet<AuthorizationCodeEntity> AuthorizationCodes => Set<AuthorizationCodeEntity>();
+    public DbSet<UserGrantEntity> UserGrants => Set<UserGrantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -100,6 +102,59 @@ public class CoreIdentDbContext : DbContext
             entity.HasIndex(x => x.SubjectId);
             entity.HasIndex(x => x.ClientId);
             entity.HasIndex(x => x.FamilyId);
+            entity.HasIndex(x => x.ExpiresAt);
+        });
+
+        modelBuilder.Entity<UserGrantEntity>(entity =>
+        {
+            entity.HasKey(x => new { x.SubjectId, x.ClientId });
+
+            entity.Property(x => x.SubjectId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.ScopesJson)
+                .IsRequired();
+
+            entity.HasIndex(x => x.ClientId);
+            entity.HasIndex(x => x.SubjectId);
+            entity.HasIndex(x => x.ExpiresAt);
+        });
+
+        modelBuilder.Entity<AuthorizationCodeEntity>(entity =>
+        {
+            entity.HasKey(x => x.Handle);
+
+            entity.Property(x => x.Handle)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.SubjectId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.RedirectUri)
+                .IsRequired();
+
+            entity.Property(x => x.ScopesJson)
+                .IsRequired();
+
+            entity.Property(x => x.CodeChallenge)
+                .IsRequired();
+
+            entity.Property(x => x.CodeChallengeMethod)
+                .IsRequired();
+
+            entity.HasIndex(x => x.ClientId);
+            entity.HasIndex(x => x.SubjectId);
             entity.HasIndex(x => x.ExpiresAt);
         });
 

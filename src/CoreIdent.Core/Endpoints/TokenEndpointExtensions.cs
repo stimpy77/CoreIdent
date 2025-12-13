@@ -38,6 +38,7 @@ public static class TokenEndpointExtensions
         ITokenService tokenService,
         IRefreshTokenStore refreshTokenStore,
         IUserStore userStore,
+        IAuthorizationCodeStore authorizationCodeStore,
         ICustomClaimsProvider customClaimsProvider,
         IOptions<CoreIdentOptions> coreOptions,
         ILoggerFactory loggerFactory,
@@ -96,8 +97,181 @@ public static class TokenEndpointExtensions
                 client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, options, timeProvider, logger, ct),
             GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
                 client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
+            GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
+                client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
             _ => TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.")
         };
+    }
+
+    private static async Task<IResult> HandleAuthorizationCodeAsync(
+        CoreIdentClient client,
+        TokenRequest tokenRequest,
+        ITokenService tokenService,
+        IRefreshTokenStore refreshTokenStore,
+        IAuthorizationCodeStore authorizationCodeStore,
+        IUserStore userStore,
+        ICustomClaimsProvider customClaimsProvider,
+        CoreIdentOptions options,
+        TimeProvider timeProvider,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(tokenRequest.Code))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The code parameter is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenRequest.RedirectUri))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The redirect_uri parameter is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenRequest.CodeVerifier))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The code_verifier parameter is required.");
+        }
+
+        var code = await authorizationCodeStore.GetAsync(tokenRequest.Code, ct);
+        if (code is null)
+        {
+            return TokenError(TokenErrors.InvalidGrant, "The authorization code is invalid or expired.");
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
+        if (code.ExpiresAt <= now)
+        {
+            return TokenError(TokenErrors.InvalidGrant, "The authorization code is invalid or expired.");
+        }
+
+        if (code.ConsumedAt.HasValue)
+        {
+            return TokenError(TokenErrors.InvalidGrant, "The authorization code has already been used.");
+        }
+
+        if (!string.Equals(code.ClientId, client.ClientId, StringComparison.Ordinal))
+        {
+            return TokenError(TokenErrors.InvalidGrant, "The authorization code was not issued to this client.");
+        }
+
+        if (!string.Equals(code.RedirectUri, tokenRequest.RedirectUri, StringComparison.Ordinal))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The redirect_uri does not match the authorization code.");
+        }
+
+        if (client.RequirePkce)
+        {
+            if (!string.Equals(code.CodeChallengeMethod, "S256", StringComparison.Ordinal))
+            {
+                return TokenError(TokenErrors.InvalidGrant, "The authorization code PKCE method is not supported.");
+            }
+
+            if (!ValidatePkceS256(tokenRequest.CodeVerifier, code.CodeChallenge))
+            {
+                return TokenError(TokenErrors.InvalidGrant, "PKCE verification failed.");
+            }
+        }
+
+        var consumed = await authorizationCodeStore.ConsumeAsync(tokenRequest.Code, ct);
+        if (!consumed)
+        {
+            return TokenError(TokenErrors.InvalidGrant, "The authorization code is invalid or has already been used.");
+        }
+
+        var grantedScopes = code.Scopes.ToList();
+
+        var accessTokenLifetime = TimeSpan.FromSeconds(client.AccessTokenLifetimeSeconds);
+        var accessTokenExpiresAt = timeProvider.GetUtcNow().Add(accessTokenLifetime);
+
+        var accessTokenClaims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, code.SubjectId),
+            new("client_id", client.ClientId)
+        };
+
+        if (grantedScopes.Count > 0)
+        {
+            accessTokenClaims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
+        }
+
+        var userClaims = await userStore.GetClaimsAsync(code.SubjectId, ct);
+        accessTokenClaims.AddRange(userClaims);
+
+        var claimsContext = new ClaimsContext
+        {
+            SubjectId = code.SubjectId,
+            ClientId = client.ClientId,
+            Scopes = grantedScopes,
+            GrantType = GrantTypes.AuthorizationCode
+        };
+
+        var customAccessClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
+        accessTokenClaims.AddRange(customAccessClaims);
+
+        var accessToken = await tokenService.CreateJwtAsync(
+            options.Issuer!,
+            options.Audience!,
+            accessTokenClaims,
+            accessTokenExpiresAt,
+            ct);
+
+        string? refreshTokenHandle = null;
+        if (client.AllowOfflineAccess && grantedScopes.Contains(StandardScopes.OfflineAccess, StringComparer.Ordinal))
+        {
+            var refreshTokenLifetime = TimeSpan.FromSeconds(client.RefreshTokenLifetimeSeconds);
+            refreshTokenHandle = GenerateRefreshTokenHandle();
+
+            var refreshToken = new CoreIdentRefreshToken
+            {
+                Handle = refreshTokenHandle,
+                SubjectId = code.SubjectId,
+                ClientId = client.ClientId,
+                FamilyId = Guid.NewGuid().ToString("N"),
+                Scopes = grantedScopes,
+                CreatedAt = now,
+                ExpiresAt = now.Add(refreshTokenLifetime)
+            };
+
+            await refreshTokenStore.StoreAsync(refreshToken, ct);
+        }
+
+        string? idToken = null;
+        if (grantedScopes.Contains(StandardScopes.OpenId, StringComparer.Ordinal))
+        {
+            var idTokenClaims = new List<Claim>
+            {
+                new(JwtRegisteredClaimNames.Sub, code.SubjectId),
+                new("client_id", client.ClientId)
+            };
+
+            if (!string.IsNullOrWhiteSpace(code.Nonce))
+            {
+                idTokenClaims.Add(new Claim("nonce", code.Nonce));
+            }
+
+            var customIdClaims = await customClaimsProvider.GetIdTokenClaimsAsync(claimsContext, ct);
+            idTokenClaims.AddRange(customIdClaims);
+
+            // audience for id_token is the client_id
+            idToken = await tokenService.CreateJwtAsync(
+                options.Issuer!,
+                client.ClientId,
+                idTokenClaims,
+                expiresAt: accessTokenExpiresAt,
+                ct);
+        }
+
+        logger.LogInformation("Issued tokens for subject {SubjectId} via authorization_code grant", code.SubjectId);
+
+        return Results.Ok(new TokenResponse
+        {
+            AccessToken = accessToken,
+            TokenType = "Bearer",
+            ExpiresIn = (int)accessTokenLifetime.TotalSeconds,
+            RefreshToken = refreshTokenHandle,
+            Scope = grantedScopes.Count > 0 ? string.Join(" ", grantedScopes) : null,
+            IdToken = idToken
+        });
     }
 
     private static async Task<IResult> HandleClientCredentialsAsync(
@@ -372,6 +546,30 @@ public static class TokenEndpointExtensions
     private static string GenerateRefreshTokenHandle()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+
+    private static bool ValidatePkceS256(string codeVerifier, string expectedCodeChallenge)
+    {
+        try
+        {
+            var bytes = Encoding.ASCII.GetBytes(codeVerifier);
+            var hashed = SHA256.HashData(bytes);
+            var computed = Base64UrlEncode(hashed);
+            return string.Equals(computed, expectedCodeChallenge, StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string Base64UrlEncode(byte[] bytes)
+    {
+        var s = Convert.ToBase64String(bytes);
+        s = s.TrimEnd('=');
+        s = s.Replace('+', '-');
+        s = s.Replace('/', '_');
+        return s;
     }
 
     private static IResult TokenError(string error, string description, int statusCode = StatusCodes.Status400BadRequest)
