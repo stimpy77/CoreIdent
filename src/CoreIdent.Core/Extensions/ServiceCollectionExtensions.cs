@@ -73,6 +73,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<InMemoryUserStore>();
         services.TryAddSingleton<IUserStore>(sp => sp.GetRequiredService<InMemoryUserStore>());
 
+        services.TryAddSingleton<ICustomClaimsProvider, NullCustomClaimsProvider>();
+
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         return services;

@@ -156,6 +156,254 @@ You are responsible for applying EF Core migrations / ensuring the schema is cre
 
 ---
 
+## Token Endpoint (0.4)
+
+CoreIdent exposes an OAuth 2.0 token endpoint at `POST /auth/token` (configurable via `CoreIdentRouteOptions.TokenPath`).
+
+### Supported Grant Types
+
+| Grant Type | Description |
+|------------|-------------|
+| `client_credentials` | Machine-to-machine authentication using client ID and secret |
+| `refresh_token` | Exchange a refresh token for new access and refresh tokens |
+
+> **Note:** `authorization_code` grant is planned for a future release.
+
+### Client Credentials Grant
+
+```http
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(client_id:client_secret)
+
+grant_type=client_credentials&scope=api
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "scope": "api"
+}
+```
+
+### Refresh Token Grant
+
+```http
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(client_id:client_secret)
+
+grant_type=refresh_token&refresh_token=<refresh_token>
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "<new_refresh_token>",
+  "scope": "openid profile"
+}
+```
+
+### Refresh Token Rotation
+
+CoreIdent implements **refresh token rotation** for enhanced security:
+
+1. **Single use:** Each refresh token can only be used once. After use, it is marked as consumed.
+2. **Token families:** All refresh tokens derived from the same initial grant share a `FamilyId`.
+3. **Theft detection:** If a consumed refresh token is reused (indicating potential theft), the **entire token family is revoked**, invalidating all tokens in that lineage.
+
+This approach ensures that if an attacker steals a refresh token, legitimate use by the real user will trigger revocation, limiting the attack window.
+
+### Custom Claims
+
+Register a custom `ICustomClaimsProvider` to add claims to tokens:
+
+```csharp
+public class MyClaimsProvider : ICustomClaimsProvider
+{
+    public Task<IEnumerable<Claim>> GetAccessTokenClaimsAsync(ClaimsContext context, CancellationToken ct)
+    {
+        var claims = new List<Claim>();
+        if (context.Scopes.Contains("roles"))
+        {
+            claims.Add(new Claim("role", "admin"));
+        }
+        return Task.FromResult<IEnumerable<Claim>>(claims);
+    }
+
+    public Task<IEnumerable<Claim>> GetIdTokenClaimsAsync(ClaimsContext context, CancellationToken ct)
+        => Task.FromResult(Enumerable.Empty<Claim>());
+}
+
+// Register before AddCoreIdent() to override the default
+builder.Services.AddSingleton<ICustomClaimsProvider, MyClaimsProvider>();
+```
+
+---
+
+## Token Revocation (RFC 7009) (0.4)
+
+CoreIdent exposes a token revocation endpoint at `POST /auth/revoke` (configurable via `CoreIdentRouteOptions.RevocationPath`).
+
+### Client Authentication
+
+- **Confidential clients:** must authenticate (recommended: HTTP Basic auth).
+- **Public clients:** client authentication requirements may vary by deployment; CoreIdent enforces the same endpoint contract but confidential clients must still authenticate.
+
+### Revoke an Access Token
+
+```http
+POST /auth/revoke
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(client_id:client_secret)
+
+token=<access_token>&token_type_hint=access_token
+```
+
+CoreIdent will validate the JWT signature, extract the `jti`, and record the token as revoked in `ITokenRevocationStore`.
+
+> **Important (JWT reality):** revoking a JWT only takes effect for resource servers that perform an online check (e.g., via introspection or shared revocation middleware). CoreIdent provides `UseCoreIdentTokenRevocation()` middleware for this purpose.
+
+### Revoke a Refresh Token
+
+```http
+POST /auth/revoke
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(client_id:client_secret)
+
+token=<refresh_token>&token_type_hint=refresh_token
+```
+
+CoreIdent will revoke the refresh token using `IRefreshTokenStore`.
+
+### Privacy / Response Semantics
+
+Per RFC 7009, the revocation endpoint is designed to avoid leaking token validity. CoreIdent returns `200 OK` for well-formed requests even if the token is unknown.
+
+### Client Ownership
+
+CoreIdent validates that the authenticated client is the same client that the token was issued to. If a client attempts to revoke a token it does not own, CoreIdent returns `200 OK` but does not revoke the token.
+
+---
+
+## Token Introspection (RFC 7662) (0.4)
+
+CoreIdent exposes an introspection endpoint at `POST /auth/introspect` (configurable via `CoreIdentRouteOptions.IntrospectionPath`).
+
+This endpoint is intended for **resource servers** (APIs) that need an online check for:
+
+- Token validity / expiry
+- Access token revocation status
+- Refresh token activity status
+
+### Client Authentication
+
+Introspection requests must authenticate using **resource server credentials** (recommended: HTTP Basic auth).
+
+```http
+POST /auth/introspect
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(resource_server_client_id:resource_server_client_secret)
+
+token=<token>&token_type_hint=access_token
+```
+
+### Response
+
+The response follows RFC 7662. Example:
+
+```json
+{
+  "active": true,
+  "scope": "openid profile",
+  "client_id": "client123",
+  "token_type": "Bearer",
+  "exp": 1234567890,
+  "iat": 1234567800,
+  "sub": "user-id",
+  "aud": "https://api.example",
+  "iss": "https://issuer.example"
+}
+```
+
+If the token is unknown, invalid, expired, revoked, or otherwise inactive, CoreIdent returns:
+
+```json
+{ "active": false }
+```
+
+---
+
+## Client Configuration (0.4)
+
+Clients are OAuth 2.0 applications that can request tokens. Configure clients using `IClientStore`.
+
+### Client Model
+
+```csharp
+var client = new CoreIdentClient
+{
+    ClientId = "my-api-client",
+    ClientSecretHash = secretHasher.HashSecret("my-secret"),
+    ClientName = "My API Client",
+    ClientType = ClientType.Confidential,
+    AllowedGrantTypes = ["client_credentials", "refresh_token"],
+    AllowedScopes = ["openid", "profile", "api"],
+    AllowOfflineAccess = true,
+    AccessTokenLifetimeSeconds = 900,      // 15 minutes
+    RefreshTokenLifetimeSeconds = 604800,  // 7 days
+    RequirePkce = true,
+    Enabled = true
+};
+```
+
+### Client Types
+
+| Type | Description |
+|------|-------------|
+| `Confidential` | Server-side apps that can securely store secrets. Must provide `client_secret`. |
+| `Public` | SPAs, mobile apps that cannot securely store secrets. Must use PKCE. |
+
+### In-Memory Client Store
+
+```csharp
+var hasher = new DefaultClientSecretHasher();
+builder.Services.AddInMemoryClients(new[]
+{
+    new CoreIdentClient
+    {
+        ClientId = "my-client",
+        ClientSecretHash = hasher.HashSecret("my-secret"),
+        ClientType = ClientType.Confidential,
+        AllowedGrantTypes = ["client_credentials"],
+        AllowedScopes = ["api"]
+    }
+});
+```
+
+### EF Core Client Store
+
+```csharp
+builder.Services.AddEntityFrameworkCoreClientStore();
+```
+
+### Token Lifetimes
+
+Each client can have custom token lifetimes:
+
+- `AccessTokenLifetimeSeconds` — How long access tokens are valid (default: 3600 = 1 hour)
+- `RefreshTokenLifetimeSeconds` — How long refresh tokens are valid (default: 86400 = 1 day)
+
+The global defaults in `CoreIdentOptions` are used when creating tokens for flows that don't have a specific client (if applicable).
+
+---
+
 ## OIDC Discovery Metadata (0.4)
 
 CoreIdent exposes an OpenID Connect discovery document endpoint at:
