@@ -166,8 +166,31 @@ CoreIdent exposes an OAuth 2.0 token endpoint at `POST /auth/token` (configurabl
 |------------|-------------|
 | `client_credentials` | Machine-to-machine authentication using client ID and secret |
 | `refresh_token` | Exchange a refresh token for new access and refresh tokens |
+| `password` | **Deprecated** resource owner password credentials (ROPC). Supported for legacy/mobile scenarios; logs a warning on use. |
 
 > **Note:** `authorization_code` grant is planned for a future release.
+
+### Password Grant (ROPC) (Deprecated)
+
+CoreIdent supports `grant_type=password` for **legacy** scenarios.
+
+- **Deprecation:** This grant is deprecated in OAuth 2.1. CoreIdent will log a warning: `Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE.`
+- **Recommendation:** Migrate to **authorization code + PKCE**.
+
+```http
+POST /auth/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(client_id:client_secret)
+
+grant_type=password&username=user%40example.com&password=Test123!&scope=openid%20offline_access
+```
+
+Notes:
+
+- A client must include `"password"` in `AllowedGrantTypes`.
+- A refresh token is only issued when:
+  - the client has `AllowOfflineAccess = true`, and
+  - the granted scopes include `offline_access`.
 
 ### Client Credentials Grant
 
@@ -341,6 +364,70 @@ If the token is unknown, invalid, expired, revoked, or otherwise inactive, CoreI
 ---
 
 ## Client Configuration (0.4)
+
+---
+
+## Resource Owner Endpoints (Register/Login/Profile) (0.4)
+
+CoreIdent provides minimal **resource owner** endpoints under the base path (default `/auth`):
+
+- `GET/POST /auth/register`
+- `GET/POST /auth/login`
+- `GET /auth/profile`
+
+`/auth/profile` is a **CoreIdent convenience endpoint** intended for first-party apps using the resource owner (register/login) workflow.
+It is distinct from the OIDC-standard **UserInfo** endpoint (`/auth/userinfo` via `CoreIdentRouteOptions.UserInfoPath`), which is specified by OpenID Connect and is tracked separately in Feature 1.10.
+
+### Content Negotiation (JSON vs HTML)
+
+CoreIdent returns **JSON** when the request indicates a JSON client:
+
+- `Accept: application/json`, or
+- `Content-Type: application/json`
+
+Otherwise, CoreIdent returns **minimal HTML** suitable for basic browser workflows.
+
+### Default Responses
+
+- `POST /auth/register`
+  - JSON: `{ "userId": "...", "message": "Registered successfully" }`
+  - HTML: basic success page
+- `POST /auth/login`
+  - JSON: OAuth-style token response (`access_token`, `refresh_token`, `expires_in`, `token_type`)
+  - HTML: basic success page
+  - Optional: if `redirect_uri` is provided as a query string parameter, CoreIdent redirects after successful login
+- `GET /auth/profile`
+  - Requires a valid **Bearer** access token
+  - JSON: `{ "id": "...", "email": "...", "claims": { ... } }`
+  - HTML: basic profile page
+
+### Customizing Responses with Delegates
+
+You can override the default behavior by registering handlers via `ConfigureResourceOwnerEndpoints(...)`.
+Each handler can return a custom `IResult`, or return `null` to fall back to CoreIdent's default response.
+
+```csharp
+builder.Services.ConfigureResourceOwnerEndpoints(options =>
+{
+    options.RegisterHandler = (http, user, ct) =>
+        Task.FromResult<IResult?>(Results.Redirect("/welcome"));
+
+    options.LoginHandler = (http, user, tokens, ct) =>
+        Task.FromResult<IResult?>(Results.Json(new { tokens.AccessToken }));
+
+    options.ProfileHandler = (http, user, claims, ct) =>
+        Task.FromResult<IResult?>(Results.Json(new { user.Id, user.UserName }));
+});
+```
+
+### Disabling Individual Endpoints
+
+`MapCoreIdentEndpoints()` maps *all* CoreIdent endpoints, including the resource owner endpoints.
+
+To omit one or more endpoints:
+
+- Do not call `MapCoreIdentEndpoints()`.
+- Instead, map only the endpoints you want using the granular extension methods (e.g., `MapCoreIdentTokenEndpoint(...)`, `MapCoreIdentTokenManagementEndpoints(...)`, `MapCoreIdentResourceOwnerEndpoints(...)`, etc.).
 
 Clients are OAuth 2.0 applications that can request tokens. Configure clients using `IClientStore`.
 

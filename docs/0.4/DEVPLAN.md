@@ -968,7 +968,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 - Content negotiation: JSON for API clients, HTML for browsers
 
 *   **Component:** `CoreIdentResourceOwnerOptions`
-    - [ ] (L1) Create options class with delegate properties:
+    - [x] (L1) Create options class with delegate properties:
         ```csharp
         public class CoreIdentResourceOwnerOptions
         {
@@ -986,7 +986,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         ```
 
 *   **Component:** Route Configuration
-    - [ ] (L1) Add paths to `CoreIdentRouteOptions`:
+    - [x] (L1) Add paths to `CoreIdentRouteOptions`:
         ```csharp
         public string RegisterPath { get; set; } = "/register";
         public string LoginPath { get; set; } = "/login";
@@ -994,7 +994,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         ```
 
 *   **Component:** Content Negotiation Helper
-    - [ ] (L1) Create shared helper for detecting JSON vs HTML preference:
+    - [x] (L1) Create shared helper for detecting JSON vs HTML preference:
         ```csharp
         // Returns true if client prefers JSON (explicit Accept header or JSON Content-Type)
         // Returns false for form posts without JSON Accept, query string GETs, etc.
@@ -1002,7 +1002,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         ```
 
 *   **Component:** `ResourceOwnerEndpointsExtensions`
-    - [ ] (L2) `POST /auth/register`:
+    - [x] (L2) `POST /auth/register`:
         *   Accept JSON body OR form-urlencoded
         *   Validate email + password
         *   Create user via `IUserStore.CreateAsync()`
@@ -1010,20 +1010,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   Call delegate if provided; if delegate returns null or not provided, return default response
         *   Default JSON: `{ "userId": "...", "message": "Registered successfully" }`
         *   Default HTML: Minimal success page with user ID
-    - [ ] (L2) `GET /auth/register` (optional form UI):
+    - [x] (L2) `GET /auth/register` (optional form UI):
         *   Return minimal HTML registration form
         *   Form posts to same endpoint
-    - [ ] (L2) `POST /auth/login`:
+    - [x] (L2) `POST /auth/login`:
         *   Accept JSON body OR form-urlencoded
         *   Validate credentials via `IUserStore.FindByUsernameAsync()` + `IPasswordHasher.VerifyHashedPassword()`
         *   Issue tokens via `ITokenService` + `IRefreshTokenStore`
         *   Call delegate if provided
         *   Default JSON: `{ "access_token": "...", "refresh_token": "...", "expires_in": 3600, "token_type": "Bearer" }`
         *   Default HTML: Minimal success page (or redirect if `redirect_uri` provided)
-    - [ ] (L2) `GET /auth/login` (optional form UI):
+    - [x] (L2) `GET /auth/login` (optional form UI):
         *   Return minimal HTML login form
         *   Form posts to same endpoint
-    - [ ] (L2) `GET /auth/profile`:
+    - [x] (L2) `GET /auth/profile`:
         *   Require bearer token authentication
         *   Get user via `IUserStore.FindByIdAsync()` using `sub` claim
         *   Get claims via `IUserStore.GetClaimsAsync()`
@@ -1032,27 +1032,27 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   Default HTML: Minimal profile display
 
 *   **Component:** DI Registration
-    - [ ] (L1) Add `ConfigureResourceOwnerEndpoints(Action<CoreIdentResourceOwnerOptions>)` extension
-    - [ ] (L1) Integrate into `MapCoreIdentEndpoints()` pipeline
+    - [x] (L1) Add `ConfigureResourceOwnerEndpoints(Action<CoreIdentResourceOwnerOptions>)` extension
+    - [x] (L1) Integrate into `MapCoreIdentEndpoints()` pipeline
 
 *   **Test Case (Unit):**
-    - [ ] (L2) Register creates user with hashed password
-    - [ ] (L2) Register rejects duplicate email
-    - [ ] (L2) Login returns tokens for valid credentials
-    - [ ] (L2) Login rejects invalid credentials
-    - [ ] (L2) Profile returns user data for authenticated request
-    - [ ] (L2) Profile rejects unauthenticated request
+    - [x] (L2) Register creates user with hashed password
+    - [x] (L2) Register rejects duplicate email
+    - [x] (L2) Login returns tokens for valid credentials
+    - [x] (L2) Login rejects invalid credentials
+    - [x] (L2) Profile returns user data for authenticated request
+    - [x] (L2) Profile rejects unauthenticated request
 
 *   **Test Case (Integration):**
-    - [ ] (L2) Full register → login → profile flow (JSON)
-    - [ ] (L2) Full register → login → profile flow (HTML form)
-    - [ ] (L2) Custom delegate is invoked and can override response
-    - [ ] (L2) Custom delegate returning null falls back to default
+    - [x] (L2) Full register → login → profile flow (JSON)
+    - [x] (L2) Full register → login → profile flow (HTML form)
+    - [x] (L2) Custom delegate is invoked and can override response
+    - [x] (L2) Custom delegate returning null falls back to default
 
 *   **Documentation:**
-    - [ ] (L1) Document default behavior and content negotiation
-    - [ ] (L1) Document delegate customization pattern with examples
-    - [ ] (L1) Document how to disable individual endpoints
+    - [x] (L1) Document default behavior and content negotiation
+    - [x] (L1) Document delegate customization pattern with examples
+    - [x] (L1) Document how to disable individual endpoints
 
 ---
 
@@ -1063,24 +1063,24 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 **Note:** This grant type is deprecated in OAuth 2.1. A warning is logged when used.
 
 *   **Component:** Password Grant Handler
-    - [ ] (L2) Add `GrantTypes.Password` case to `TokenEndpointExtensions.HandleTokenRequest()`
-    - [ ] (L2) Validate `username` and `password` parameters
-    - [ ] (L2) Authenticate via `IUserStore.FindByUsernameAsync()` + `IPasswordHasher.VerifyHashedPassword()`
-    - [ ] (L2) Issue tokens same as login endpoint
-    - [ ] (L1) Log deprecation warning: "Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE."
+    - [x] (L2) Add `GrantTypes.Password` case to `TokenEndpointExtensions.HandleTokenRequest()`
+    - [x] (L2) Validate `username` and `password` parameters
+    - [x] (L2) Authenticate via `IUserStore.FindByUsernameAsync()` + `IPasswordHasher.VerifyHashedPassword()`
+    - [x] (L2) Issue tokens same as login endpoint
+    - [x] (L1) Log deprecation warning: "Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE."
 
 *   **Component:** Client Configuration
-    - [ ] (L1) Add `"password"` as valid grant type in `CoreIdentClient.AllowedGrantTypes`
+    - [x] (L1) Add "password" as valid grant type in `CoreIdentClient.AllowedGrantTypes`
 
 *   **Test Case (Integration):**
-    - [ ] (L2) Password grant returns tokens for valid credentials
-    - [ ] (L2) Password grant rejects invalid credentials
-    - [ ] (L2) Password grant rejected if client doesn't allow it
-    - [ ] (L1) Deprecation warning is logged
+    - [x] (L2) Password grant returns tokens for valid credentials
+    - [x] (L2) Password grant rejects invalid credentials
+    - [x] (L2) Password grant rejected if client doesn't allow it
+    - [x] (L1) Deprecation warning is logged
 
 *   **Documentation:**
-    - [ ] (L1) Document password grant with deprecation notice
-    - [ ] (L1) Recommend migration to authorization code flow
+    - [x] (L1) Document password grant with deprecation notice
+    - [x] (L1) Recommend migration to authorization code flow
 
 ---
 
@@ -1784,10 +1784,10 @@ The following features were implemented in 0.3.x and will be re-implemented in 0
 - [x] (L2) User Consent Mechanism — *Covered in Feature 1.8*
 - [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
 - [ ] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
-- [ ] (L2) User Registration Endpoint — *Covered in Feature 1.11*
-- [ ] (L2) User Login Endpoint — *Covered in Feature 1.11*
-- [ ] (L2) User Profile Endpoint — *Covered in Feature 1.11*
-- [ ] (L2) Password Grant (ROPC) — *Covered in Feature 1.12*
+- [x] (L2) User Registration Endpoint — *Covered in Feature 1.11*
+- [x] (L2) User Login Endpoint — *Covered in Feature 1.11*
+- [x] (L2) User Profile Endpoint — *Covered in Feature 1.11*
+- [x] (L2) Password Grant (ROPC) — *Covered in Feature 1.12*
 - [x] (L1) Custom Claims Provider — *Covered in Feature 0.5*
 
 > **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture. Many items are now explicitly covered in Phase 0 features.

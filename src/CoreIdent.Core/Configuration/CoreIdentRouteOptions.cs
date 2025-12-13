@@ -24,6 +24,12 @@ public sealed class CoreIdentRouteOptions
 
     public string UserProfilePath { get; set; } = "/me";
 
+    public string RegisterPath { get; set; } = "register";
+
+    public string LoginPath { get; set; } = "login";
+
+    public string ProfilePath { get; set; } = "profile";
+
     public string CombineWithBase(string path)
     {
         if (string.IsNullOrWhiteSpace(path))

@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<CoreIdentRouteOptions>();
 
+        services.AddOptions<CoreIdentResourceOwnerOptions>();
+
         services.AddOptions<CoreIdentAuthorizationCodeOptions>();
 
         if (configureRoutes is not null)
@@ -89,6 +91,18 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AuthorizationCodeCleanupHostedService>());
+
+        return services;
+    }
+
+    public static IServiceCollection ConfigureResourceOwnerEndpoints(
+        this IServiceCollection services,
+        Action<CoreIdentResourceOwnerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        services.Configure(configure);
 
         return services;
     }

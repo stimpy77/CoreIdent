@@ -61,6 +61,11 @@ public static class EndpointRouteBuilderExtensions
         var introspectPath = routeOptions.CombineWithBase(routeOptions.IntrospectionPath);
         endpoints.MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath);
 
+        var registerPath = routeOptions.CombineWithBase(routeOptions.RegisterPath);
+        var loginPath = routeOptions.CombineWithBase(routeOptions.LoginPath);
+        var profilePath = routeOptions.CombineWithBase(routeOptions.ProfilePath);
+        endpoints.MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath);
+
         return endpoints;
     }
 }
