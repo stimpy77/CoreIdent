@@ -18,6 +18,7 @@
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="features.html" class="active">Roadmap</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/Developer_Guide.md" target="_blank">Developer Guide</a></li>
                     <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a></li>
                 </ul>
             </nav>
@@ -33,7 +34,7 @@
 
     <section class="container">
         <div class="content-section">
-            <p class="intro-text">CoreIdent 0.4 is a ground-up rebuild focusing on .NET 10, passwordless authentication, and improved developer experience. For full details, see the <a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a>.</p>
+            <p class="intro-text">CoreIdent 0.4 is a ground-up rebuild focusing on .NET 10, secure defaults (asymmetric signing), and improved developer experience. For current behavior, start with the <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/Developer_Guide.md" target="_blank">Developer Guide</a>, and for full details see the <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a>.</p>
             
             <div class="feature-table-wrapper">
                 <table class="feature-table">
@@ -49,29 +50,29 @@
                         <tr>
                             <td>.NET 10 Migration</td>
                             <td>Target net10.0 only, leverage C# 14 features</td>
-                            <td><span class="status-badge planned">Phase 0A</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Asymmetric Keys (RS256/ES256)</td>
                             <td>Production-ready token signing with key management</td>
-                            <td><span class="status-badge planned">Phase 0A</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Token Revocation (RFC 7009)</td>
                             <td>Endpoint to revoke tokens on logout or compromise</td>
-                            <td><span class="status-badge planned">Phase 0A</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Token Introspection (RFC 7662)</td>
                             <td>Endpoint for resource servers to validate tokens</td>
-                            <td><span class="status-badge planned">Phase 0A</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
 
                         <tr class="phase-header"><td colspan="3"><strong>Phase 0B: Quality &amp; DevEx (Testing + Observability + Tooling)</strong></td></tr>
                         <tr>
                             <td>Test Infrastructure</td>
                             <td>CoreIdent.Testing package with fixtures, builders, assertions</td>
-                            <td><span class="status-badge planned">Phase 0B</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>OpenTelemetry Metrics</td>
@@ -262,9 +263,10 @@
             <div class="document-links">
                 <p>For implementation details, see these documents:</p>
                 <ul>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Project_Overview.md" target="_blank">Project Overview</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/Technical_Plan.md" target="_blank">Technical Plan</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/rescope_net10/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/Developer_Guide.md" target="_blank">Developer Guide</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/Project_Overview.md" target="_blank">Project Overview</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/Technical_Plan.md" target="_blank">Technical Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/0.4/DEVPLAN.md" target="_blank">Development Plan</a></li>
                 </ul>
             </div>
         </div>
