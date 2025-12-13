@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace CoreIdent.Core.Models;
 
 /// <summary>
@@ -11,167 +8,96 @@ public class CoreIdentClient
     /// <summary>
     /// Unique identifier for the client.
     /// </summary>
-    public string ClientId { get; set; } = default!;
+    public string ClientId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Client display name (used for consent screens, etc.).
+    /// Hashed client secret for confidential clients. Null for public clients.
     /// </summary>
-    public string? ClientName { get; set; }
+    public string? ClientSecretHash { get; set; }
 
     /// <summary>
-    /// URI to further information about client (used on consent screen).
+    /// Human-readable name for the client.
     /// </summary>
-    public string? ClientUri { get; set; }
+    public string ClientName { get; set; } = string.Empty;
 
     /// <summary>
-    /// URI to client logo (used on consent screen).
+    /// Type of client (public or confidential).
     /// </summary>
-    public string? LogoUri { get; set; }
+    public ClientType ClientType { get; set; } = ClientType.Confidential;
 
     /// <summary>
-    /// Specifies if the client is enabled (defaults to true).
+    /// Allowed redirect URIs for authorization code flow.
     /// </summary>
-    public bool Enabled { get; set; } = true;
+    public ICollection<string> RedirectUris { get; set; } = [];
 
     /// <summary>
-    /// List of client secrets - credentials defining the client.
+    /// Allowed post-logout redirect URIs.
     /// </summary>
-    public virtual ICollection<CoreIdentClientSecret> ClientSecrets { get; set; } = new List<CoreIdentClientSecret>();
+    public ICollection<string> PostLogoutRedirectUris { get; set; } = [];
 
     /// <summary>
-    /// Specifies the grant types the client is allowed to use.
-    /// Use constants (e.g., GrantType.AuthorizationCode, GrantType.ClientCredentials).
+    /// Scopes the client is allowed to request.
     /// </summary>
-    public virtual List<string> AllowedGrantTypes { get; set; } = new List<string>();
+    public ICollection<string> AllowedScopes { get; set; } = [];
 
     /// <summary>
-    /// Specifies the allowed URIs to return tokens or authorization codes to.
+    /// Grant types the client is allowed to use.
     /// </summary>
-    public virtual List<string> RedirectUris { get; set; } = new List<string>();
+    public ICollection<string> AllowedGrantTypes { get; set; } = [];
 
     /// <summary>
-    /// Specifies the allowed URIs to redirect to after logout.
+    /// Access token lifetime in seconds.
     /// </summary>
-    public virtual List<string> PostLogoutRedirectUris { get; set; } = new List<string>();
+    public int AccessTokenLifetimeSeconds { get; set; } = 3600;
 
     /// <summary>
-    /// Specifies the scopes that the client is allowed to request. If empty, the client can request all scopes defined in the system.
+    /// Refresh token lifetime in seconds.
     /// </summary>
-    public virtual List<string> AllowedScopes { get; set; } = new List<string>();
+    public int RefreshTokenLifetimeSeconds { get; set; } = 86400;
 
     /// <summary>
-    /// Specifies whether this client must use PKCE for the authorization code flow (defaults to true for public clients).
+    /// Whether PKCE is required for authorization code flow.
     /// </summary>
-    public bool RequirePkce { get; set; } = true; // Consider basing default on client type (confidential vs public)
+    public bool RequirePkce { get; set; } = true;
 
     /// <summary>
-    /// Specifies whether the client is allowed to request refresh tokens (via the offline_access scope).
+    /// Whether the user must explicitly consent before issuing tokens.
+    /// </summary>
+    public bool RequireConsent { get; set; } = false;
+
+    /// <summary>
+    /// Whether the client can request offline_access (refresh tokens).
     /// </summary>
     public bool AllowOfflineAccess { get; set; } = false;
 
     /// <summary>
-    /// Lifetime of identity token in seconds (defaults to 300 seconds / 5 minutes).
+    /// Whether the client is enabled.
     /// </summary>
-    public int IdentityTokenLifetime { get; set; } = 300;
+    public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Lifetime of access token in seconds (defaults to 3600 seconds / 1 hour).
+    /// When the client was created.
     /// </summary>
-    public int AccessTokenLifetime { get; set; } = 3600;
+    public DateTime CreatedAt { get; set; }
 
     /// <summary>
-    /// Lifetime of authorization code in seconds (defaults to 300 seconds / 5 minutes).
+    /// When the client was last updated.
     /// </summary>
-    public int AuthorizationCodeLifetime { get; set; } = 300;
-
-    /// <summary>
-    /// Absolute lifetime of refresh token in seconds (defaults to 2592000 seconds / 30 days).
-    /// </summary>
-    public int AbsoluteRefreshTokenLifetime { get; set; } = 2592000;
-
-    /// <summary>
-    /// Sliding lifetime of refresh token in seconds (defaults to 1296000 seconds / 15 days).
-    /// </summary>
-    public int SlidingRefreshTokenLifetime { get; set; } = 1296000;
-
-    /// <summary>
-    /// Refresh token usage type (ReUse, OneTimeOnly - defaults to OneTimeOnly for security).
-    /// </summary>
-    public TokenUsage RefreshTokenUsage { get; set; } = TokenUsage.OneTimeOnly;
-
-    /// <summary>
-    /// Refresh token expiration type (Absolute, Sliding - defaults to Absolute).
-    /// </summary>
-    public TokenExpiration RefreshTokenExpiration { get; set; } = TokenExpiration.Absolute;
-
-    /// <summary>
-    /// Specifies whether consent is required for this client (defaults to false).
-    /// </summary>
-    public bool RequireConsent { get; set; } = false;
-
-    // Add other properties as needed: AllowedCorsOrigins, IdentityProviderRestrictions, etc.
+    public DateTime? UpdatedAt { get; set; }
 }
 
 /// <summary>
-/// Represents a secret associated with a client.
+/// OAuth 2.0 client types per RFC 6749.
 /// </summary>
-public class CoreIdentClientSecret
+public enum ClientType
 {
     /// <summary>
-    /// Primary key.
+    /// Public client (e.g., SPA, mobile app) - cannot securely store secrets.
     /// </summary>
-    public int Id { get; set; }
+    Public,
 
     /// <summary>
-    /// Foreign key to the Client.
+    /// Confidential client (e.g., server-side app) - can securely store secrets.
     /// </summary>
-    public string ClientId { get; set; } = default!;
-
-    /// <summary>
-    /// Client this secret belongs to.
-    /// </summary>
-    public virtual CoreIdentClient Client { get; set; } = default!;
-
-    /// <summary>
-    /// Description of the secret.
-    /// </summary>
-    public string? Description { get; set; }
-
-    /// <summary>
-    /// The secret value (should be hashed).
-    /// </summary>
-    public string Value { get; set; } = default!;
-
-    /// <summary>
-    /// Expiration date for the secret.
-    /// </summary>
-    public DateTime? Expiration { get; set; }
-
-    /// <summary>
-    /// Type of the secret (e.g., SharedSecret, X509Thumbprint).
-    /// </summary>
-    public string Type { get; set; } = "SharedSecret";
-
-    /// <summary>
-    /// Date the secret was created.
-    /// </summary>
-    public DateTime Created { get; set; } = DateTime.UtcNow;
+    Confidential
 }
-
-/// <summary>
-/// Enum for refresh token usage behavior.
-/// </summary>
-public enum TokenUsage
-{
-    ReUse = 0,
-    OneTimeOnly = 1
-}
-
-/// <summary>
-/// Enum for refresh token expiration behavior.
-/// </summary>
-public enum TokenExpiration
-{
-    Absolute = 0,
-    Sliding = 1
-} 

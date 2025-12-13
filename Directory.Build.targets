@@ -1,0 +1,9 @@
+<Project>
+  <!-- Exclude macOS AppleDouble resource fork files from compilation -->
+  <ItemGroup>
+    <Compile Remove="**\._*" />
+    <None Remove="**\._*" />
+    <Content Remove="**\._*" />
+    <EmbeddedResource Remove="**\._*" />
+  </ItemGroup>
+</Project>

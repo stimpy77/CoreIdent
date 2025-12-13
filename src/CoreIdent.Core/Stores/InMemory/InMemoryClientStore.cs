@@ -1,75 +1,105 @@
-using CoreIdent.Core.Models;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
 /// <summary>
-/// Simple in-memory store for OAuth clients.
+/// In-memory implementation of <see cref="IClientStore"/> for development and testing.
 /// </summary>
-public class InMemoryClientStore : IClientStore
+public sealed class InMemoryClientStore : IClientStore
 {
     private readonly ConcurrentDictionary<string, CoreIdentClient> _clients = new(StringComparer.Ordinal);
-    private readonly ILogger<InMemoryClientStore> _logger;
+    private readonly IClientSecretHasher _secretHasher;
+
+    public InMemoryClientStore(IClientSecretHasher secretHasher)
+    {
+        _secretHasher = secretHasher ?? throw new ArgumentNullException(nameof(secretHasher));
+    }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InMemoryClientStore"/> class.
-    /// Optionally seeds initial clients.
+    /// Seeds the store with initial clients. Useful for testing and development.
     /// </summary>
-    /// <param name="logger">The logger.</param>
-    /// <param name="initialClients">Optional list of clients to seed.</param>
-    public InMemoryClientStore(ILogger<InMemoryClientStore> logger, IEnumerable<CoreIdentClient>? initialClients = null)
+    public void SeedClients(IEnumerable<CoreIdentClient> clients)
     {
-        _logger = logger;
-        if (initialClients != null)
+        foreach (var client in clients)
         {
-            foreach (var client in initialClients)
-            {
-                if (!_clients.TryAdd(client.ClientId, client))
-                {
-                    _logger.LogWarning("Failed to add initial client with duplicate ClientId: {ClientId}", client.ClientId);
-                }
-                else
-                {
-                    _logger.LogDebug("Added initial client: {ClientId}", client.ClientId);
-                }
-            }
+            _clients.TryAdd(client.ClientId, client);
         }
+    }
+
+    /// <summary>
+    /// Seeds a client with a plaintext secret (will be hashed).
+    /// </summary>
+    public void SeedClientWithSecret(CoreIdentClient client, string plaintextSecret)
+    {
+        client.ClientSecretHash = _secretHasher.HashSecret(plaintextSecret);
+        _clients.TryAdd(client.ClientId, client);
     }
 
     /// <inheritdoc />
-    public Task<CoreIdentClient?> FindClientByIdAsync(string clientId, CancellationToken cancellationToken)
+    public Task<CoreIdentClient?> FindByClientIdAsync(string clientId, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(clientId);
-        cancellationToken.ThrowIfCancellationRequested();
-
         _clients.TryGetValue(clientId, out var client);
-        if (client != null)
-        {
-            _logger.LogDebug("Found client: {ClientId}", clientId);
-            // Return a copy? For simplicity, returning direct reference.
-            return Task.FromResult<CoreIdentClient?>(client);
-        }
-        else
-        {
-            _logger.LogDebug("Client not found: {ClientId}", clientId);
-            return Task.FromResult<CoreIdentClient?>(null);
-        }
+        return Task.FromResult(client);
     }
 
-    // Optional: Add methods for managing clients if needed (e.g., AddClientAsync, UpdateClientAsync)
-    public Task AddClientAsync(CoreIdentClient client, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public Task<bool> ValidateClientSecretAsync(string clientId, string clientSecret, CancellationToken ct = default)
+    {
+        if (!_clients.TryGetValue(clientId, out var client))
+        {
+            return Task.FromResult(false);
+        }
+
+        if (client.ClientType == ClientType.Public)
+        {
+            // Public clients don't have secrets
+            return Task.FromResult(true);
+        }
+
+        if (string.IsNullOrWhiteSpace(client.ClientSecretHash))
+        {
+            return Task.FromResult(false);
+        }
+
+        var isValid = _secretHasher.VerifySecret(clientSecret, client.ClientSecretHash);
+        return Task.FromResult(isValid);
+    }
+
+    /// <inheritdoc />
+    public Task CreateAsync(CoreIdentClient client, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(client);
-        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(client.ClientId);
 
         if (!_clients.TryAdd(client.ClientId, client))
         {
-            _logger.LogWarning("Client already exists: {ClientId}", client.ClientId);
-            // Throw or return a specific result? Throwing for now.
             throw new InvalidOperationException($"Client with ID '{client.ClientId}' already exists.");
         }
-        _logger.LogInformation("Added client: {ClientId}", client.ClientId);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task UpdateAsync(CoreIdentClient client, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(client.ClientId);
+
+        if (!_clients.ContainsKey(client.ClientId))
+        {
+            throw new InvalidOperationException($"Client with ID '{client.ClientId}' does not exist.");
+        }
+
+        _clients[client.ClientId] = client;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task DeleteAsync(string clientId, CancellationToken ct = default)
+    {
+        _clients.TryRemove(clientId, out _);
         return Task.CompletedTask;
     }
 }

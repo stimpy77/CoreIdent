@@ -16,6 +16,65 @@ body {
   padding: 0 15px;
 }
 
+header {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.logo a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 18px;
+  padding: 0;
+  margin: 0;
+  align-items: center;
+}
+
+nav a {
+  text-decoration: none;
+  color: #1a365d;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background 0.18s, color 0.18s;
+}
+
+nav a:hover {
+  background: #e0e7ef;
+  color: #1e40af;
+}
+
+nav a.active {
+  background: #2563eb;
+  color: #fff;
+}
+
 /* SECTION HEADINGS */
 h2 {
   color: #1a365d;

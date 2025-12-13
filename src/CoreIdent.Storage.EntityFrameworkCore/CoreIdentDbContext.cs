@@ -1,202 +1,187 @@
-using CoreIdent.Core.Models;
+using CoreIdent.Storage.EntityFrameworkCore.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using System.Text.Json;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace CoreIdent.Storage.EntityFrameworkCore;
 
-/// <summary>
-/// EF Core DbContext for CoreIdent data persistence.
-/// </summary>
 public class CoreIdentDbContext : DbContext
 {
-    // --- User Related DbSets ---
-    public virtual DbSet<CoreIdentUser> Users { get; set; } = default!;
-    public virtual DbSet<CoreIdentUserClaim> UserClaims { get; set; } = default!;
+    public CoreIdentDbContext(DbContextOptions<CoreIdentDbContext> options)
+        : base(options)
+    {
+    }
 
-    // --- Token Related DbSets ---
-    public virtual DbSet<CoreIdentRefreshToken> RefreshTokens { get; set; } = default!;
-
-    // --- Client/Scope Related DbSets ---
-    public virtual DbSet<CoreIdentClient> Clients { get; set; } = default!;
-    public virtual DbSet<CoreIdentClientSecret> ClientSecrets { get; set; } = default!;
-    public virtual DbSet<CoreIdentScope> Scopes { get; set; } = default!;
-    public virtual DbSet<CoreIdentScopeClaim> ScopeClaims { get; set; } = default!;
-
-    // --- Authorization Code DbSet ---
-    public virtual DbSet<AuthorizationCode> AuthorizationCodes { get; set; } = default!;
-
-    public CoreIdentDbContext(DbContextOptions<CoreIdentDbContext> options) : base(options)
-    { }
+    public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+    public DbSet<ClientEntity> Clients => Set<ClientEntity>();
+    public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
+    public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
+    public DbSet<AuthorizationCodeEntity> AuthorizationCodes => Set<AuthorizationCodeEntity>();
+    public DbSet<UserGrantEntity> UserGrants => Set<UserGrantEntity>();
+    public DbSet<UserEntity> Users => Set<UserEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // --- User Configuration ---
-        modelBuilder.Entity<CoreIdentUser>(user =>
+        modelBuilder.Entity<RevokedToken>(entity =>
         {
-            user.HasKey(u => u.Id);
-            user.HasIndex(u => u.NormalizedUserName).IsUnique();
-            user.Property(u => u.UserName).HasMaxLength(256);
-            user.Property(u => u.NormalizedUserName).HasMaxLength(256);
-            // PasswordHash can be long
-            user.Property(u => u.ConcurrencyStamp).IsConcurrencyToken(); // Add ConcurrencyStamp to CoreIdentUser model if needed for EF
+            entity.HasKey(x => x.Jti);
 
-            // Relationship: User -> UserClaims (One-to-Many)
-            user.HasMany(u => u.Claims).WithOne().HasForeignKey(uc => uc.UserId).IsRequired();
+            entity.Property(x => x.Jti)
+                .IsRequired();
 
-            // Ignored properties (computed)
-            user.Ignore(u => u.IsLockedOut);
+            entity.Property(x => x.TokenType)
+                .IsRequired();
 
-            user.ToTable("Users"); // Optional: Specify table name
+            entity.HasIndex(x => x.ExpiresAtUtc);
         });
 
-        modelBuilder.Entity<CoreIdentUserClaim>(userClaim =>
+        modelBuilder.Entity<ClientEntity>(entity =>
         {
-            userClaim.HasKey(uc => uc.Id);
-            userClaim.Property(uc => uc.ClaimType).HasMaxLength(256);
-            // ClaimValue can be long
+            entity.HasKey(x => x.ClientId);
 
-            userClaim.HasIndex(uc => uc.UserId); // Index for finding claims by user
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            userClaim.ToTable("UserClaims");
+            entity.Property(x => x.ClientName)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.ClientType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.ClientSecretHash)
+                .HasMaxLength(500);
+
+            entity.HasIndex(x => x.Enabled);
         });
 
-        // --- Refresh Token Configuration ---
-        modelBuilder.Entity<CoreIdentRefreshToken>(refreshToken =>
+        modelBuilder.Entity<ScopeEntity>(entity =>
         {
-            // Use Handle as the key, but it should be stored hashed.
-            // The actual token value presented by the client is not stored directly.
-            refreshToken.HasKey(rt => rt.Handle);
-            refreshToken.Property(rt => rt.Handle).HasMaxLength(128); // Adjust length as needed for hash
-            
-            // HashedHandle is the new preferred property for storing the hashed token value
-            // In a future version, Handle will be phased out and HashedHandle will become the primary key
-            refreshToken.Property(rt => rt.HashedHandle).HasMaxLength(128);
-            refreshToken.HasIndex(rt => rt.HashedHandle); // Additional index for lookups
+            entity.HasKey(x => x.Name);
 
-            refreshToken.HasIndex(rt => rt.SubjectId);
-            refreshToken.HasIndex(rt => rt.ClientId);
-            refreshToken.HasIndex(rt => rt.ExpirationTime); // Index for cleanup tasks
-            refreshToken.HasIndex(rt => rt.FamilyId); // Index for token family operations
+            entity.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            refreshToken.Property(rt => rt.SubjectId).IsRequired().HasMaxLength(256);
-            refreshToken.Property(rt => rt.ClientId).IsRequired().HasMaxLength(256);
-            refreshToken.Property(rt => rt.FamilyId).IsRequired().HasMaxLength(128);
+            entity.Property(x => x.DisplayName)
+                .HasMaxLength(200);
 
-            refreshToken.ToTable("RefreshTokens");
+            entity.Property(x => x.Description)
+                .HasMaxLength(1000);
+
+            entity.Property(x => x.UserClaimsJson)
+                .IsRequired();
+
+            entity.HasIndex(x => x.ShowInDiscoveryDocument);
         });
 
-        // --- Client Configuration ---
-        modelBuilder.Entity<CoreIdentClient>(client =>
+        modelBuilder.Entity<RefreshTokenEntity>(entity =>
         {
-            client.HasKey(c => c.ClientId);
-            client.Property(c => c.ClientId).HasMaxLength(256);
-            client.Property(c => c.ClientName).HasMaxLength(256);
+            entity.HasKey(x => x.Handle);
 
-            // Relationship: Client -> ClientSecrets (One-to-Many)
-            client.HasMany(c => c.ClientSecrets).WithOne(cs => cs.Client).HasForeignKey(cs => cs.ClientId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.Handle)
+                .IsRequired()
+                .HasMaxLength(500);
 
-            // Store collections as JSON strings (simple approach for collections of strings)
-            // Requires EF Core 7+ for primitive collections. For older versions, use Value Converters.
-            // EF Core 8+ has built-in support for JSON columns which is more robust.
-            // Using Value Converter approach here for broader compatibility initially.
+            entity.Property(x => x.SubjectId)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            var stringListConverter = new ValueConverter<List<string>, string>(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
-            );
-            var stringListComparer = new ValueComparer<List<string>>(
-                (c1, c2) => c1!.SequenceEqual(c2!),
-                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                c => c.ToList()
-            );
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            client.Property(c => c.AllowedGrantTypes)
-                  .HasConversion(stringListConverter)
-                  .Metadata.SetValueComparer(stringListComparer);
+            entity.Property(x => x.FamilyId)
+                .HasMaxLength(200);
 
-            client.Property(c => c.RedirectUris)
-                  .HasConversion(stringListConverter)
-                  .Metadata.SetValueComparer(stringListComparer);
+            entity.Property(x => x.ScopesJson)
+                .IsRequired();
 
-            client.Property(c => c.PostLogoutRedirectUris)
-                  .HasConversion(stringListConverter)
-                  .Metadata.SetValueComparer(stringListComparer);
-
-            client.Property(c => c.AllowedScopes)
-                  .HasConversion(stringListConverter)
-                  .Metadata.SetValueComparer(stringListComparer);
-
-            client.ToTable("Clients");
+            entity.HasIndex(x => x.SubjectId);
+            entity.HasIndex(x => x.ClientId);
+            entity.HasIndex(x => x.FamilyId);
+            entity.HasIndex(x => x.ExpiresAt);
         });
 
-        modelBuilder.Entity<CoreIdentClientSecret>(clientSecret =>
+        modelBuilder.Entity<UserGrantEntity>(entity =>
         {
-            clientSecret.HasKey(cs => cs.Id);
-            // Value should be hashed, can be long
-            clientSecret.Property(cs => cs.Type).HasMaxLength(50);
+            entity.HasKey(x => new { x.SubjectId, x.ClientId });
 
-            clientSecret.HasIndex(cs => cs.ClientId);
+            entity.Property(x => x.SubjectId)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            clientSecret.ToTable("ClientSecrets");
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.ScopesJson)
+                .IsRequired();
+
+            entity.HasIndex(x => x.ClientId);
+            entity.HasIndex(x => x.SubjectId);
+            entity.HasIndex(x => x.ExpiresAt);
         });
 
-        // --- Scope Configuration ---
-        modelBuilder.Entity<CoreIdentScope>(scope =>
+        modelBuilder.Entity<AuthorizationCodeEntity>(entity =>
         {
-            scope.HasKey(s => s.Name);
-            scope.Property(s => s.Name).HasMaxLength(256);
-            scope.Property(s => s.DisplayName).HasMaxLength(256);
+            entity.HasKey(x => x.Handle);
 
-            // Relationship: Scope -> ScopeClaims (One-to-Many)
-            scope.HasMany(s => s.UserClaims).WithOne(sc => sc.Scope).HasForeignKey(sc => sc.ScopeName).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.Handle)
+                .IsRequired()
+                .HasMaxLength(500);
 
-            scope.ToTable("Scopes");
+            entity.Property(x => x.ClientId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.SubjectId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.RedirectUri)
+                .IsRequired();
+
+            entity.Property(x => x.ScopesJson)
+                .IsRequired();
+
+            entity.Property(x => x.CodeChallenge)
+                .IsRequired();
+
+            entity.Property(x => x.CodeChallengeMethod)
+                .IsRequired();
+
+            entity.HasIndex(x => x.ClientId);
+            entity.HasIndex(x => x.SubjectId);
+            entity.HasIndex(x => x.ExpiresAt);
         });
 
-        modelBuilder.Entity<CoreIdentScopeClaim>(scopeClaim =>
+        modelBuilder.Entity<UserEntity>(entity =>
         {
-            scopeClaim.HasKey(sc => sc.Id);
-            scopeClaim.Property(sc => sc.Type).IsRequired().HasMaxLength(256);
+            entity.HasKey(x => x.Id);
 
-            scopeClaim.HasIndex(sc => sc.ScopeName);
+            entity.Property(x => x.Id)
+                .IsRequired()
+                .HasMaxLength(200);
 
-            scopeClaim.ToTable("ScopeClaims");
-        });
+            entity.Property(x => x.UserName)
+                .IsRequired()
+                .HasMaxLength(256);
 
-        // --- Authorization Code Configuration ---
-        modelBuilder.Entity<AuthorizationCode>(authCode =>
-        {
-            authCode.HasKey(ac => ac.CodeHandle);
-            authCode.Property(ac => ac.CodeHandle).HasMaxLength(128); // Adjust length as needed for code handle representation
+            entity.Property(x => x.NormalizedUserName)
+                .IsRequired()
+                .HasMaxLength(256);
 
-            authCode.Property(ac => ac.ClientId).IsRequired().HasMaxLength(256);
-            authCode.Property(ac => ac.SubjectId).IsRequired().HasMaxLength(256);
-            authCode.Property(ac => ac.RedirectUri).IsRequired(); // Redirect URIs can be long
+            entity.Property(x => x.PasswordHash)
+                .HasMaxLength(500);
 
-            authCode.HasIndex(ac => ac.ExpirationTime); // Index for cleanup tasks
+            entity.Property(x => x.ClaimsJson)
+                .IsRequired();
 
-            // Configure RequestedScopes using the existing JSON converter and comparer
-            var stringListConverterForAuthCode = new ValueConverter<List<string>, string>(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>()
-            );
-            var stringListComparerForAuthCode = new ValueComparer<List<string>>(
-                (c1, c2) => c1!.SequenceEqual(c2!),
-                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                c => c.ToList()
-            );
-
-            authCode.Property(ac => ac.RequestedScopes)
-                  .HasConversion(stringListConverterForAuthCode)
-                  .Metadata.SetValueComparer(stringListComparerForAuthCode);
-
-            authCode.ToTable("AuthorizationCodes");
+            entity.HasIndex(x => x.NormalizedUserName)
+                .IsUnique();
         });
     }
-} 
+}

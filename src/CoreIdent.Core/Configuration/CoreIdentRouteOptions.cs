@@ -2,108 +2,126 @@ using System;
 
 namespace CoreIdent.Core.Configuration;
 
-/// <summary>
-/// Configures the routes for CoreIdent endpoints.
-/// </summary>
-public class CoreIdentRouteOptions
+public sealed class CoreIdentRouteOptions
 {
-    /// <summary>
-    /// The base path for all CoreIdent endpoints. Defaults to "/auth".
-    /// Must start with a '/'.
-    /// </summary>
     public string BasePath { get; set; } = "/auth";
 
-    /// <summary>
-    /// Path for the user registration endpoint. Defaults to "register". Relative to BasePath.
-    /// </summary>
-    public string RegisterPath { get; set; } = "register";
-
-    /// <summary>
-    /// Path for the user login endpoint. Defaults to "login". Relative to BasePath.
-    /// </summary>
-    public string LoginPath { get; set; } = "login";
-
-    /// <summary>
-    /// Path for the token endpoint (issuance and refresh). Defaults to "token". Relative to BasePath.
-    /// </summary>
-    public string TokenPath { get; set; } = "token";
-
-    /// <summary>
-    /// Path for the token refresh specific endpoint (legacy/alternative). Defaults to "token/refresh". Relative to BasePath.
-    /// Note: The main /token endpoint is preferred for refresh grant_type.
-    /// </summary>
-    public string RefreshTokenPath { get; set; } = "token/refresh";
-
-    /// <summary>
-    /// Path for the OAuth/OIDC authorization endpoint. Defaults to "authorize". Relative to BasePath.
-    /// </summary>
     public string AuthorizePath { get; set; } = "authorize";
 
-    /// <summary>
-    /// Path for the OIDC UserInfo endpoint. Defaults to "userinfo". Relative to BasePath.
-    /// </summary>
-    public string UserInfoPath { get; set; } = "userinfo";
+    public string TokenPath { get; set; } = "token";
 
-    /// <summary>
-    /// Path for the OIDC Discovery configuration endpoint. Defaults to ".well-known/openid-configuration". Relative to the root, not BasePath.
-    /// </summary>
-    public string DiscoveryPath { get; set; } = ".well-known/openid-configuration";
+    public string RevocationPath { get; set; } = "revoke";
 
-    /// <summary>
-    /// Path for the OIDC JWKS endpoint. Defaults to ".well-known/jwks.json". Relative to the root, not BasePath.
-    /// </summary>
-    public string JwksPath { get; set; } = ".well-known/jwks.json";
+    public string IntrospectionPath { get; set; } = "introspect";
 
-    /// <summary>
-    /// Path for the consent endpoint. Defaults to "consent". Relative to BasePath.
-    /// </summary>
+    public string? DiscoveryPath { get; set; }
+
+    public string? JwksPath { get; set; }
+
     public string ConsentPath { get; set; } = "consent";
 
-    /// <summary>
-    /// Path for the end session/logout endpoint. Defaults to "endsession". Relative to BasePath.
-    /// </summary>
-    public string EndSessionPath { get; set; } = "endsession"; // Not yet implemented
+    public string UserInfoPath { get; set; } = "userinfo";
 
-    /// <summary>
-    /// Path for the user profile endpoint (e.g., "/me"). Defaults to "/me".
-    /// If the path starts with '/', it is relative to the root. Otherwise, it is relative to BasePath.
-    /// </summary>
-    public string UserProfilePath { get; set; } = "/me"; // Task 4
+    public string UserProfilePath { get; set; } = "/me";
 
-    // Helper method to combine BasePath and relative path
-    internal string Combine(string relativePath)
+    public string RegisterPath { get; set; } = "register";
+
+    public string LoginPath { get; set; } = "login";
+
+    public string ProfilePath { get; set; } = "profile";
+
+    public string CombineWithBase(string path)
     {
-        if (string.IsNullOrWhiteSpace(relativePath))
+        if (string.IsNullOrWhiteSpace(path))
         {
-            throw new ArgumentException("Relative path cannot be null or whitespace.", nameof(relativePath));
+            throw new ArgumentException("Path cannot be null or whitespace.", nameof(path));
         }
 
-        // Handle paths that should be relative to root, not base path
-        if (relativePath.StartsWith(".well-known/"))
+        if (path.StartsWith("/", StringComparison.Ordinal))
         {
-            // Ensure it starts with exactly one '/'
-            return "/" + relativePath.TrimStart('/');
+            return NormalizeRouteTemplate(path);
         }
 
-        if (string.IsNullOrWhiteSpace(BasePath) || !BasePath.StartsWith("/"))
-        {
-            throw new InvalidOperationException($"{nameof(BasePath)} must be configured and start with a '/'. Current value: '{BasePath}'");
-        }
-
-        // Use System.Uri to combine and normalize the path
-        // Ensure BasePath ends with a slash, but does not have double slashes
-        var basePathNormalized = BasePath.TrimEnd('/') + "/";
-        var relativePathNormalized = relativePath.TrimStart('/');
-
-        var baseUri = new Uri("http://temp-coreident-host" + basePathNormalized, UriKind.Absolute);
-        var combinedUri = new Uri(baseUri, relativePathNormalized);
-        var absolutePath = combinedUri.AbsolutePath;
-
-        // Remove trailing slash except for root
-        if (absolutePath.Length > 1 && absolutePath.EndsWith("/"))
-        {
-            absolutePath = absolutePath.TrimEnd('/');
-        }
-        return absolutePath;
+        var basePath = NormalizeBasePath(BasePath);
+        return NormalizeRouteTemplate($"{basePath}/{path}");
     }
-} 
+
+    public string GetDiscoveryPath(CoreIdentOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (!string.IsNullOrWhiteSpace(DiscoveryPath))
+        {
+            return NormalizeRouteTemplate(DiscoveryPath);
+        }
+
+        var issuer = GetValidatedIssuer(options);
+        return NormalizeRouteTemplate($"{issuer}/.well-known/openid-configuration");
+    }
+
+    public string GetJwksPath(CoreIdentOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (!string.IsNullOrWhiteSpace(JwksPath))
+        {
+            return NormalizeRouteTemplate(JwksPath);
+        }
+
+        var issuer = GetValidatedIssuer(options);
+        return NormalizeRouteTemplate($"{issuer}/.well-known/jwks.json");
+    }
+
+    private static string GetValidatedIssuer(CoreIdentOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.Issuer))
+        {
+            throw new InvalidOperationException($"{nameof(CoreIdentOptions.Issuer)} must be configured.");
+        }
+
+        if (!Uri.TryCreate(options.Issuer, UriKind.Absolute, out var issuerUri))
+        {
+            throw new InvalidOperationException($"{nameof(CoreIdentOptions.Issuer)} must be a valid absolute URI.");
+        }
+
+        var path = issuerUri.AbsolutePath;
+        if (string.IsNullOrWhiteSpace(path) || path == "/")
+        {
+            return string.Empty;
+        }
+
+        return path.TrimEnd('/');
+    }
+
+    private static string NormalizeBasePath(string basePath)
+    {
+        if (string.IsNullOrWhiteSpace(basePath) || !basePath.StartsWith("/", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"{nameof(BasePath)} must be configured and start with '/'. Current value: '{basePath}'");
+        }
+
+        return NormalizeRouteTemplate(basePath);
+    }
+
+    private static string NormalizeRouteTemplate(string template)
+    {
+        var trimmed = template.Trim();
+
+        if (!trimmed.StartsWith("/", StringComparison.Ordinal))
+        {
+            trimmed = "/" + trimmed;
+        }
+
+        while (trimmed.Contains("//", StringComparison.Ordinal))
+        {
+            trimmed = trimmed.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        if (trimmed.Length > 1 && trimmed.EndsWith("/", StringComparison.Ordinal))
+        {
+            trimmed = trimmed.TrimEnd('/');
+        }
+
+        return trimmed;
+    }
+}

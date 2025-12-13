@@ -1,315 +1,164 @@
-using CoreIdent.Core.Models;
-using CoreIdent.Core.Stores;
-using CoreIdent.Core.Tests.Infrastructure;
-using CoreIdent.Storage.EntityFrameworkCore.Stores;
-using Shouldly; // Using Shouldly for assertions
-using System.Threading.Tasks;
-using Xunit;
 using System.Security.Claims;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using System.Threading; // Added for CancellationToken
+using CoreIdent.Core.Models;
 using CoreIdent.Storage.EntityFrameworkCore;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
-using Moq;
-using CoreIdent.Core.Services;
-using Microsoft.Extensions.Logging;
+using CoreIdent.Storage.EntityFrameworkCore.Stores;
+using Microsoft.EntityFrameworkCore;
+using Shouldly;
 
 namespace CoreIdent.Core.Tests.Stores;
 
-public class EfUserStoreTests : SqliteInMemoryTestBase
+public class EfUserStoreTests : IDisposable
 {
-    private readonly EfUserStore _userStore;
-    private readonly Mock<IPasswordHasher> _mockPasswordHasher;
-    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
+    private readonly CoreIdentDbContext _context;
+    private readonly EfUserStore _store;
 
     public EfUserStoreTests()
     {
-        _mockPasswordHasher = new Mock<IPasswordHasher>();
-        _mockLoggerFactory = new Mock<ILoggerFactory>();
-        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
-                          .Returns(new Mock<ILogger>().Object);
-        _userStore = new EfUserStore(DbContext, _mockPasswordHasher.Object, _mockLoggerFactory.Object);
+        var options = new DbContextOptionsBuilder<CoreIdentDbContext>()
+            .UseSqlite("DataSource=:memory:")
+            .Options;
+
+        _context = new CoreIdentDbContext(options);
+        _context.Database.OpenConnection();
+        _context.Database.EnsureCreated();
+
+        _store = new EfUserStore(_context);
     }
 
-    // --- CreateUserAsync Tests ---
-
-    [Fact]
-    public async Task CreateUserAsync_ShouldAddUser_WhenValidUserProvided()
+    public void Dispose()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "test@example.com", NormalizedUserName = "TEST@EXAMPLE.COM" };
-
-        // Act
-        var result = await _userStore.CreateUserAsync(user, CancellationToken.None);
-        var foundUser = await DbContext.Users.FindAsync(new object[] { user.Id }, CancellationToken.None);
-
-        // Assert
-        result.ShouldBe(StoreResult.Success);
-        foundUser.ShouldNotBeNull();
-        foundUser.Id.ShouldBe(user.Id);
-        foundUser.UserName.ShouldBe("test@example.com");
-        foundUser.NormalizedUserName.ShouldBe("TEST@EXAMPLE.COM");
+        _context.Database.CloseConnection();
+        _context.Dispose();
     }
 
-    [Fact]
-    public async Task CreateUserAsync_ShouldReturnConflict_WhenUsernameExists()
+    private static CoreIdentUser CreateTestUser(string username = "test@example.com") => new()
     {
-        // Arrange
-        var existingUser = new CoreIdentUser { UserName = "test@example.com", NormalizedUserName = "TEST@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(existingUser, CancellationToken.None);
-        var newUser = new CoreIdentUser { UserName = "test@example.com", NormalizedUserName = "TEST@EXAMPLE.COM" }; // Same normalized username
-
-        // Act
-        var result = await _userStore.CreateUserAsync(newUser, CancellationToken.None);
-
-        // Assert
-        result.ShouldBe(StoreResult.Conflict);
-        DbContext.Users.Count().ShouldBe(1); // Only the first user should exist
-    }
-
-    // --- FindUserByIdAsync Tests ---
+        Id = Guid.NewGuid().ToString("N"),
+        UserName = username,
+        CreatedAt = DateTime.UtcNow
+    };
 
     [Fact]
-    public async Task FindUserByIdAsync_ShouldReturnUser_WhenUserExists()
+    public async Task FindByIdAsync_ReturnsNull_WhenUserDoesNotExist()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "findbyid@example.com", NormalizedUserName = "FINDBYID@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
+        var result = await _store.FindByIdAsync("nonexistent");
 
-        // Act
-        var foundUser = await _userStore.FindUserByIdAsync(user.Id, CancellationToken.None);
-
-        // Assert
-        foundUser.ShouldNotBeNull();
-        foundUser.Id.ShouldBe(user.Id);
-        foundUser.UserName.ShouldBe(user.UserName);
+        result.ShouldBeNull("should return null for non-existent user");
     }
 
     [Fact]
-    public async Task FindUserByIdAsync_ShouldReturnNull_WhenUserDoesNotExist()
+    public async Task CreateAsync_And_FindByIdAsync_WorkCorrectly()
     {
-        // Arrange
-        var nonExistentId = Guid.NewGuid().ToString();
+        var user = CreateTestUser();
 
-        // Act
-        var foundUser = await _userStore.FindUserByIdAsync(nonExistentId, CancellationToken.None);
+        await _store.CreateAsync(user);
+        var result = await _store.FindByIdAsync(user.Id);
 
-        // Assert
-        foundUser.ShouldBeNull();
-    }
-
-    // --- FindUserByUsernameAsync Tests ---
-
-    [Fact]
-    public async Task FindUserByUsernameAsync_ShouldReturnUser_WhenUserExists()
-    {
-        // Arrange
-        var normalizedUsername = "FINDBYUSERNAME@EXAMPLE.COM";
-        var user = new CoreIdentUser { UserName = "findbyusername@example.com", NormalizedUserName = normalizedUsername };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-
-        // Act
-        var foundUser = await _userStore.FindUserByUsernameAsync(normalizedUsername, CancellationToken.None);
-
-        // Assert
-        foundUser.ShouldNotBeNull();
-        foundUser.Id.ShouldBe(user.Id);
-        foundUser.NormalizedUserName.ShouldBe(normalizedUsername);
+        result.ShouldNotBeNull("should find created user");
+        result.UserName.ShouldBe(user.UserName, "username should match");
     }
 
     [Fact]
-    public async Task FindUserByUsernameAsync_ShouldReturnNull_WhenUserDoesNotExist()
+    public async Task CreateAsync_ThrowsException_WhenUsernameAlreadyExists()
     {
-        // Arrange
-        var nonExistentUsername = "DOESNOTEXIST@EXAMPLE.COM";
+        var user1 = CreateTestUser("test@example.com");
+        var user2 = CreateTestUser("test@example.com");
 
-        // Act
-        var foundUser = await _userStore.FindUserByUsernameAsync(nonExistentUsername, CancellationToken.None);
+        await _store.CreateAsync(user1);
 
-        // Assert
-        foundUser.ShouldBeNull();
+        await Should.ThrowAsync<DbUpdateException>(
+            () => _store.CreateAsync(user2),
+            "should throw when creating duplicate username due to unique index");
     }
 
-    // --- UpdateUserAsync Tests ---
     [Fact]
-    public async Task UpdateUserAsync_ShouldUpdateUserData()
+    public async Task FindByUsernameAsync_NormalizesAndMatches()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "update@example.com", NormalizedUserName = "UPDATE@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-        // Capture the concurrency stamp *after* creation (before update)
-        var originalStamp = user.ConcurrencyStamp;
+        var user = CreateTestUser("Test@Example.com");
+        await _store.CreateAsync(user);
 
-        user.PasswordHash = "newHash";
-        user.LockoutEnd = DateTimeOffset.UtcNow.AddDays(1);
+        var result = await _store.FindByUsernameAsync("test@example.com");
 
-        // Act
-        var result = await _userStore.UpdateUserAsync(user, CancellationToken.None);
-        // Fetch a fresh copy from the database, ignoring the DbContext cache
-        var updatedUser = await DbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id, CancellationToken.None);
-
-        // Assert
-        result.ShouldBe(StoreResult.Success);
-        updatedUser.ShouldNotBeNull("User should exist after update.");
-        updatedUser.PasswordHash.ShouldBe("newHash");
-        updatedUser.LockoutEnd.ShouldNotBeNull();
-        // Assert that the stamp fetched from DB after update is different from the original one
-        updatedUser.ConcurrencyStamp.ShouldNotBeNullOrEmpty();
-        updatedUser.ConcurrencyStamp.ShouldNotBe(originalStamp, "Concurrency stamp should change on update.");
+        result.ShouldNotBeNull("should find user by normalized username");
+        result.Id.ShouldBe(user.Id, "id should match");
     }
 
-    // --- DeleteUserAsync Tests ---
     [Fact]
-    public async Task DeleteUserAsync_ShouldRemoveUser()
+    public async Task UpdateAsync_UpdatesUser()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "delete@example.com", NormalizedUserName = "DELETE@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
+        var user = CreateTestUser();
+        await _store.CreateAsync(user);
 
-        // Act
-        var result = await _userStore.DeleteUserAsync(user, CancellationToken.None);
-        var foundUser = await DbContext.Users.FindAsync(new object[] { user.Id }, CancellationToken.None);
+        user.UserName = "updated@example.com";
+        user.UpdatedAt = DateTime.UtcNow;
+        await _store.UpdateAsync(user);
 
-        // Assert
-        result.ShouldBe(StoreResult.Success);
-        foundUser.ShouldBeNull();
+        var result = await _store.FindByIdAsync(user.Id);
+        result.ShouldNotBeNull();
+        result.UserName.ShouldBe("updated@example.com", "username should be updated");
     }
 
-    // --- Claim Management Tests ---
+    [Fact]
+    public async Task UpdateAsync_ThrowsException_WhenUserDoesNotExist()
+    {
+        var user = CreateTestUser();
+
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => _store.UpdateAsync(user),
+            "should throw when updating non-existent user");
+    }
 
     [Fact]
-    public async Task AddClaimsAsync_And_GetClaimsAsync_ShouldWorkCorrectly()
+    public async Task DeleteAsync_RemovesUser()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "claims@example.com", NormalizedUserName = "CLAIMS@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-        var claimsToAdd = new List<Claim>
+        var user = CreateTestUser();
+        await _store.CreateAsync(user);
+
+        await _store.DeleteAsync(user.Id);
+
+        (await _store.FindByIdAsync(user.Id)).ShouldBeNull("user should be deleted");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DoesNotThrow_WhenUserDoesNotExist()
+    {
+        await Should.NotThrowAsync(
+            () => _store.DeleteAsync("nonexistent"),
+            "should not throw when deleting non-existent user");
+    }
+
+    [Fact]
+    public async Task GetClaimsAsync_And_SetClaimsAsync_WorkCorrectly()
+    {
+        var user = CreateTestUser();
+        await _store.CreateAsync(user);
+
+        var claims = new[]
         {
-            new Claim("test_type1", "value1"),
-            new Claim("test_type2", "value2")
+            new Claim("sub", user.Id),
+            new Claim("email", user.UserName)
         };
 
-        // Act
-        await _userStore.AddClaimsAsync(user, claimsToAdd, CancellationToken.None);
-        var retrievedClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
+        await _store.SetClaimsAsync(user.Id, claims);
+        var result = await _store.GetClaimsAsync(user.Id);
 
-        // Assert
-        retrievedClaims.Count.ShouldBe(2);
-        retrievedClaims.ShouldContain(c => c.Type == "test_type1" && c.Value == "value1");
-        retrievedClaims.ShouldContain(c => c.Type == "test_type2" && c.Value == "value2");
+        result.Count.ShouldBe(2, "should return stored claims");
+        result.ShouldContain(c => c.Type == "email" && c.Value == user.UserName, "should contain email claim");
     }
 
     [Fact]
-    public async Task RemoveClaimsAsync_ShouldRemoveSpecificClaims()
+    public async Task GetClaimsAsync_ReturnsEmpty_WhenUserDoesNotExist()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "removeclaims@example.com", NormalizedUserName = "REMOVECLAIMS@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-        var claimsToAdd = new List<Claim>
-        {
-            new Claim("test_type1", "value1"),
-            new Claim("test_type2", "value2"),
-            new Claim("test_type3", "value3")
-        };
-        await _userStore.AddClaimsAsync(user, claimsToAdd, CancellationToken.None);
-        var claimsToRemove = new List<Claim>
-        {
-            new Claim("test_type1", "value1"),
-            new Claim("test_type3", "value3")
-        };
+        var claims = await _store.GetClaimsAsync("nonexistent");
 
-        // Act
-        await _userStore.RemoveClaimsAsync(user, claimsToRemove, CancellationToken.None);
-        var remainingClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
-
-        // Assert
-        remainingClaims.Count.ShouldBe(1);
-        remainingClaims.Single().Type.ShouldBe("test_type2");
-        remainingClaims.Single().Value.ShouldBe("value2");
+        claims.Count.ShouldBe(0, "should return empty claims for missing user");
     }
 
     [Fact]
-    public async Task ReplaceClaimAsync_ShouldModifyExistingClaim()
+    public async Task SetClaimsAsync_ThrowsException_WhenUserDoesNotExist()
     {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "replaceclaim@example.com", NormalizedUserName = "REPLACECLAIM@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-        var originalClaim = new Claim("original_type", "original_value");
-        await _userStore.AddClaimsAsync(user, new[] { originalClaim }, CancellationToken.None);
-        var newClaim = new Claim("new_type", "new_value");
-
-        // Act
-        await _userStore.ReplaceClaimAsync(user, originalClaim, newClaim, CancellationToken.None);
-        var updatedClaims = await _userStore.GetClaimsAsync(user, CancellationToken.None);
-
-        // Assert
-        updatedClaims.Count.ShouldBe(1);
-        updatedClaims.Single().Type.ShouldBe("new_type");
-        updatedClaims.Single().Value.ShouldBe("new_value");
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => _store.SetClaimsAsync("nonexistent", [new Claim("sub", "x")]),
+            "should throw when setting claims for missing user");
     }
-
-    [Fact]
-    public async Task GetUsersForClaimAsync_ShouldReturnUsersWithClaim()
-    {
-        // Arrange
-        var claim = new Claim("role", "admin");
-        var user1 = new CoreIdentUser { UserName = "admin1@example.com", NormalizedUserName = "ADMIN1@EXAMPLE.COM" };
-        var user2 = new CoreIdentUser { UserName = "user@example.com", NormalizedUserName = "USER@EXAMPLE.COM" };
-        var user3 = new CoreIdentUser { UserName = "admin2@example.com", NormalizedUserName = "ADMIN2@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user1, CancellationToken.None);
-        await _userStore.CreateUserAsync(user2, CancellationToken.None);
-        await _userStore.CreateUserAsync(user3, CancellationToken.None);
-        await _userStore.AddClaimsAsync(user1, new[] { claim }, CancellationToken.None);
-        await _userStore.AddClaimsAsync(user3, new[] { claim }, CancellationToken.None);
-
-        // Act
-        var usersWithClaim = await _userStore.GetUsersForClaimAsync(claim, CancellationToken.None);
-
-        // Assert
-        usersWithClaim.Count.ShouldBe(2);
-        usersWithClaim.Select(u => u.Id).ShouldContain(user1.Id);
-        usersWithClaim.Select(u => u.Id).ShouldContain(user3.Id);
-        usersWithClaim.Select(u => u.Id).ShouldNotContain(user2.Id);
-    }
-
-    // --- Lockout Tests ---
-    // Basic tests; relies on UpdateUserAsync to persist changes from Increment/Reset/Set methods
-    [Fact]
-    public async Task LockoutMethods_ShouldUpdateProperties_InMemory()
-    {
-        // Arrange
-        var user = new CoreIdentUser { UserName = "lockout@example.com", NormalizedUserName = "LOCKOUT@EXAMPLE.COM" };
-        await _userStore.CreateUserAsync(user, CancellationToken.None);
-
-        // Act & Assert - Increment
-        var count = await _userStore.IncrementAccessFailedCountAsync(user, CancellationToken.None);
-        count.ShouldBe(1);
-        user.AccessFailedCount.ShouldBe(1);
-
-        // Act & Assert - Reset
-        await _userStore.ResetAccessFailedCountAsync(user, CancellationToken.None);
-        user.AccessFailedCount.ShouldBe(0);
-
-        // Act & Assert - SetLockoutEnd
-        var lockoutEnd = DateTimeOffset.UtcNow.AddMinutes(5);
-        await _userStore.SetLockoutEndDateAsync(user, lockoutEnd, CancellationToken.None);
-        user.LockoutEnd.ShouldBe(lockoutEnd);
-
-        // Act & Assert - SetLockoutEnabled
-        await _userStore.SetLockoutEnabledAsync(user, true, CancellationToken.None);
-        user.LockoutEnabled.ShouldBeTrue();
-
-        // Important: Assert these changes are persisted AFTER calling UpdateUserAsync
-        var updateResult = await _userStore.UpdateUserAsync(user, CancellationToken.None);
-        updateResult.ShouldBe(StoreResult.Success);
-
-        var persistedUser = await _userStore.FindUserByIdAsync(user.Id, CancellationToken.None);
-        persistedUser.ShouldNotBeNull();
-        persistedUser.AccessFailedCount.ShouldBe(0); // Last state before UpdateUserAsync
-        persistedUser.LockoutEnd.ShouldBe(lockoutEnd);
-        persistedUser.LockoutEnabled.ShouldBeTrue();
-    }
-} 
+}

@@ -1,152 +1,151 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
+using CoreIdent.Storage.EntityFrameworkCore.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
 /// <summary>
-/// Entity Framework Core implementation of IRefreshTokenStore.
+/// EF Core implementation of <see cref="IRefreshTokenStore"/>.
 /// </summary>
-public class EfRefreshTokenStore : IRefreshTokenStore
+public sealed class EfRefreshTokenStore : IRefreshTokenStore
 {
-    // Revert to injecting DbContext directly
-    protected readonly CoreIdentDbContext Context;
-    protected readonly ILogger<EfRefreshTokenStore> Logger;
+    private readonly CoreIdentDbContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public EfRefreshTokenStore(CoreIdentDbContext context, ILogger<EfRefreshTokenStore> logger)
+    public EfRefreshTokenStore(CoreIdentDbContext context)
+        : this(context, timeProvider: null)
     {
-        Context = context ?? throw new ArgumentNullException(nameof(context));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public virtual async Task StoreRefreshTokenAsync(CoreIdentRefreshToken token, CancellationToken cancellationToken)
+    public EfRefreshTokenStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    /// <inheritdoc />
+    public async Task<string> StoreAsync(CoreIdentRefreshToken token, CancellationToken ct = default)
+    {
         ArgumentNullException.ThrowIfNull(token);
 
-        // Ensure HashedHandle is properly set if available
-        if (!string.IsNullOrEmpty(token.HashedHandle) && string.IsNullOrEmpty(token.Handle))
+        if (string.IsNullOrWhiteSpace(token.Handle))
         {
-            token.Handle = token.HashedHandle; // Use HashedHandle as the primary key if Handle is empty
-        }
-        else if (string.IsNullOrEmpty(token.HashedHandle) && !string.IsNullOrEmpty(token.Handle))
-        {
-            token.HashedHandle = token.Handle; // Set HashedHandle for consistency if not already set
+            token.Handle = GenerateHandle();
         }
 
-        Logger.LogDebug("Attempting to add RefreshToken to context. Handle: {Handle}, HashedHandle: {HashedHandle}, SubjectId: {SubjectId}, ClientId: {ClientId}, FamilyId: {FamilyId}",
-            token.Handle, token.HashedHandle, token.SubjectId, token.ClientId, token.FamilyId);
+        var entity = ToEntity(token);
+        _context.RefreshTokens.Add(entity);
+        await _context.SaveChangesAsync(ct);
 
-        Context.RefreshTokens.Add(token);
-        
-        try
-        {
-            Logger.LogInformation("Calling SaveChangesAsync for RefreshToken Handle: {Handle}", token.Handle);
-            var changes = await Context.SaveChangesAsync(cancellationToken); 
-            Logger.LogInformation("SaveChangesAsync SUCCESS for RefreshToken Handle: {Handle}. Changes saved: {Changes}", token.Handle, changes);
-        }
-        catch(Exception ex)
-        {
-            Logger.LogError(ex, "SaveChangesAsync FAILED for RefreshToken Handle: {Handle}. Entity State: {State}", 
-                token.Handle, Context.Entry(token).State);
-            // Re-throw the exception so the service layer knows storage failed.
-            throw; 
-        }
-
-        Logger.LogDebug("Successfully stored refresh token. Handle: {HandlePrefix}", 
-            token.Handle.Substring(0, Math.Min(6, token.Handle.Length)));
+        return token.Handle;
     }
 
-    public virtual async Task<CoreIdentRefreshToken?> GetRefreshTokenAsync(string tokenHandle, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<CoreIdentRefreshToken?> GetAsync(string handle, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        ArgumentNullException.ThrowIfNull(tokenHandle);
-
-        // Use injected context
-        var token = await Context.RefreshTokens.FirstOrDefaultAsync(
-            rt => rt.Handle == tokenHandle, 
-            cancellationToken);
-        
-        if (token == null)
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            // Log using raw handle prefix for consistency
-            Logger.LogDebug("Refresh token not found with handle: {HandlePrefix}", 
-                tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
+            return null;
         }
-        
-        return token;
+
+        var entity = await _context.RefreshTokens
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Handle == handle, ct);
+
+        return entity is null ? null : ToModel(entity);
     }
 
-    public virtual async Task RemoveRefreshTokenAsync(string tokenHandle, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<bool> RevokeAsync(string handle, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        ArgumentNullException.ThrowIfNull(tokenHandle);
-
-        // Use injected context
-        var token = await Context.RefreshTokens.FirstOrDefaultAsync(
-            rt => rt.Handle == tokenHandle, 
-            cancellationToken);
-            
-        if (token != null)
+        if (string.IsNullOrWhiteSpace(handle))
         {
-            // Mark as consumed 
-            token.ConsumedTime = DateTime.UtcNow;
-            Context.RefreshTokens.Update(token);
+            return false;
+        }
 
-            await Context.SaveChangesAsync(cancellationToken);
-            
-            // Log using raw handle prefix
-            Logger.LogDebug("Marked refresh token as consumed. Handle: {HandlePrefix}",
-                tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
-        }
-        else
+        var entity = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Handle == handle, ct);
+        if (entity is null)
         {
-             // Log using raw handle prefix
-            Logger.LogDebug("No token found to consume with handle: {HandlePrefix}",
-                tokenHandle.Substring(0, Math.Min(6, tokenHandle.Length)));
+            return false;
         }
-        // If token not found, do nothing (idempotent) 
+
+        entity.IsRevoked = true;
+        await _context.SaveChangesAsync(ct);
+        return true;
     }
 
-    public virtual async Task RevokeTokenFamilyAsync(string familyId, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task RevokeFamilyAsync(string familyId, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
-
-        // Use injected context
-        var tokensToRevoke = await Context.RefreshTokens
-            .Where(t => t.FamilyId == familyId && !t.ConsumedTime.HasValue)
-            .ToListAsync(cancellationToken);
-
-        // Mark all tokens as consumed
-        foreach (var token in tokensToRevoke)
+        if (string.IsNullOrWhiteSpace(familyId))
         {
-            token.ConsumedTime = DateTime.UtcNow;
-            Context.RefreshTokens.Update(token);
+            return;
         }
 
-        if (tokensToRevoke.Any())
-        {
-            await Context.SaveChangesAsync(cancellationToken);
-            Logger.LogWarning("Revoked {Count} refresh tokens from family {FamilyId}", 
-                tokensToRevoke.Count, familyId);
-        }
+        await _context.RefreshTokens
+            .Where(t => t.FamilyId == familyId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsRevoked, true), ct);
     }
 
-    public virtual async Task<IEnumerable<CoreIdentRefreshToken>> FindTokensBySubjectIdAsync(string subjectId, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<bool> ConsumeAsync(string handle, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        if (string.IsNullOrWhiteSpace(handle))
+        {
+            return false;
+        }
 
-        // Use injected context
-        return await Context.RefreshTokens
-            .Where(t => t.SubjectId == subjectId)
-            .ToListAsync(cancellationToken);
+        var entity = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Handle == handle, ct);
+        if (entity is null || entity.ConsumedAt.HasValue)
+        {
+            return false;
+        }
+
+        entity.ConsumedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        await _context.SaveChangesAsync(ct);
+        return true;
     }
-} 
+
+    /// <inheritdoc />
+    public async Task CleanupExpiredAsync(CancellationToken ct = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        await _context.RefreshTokens
+            .Where(t => t.ExpiresAt <= now)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    private static CoreIdentRefreshToken ToModel(RefreshTokenEntity entity) => new()
+    {
+        Handle = entity.Handle,
+        SubjectId = entity.SubjectId,
+        ClientId = entity.ClientId,
+        FamilyId = entity.FamilyId,
+        Scopes = JsonSerializer.Deserialize<List<string>>(entity.ScopesJson) ?? [],
+        CreatedAt = entity.CreatedAt,
+        ExpiresAt = entity.ExpiresAt,
+        ConsumedAt = entity.ConsumedAt,
+        IsRevoked = entity.IsRevoked
+    };
+
+    private static RefreshTokenEntity ToEntity(CoreIdentRefreshToken token) => new()
+    {
+        Handle = token.Handle,
+        SubjectId = token.SubjectId,
+        ClientId = token.ClientId,
+        FamilyId = token.FamilyId,
+        ScopesJson = JsonSerializer.Serialize(token.Scopes),
+        CreatedAt = token.CreatedAt,
+        ExpiresAt = token.ExpiresAt,
+        ConsumedAt = token.ConsumedAt,
+        IsRevoked = token.IsRevoked
+    };
+
+    private static string GenerateHandle()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+}
