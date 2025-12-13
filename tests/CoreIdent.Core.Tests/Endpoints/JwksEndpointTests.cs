@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Shouldly;
 using System.Net;
@@ -69,6 +70,10 @@ public class JwksEndpointTests
     private static async Task<IHost> CreateHostAsync(Action<IServiceCollection> configure)
     {
         var builder = new HostBuilder()
+            .ConfigureLogging(logging =>
+            {
+                logging.AddFilter("CoreIdent.Core.Services.SymmetricSigningKeyProvider", LogLevel.Error);
+            })
             .ConfigureWebHost(webHost =>
             {
                 webHost
