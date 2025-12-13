@@ -38,6 +38,7 @@ public static class TokenEndpointExtensions
         ITokenService tokenService,
         IRefreshTokenStore refreshTokenStore,
         IUserStore userStore,
+        IPasswordHasher passwordHasher,
         IAuthorizationCodeStore authorizationCodeStore,
         ICustomClaimsProvider customClaimsProvider,
         IOptions<CoreIdentOptions> coreOptions,
@@ -99,8 +100,122 @@ public static class TokenEndpointExtensions
                 client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
             GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
                 client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
+            GrantTypes.Password => await HandlePasswordGrantAsync(
+                client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, options, timeProvider, logger, ct),
             _ => TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.")
         };
+    }
+
+    private static async Task<IResult> HandlePasswordGrantAsync(
+        CoreIdentClient client,
+        TokenRequest tokenRequest,
+        ITokenService tokenService,
+        IRefreshTokenStore refreshTokenStore,
+        IUserStore userStore,
+        IPasswordHasher passwordHasher,
+        ICustomClaimsProvider customClaimsProvider,
+        CoreIdentOptions options,
+        TimeProvider timeProvider,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        logger.LogWarning("Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE.");
+
+        if (string.IsNullOrWhiteSpace(tokenRequest.Username))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The username parameter is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenRequest.Password))
+        {
+            return TokenError(TokenErrors.InvalidRequest, "The password parameter is required.");
+        }
+
+        var user = await userStore.FindByUsernameAsync(tokenRequest.Username, ct);
+        if (user is null)
+        {
+            return TokenError(TokenErrors.InvalidGrant, "Invalid resource owner credentials.");
+        }
+
+        if (string.IsNullOrWhiteSpace(user.PasswordHash) || !passwordHasher.VerifyHashedPassword(user, user.PasswordHash, tokenRequest.Password))
+        {
+            return TokenError(TokenErrors.InvalidGrant, "Invalid resource owner credentials.");
+        }
+
+        var requestedScopes = ParseScopes(tokenRequest.Scope);
+        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes);
+
+        if (requestedScopes.Count > 0 && grantedScopes.Count == 0)
+        {
+            return TokenError(TokenErrors.InvalidScope, "None of the requested scopes are allowed for this client.");
+        }
+
+        var accessTokenLifetime = TimeSpan.FromSeconds(client.AccessTokenLifetimeSeconds);
+        var accessTokenExpiresAt = timeProvider.GetUtcNow().Add(accessTokenLifetime);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id),
+            new("client_id", client.ClientId)
+        };
+
+        if (grantedScopes.Count > 0)
+        {
+            claims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
+        }
+
+        var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
+        claims.AddRange(userClaims);
+
+        var claimsContext = new ClaimsContext
+        {
+            SubjectId = user.Id,
+            ClientId = client.ClientId,
+            Scopes = grantedScopes,
+            GrantType = GrantTypes.Password
+        };
+
+        var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
+        claims.AddRange(customClaims);
+
+        var accessToken = await tokenService.CreateJwtAsync(
+            options.Issuer!,
+            options.Audience!,
+            claims,
+            accessTokenExpiresAt,
+            ct);
+
+        string? refreshTokenHandle = null;
+        if (client.AllowOfflineAccess && grantedScopes.Contains(StandardScopes.OfflineAccess, StringComparer.Ordinal))
+        {
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            var refreshTokenLifetime = TimeSpan.FromSeconds(client.RefreshTokenLifetimeSeconds);
+            refreshTokenHandle = GenerateRefreshTokenHandle();
+
+            var refreshToken = new CoreIdentRefreshToken
+            {
+                Handle = refreshTokenHandle,
+                SubjectId = user.Id,
+                ClientId = client.ClientId,
+                FamilyId = Guid.NewGuid().ToString("N"),
+                Scopes = grantedScopes,
+                CreatedAt = now,
+                ExpiresAt = now.Add(refreshTokenLifetime)
+            };
+
+            await refreshTokenStore.StoreAsync(refreshToken, ct);
+        }
+
+        logger.LogInformation("Issued tokens for subject {SubjectId} via password grant", user.Id);
+
+        return Results.Ok(new TokenResponse
+        {
+            AccessToken = accessToken,
+            TokenType = "Bearer",
+            ExpiresIn = (int)accessTokenLifetime.TotalSeconds,
+            RefreshToken = refreshTokenHandle,
+            Scope = grantedScopes.Count > 0 ? string.Join(" ", grantedScopes) : null
+        });
     }
 
     private static async Task<IResult> HandleAuthorizationCodeAsync(
