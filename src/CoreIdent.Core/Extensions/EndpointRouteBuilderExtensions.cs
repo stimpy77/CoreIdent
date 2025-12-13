@@ -48,8 +48,12 @@ public static class EndpointRouteBuilderExtensions
         var jwksPath = routeOptions.GetJwksPath(coreOptions);
         endpoints.MapCoreIdentDiscoveryEndpoints(jwksPath);
 
+        var tokenPath = routeOptions.CombineWithBase(routeOptions.TokenPath);
+        endpoints.MapCoreIdentTokenEndpoint(tokenPath);
+
         var revokePath = routeOptions.CombineWithBase(routeOptions.RevocationPath);
-        endpoints.MapCoreIdentTokenManagementEndpoints(revokePath);
+        var introspectPath = routeOptions.CombineWithBase(routeOptions.IntrospectionPath);
+        endpoints.MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath);
 
         return endpoints;
     }

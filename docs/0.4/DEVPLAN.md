@@ -362,7 +362,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.5: Token Issuance Endpoint
 
 *   **Component:** Token Endpoint
-    - [ ] (L3) Create `POST /auth/token` endpoint in `TokenEndpointExtensions.cs`
+    - [x] (L3) Create `POST /auth/token` endpoint in `TokenEndpointExtensions.cs`
         *   *Guidance:* Support `grant_type=client_credentials`
         *   *Guidance:* Support `grant_type=refresh_token`
         *   *Guidance:* `grant_type=authorization_code` is implemented in Feature 1.7 (requires `/auth/authorize`)
@@ -372,8 +372,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         *   *Guidance:* Issue refresh tokens using `IRefreshTokenStore`
         *   *Guidance:* Implement refresh token rotation (new token on each use)
 *   **Component:** Token Response Models
-    - [ ] (L1) Create `TokenRequest` record
-    - [ ] (L1) Create `TokenResponse` record
+    - [x] (L1) Create `TokenRequest` record
+    - [x] (L1) Create `TokenResponse` record
         ```csharp
         public record TokenResponse(
             string AccessToken,
@@ -385,31 +385,31 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         );
         ```
 *   **Component:** Token Service Enhancement
-    - [ ] (L2) Extend `ITokenService` to support scope claims
-    - [ ] (L2) Add `jti` claim generation for all tokens
-    - [ ] (L2) Add configurable token lifetimes per client
+    - [x] (L2) Extend `ITokenService` to support scope claims
+    - [x] (L2) Add `jti` claim generation for all tokens
+    - [x] (L2) Add configurable token lifetimes per client
 *   **Component:** Custom Claims Provider
-    - [ ] (L1) Create `ICustomClaimsProvider` interface
+    - [x] (L1) Create `ICustomClaimsProvider` interface
         *   *Guidance:* Provide a hook to add/transform claims based on subject, client, and granted scopes
-    - [ ] (L2) Integrate `ICustomClaimsProvider` into token issuance
+    - [x] (L2) Integrate `ICustomClaimsProvider` into token issuance
 *   **Component:** Refresh Token Rotation
-    - [ ] (L3) Implement rotation: consume old token, issue new token with same family
-    - [ ] (L3) Implement theft detection: if consumed token is reused, revoke entire family
+    - [x] (L3) Implement rotation: consume old token, issue new token with same family
+    - [x] (L3) Implement theft detection: if consumed token is reused, revoke entire family
 *   **Test Case (Unit):**
-    - [ ] (L1) Token response includes all required fields
-    - [ ] (L2) Refresh token rotation creates new token in same family
+    - [x] (L1) Token response includes all required fields
+    - [x] (L2) Refresh token rotation creates new token in same family
 *   **Test Case (Integration):**
-    - [ ] (L2) `POST /auth/token` with `client_credentials` returns access token
-    - [ ] (L2) `POST /auth/token` with `refresh_token` returns new tokens
-    - [ ] (L3) Refresh token rotation works correctly
-    - [ ] (L3) Reusing consumed refresh token revokes family (theft detection)
-    - [ ] (L1) Invalid client credentials return 401
-    - [ ] (L1) Invalid grant returns 400
-    - [ ] (L2) Client authentication works in token endpoints *(from Feature 0.3)*
+    - [x] (L2) `POST /auth/token` with `client_credentials` returns access token
+    - [x] (L2) `POST /auth/token` with `refresh_token` returns new tokens
+    - [x] (L3) Refresh token rotation works correctly
+    - [x] (L3) Reusing consumed refresh token revokes family (theft detection)
+    - [x] (L1) Invalid client credentials return 401
+    - [x] (L1) Invalid grant returns 400
+    - [x] (L2) Client authentication works in token endpoints *(from Feature 0.3)*
 *   **Documentation:**
-    - [ ] (L1) Document token endpoint usage
-    - [ ] (L2) Document refresh token rotation behavior
-    - [ ] (L1) Document client configuration options *(from Feature 0.3)*
+    - [x] (L1) Document token endpoint usage
+    - [x] (L2) Document refresh token rotation behavior
+    - [x] (L1) Document client configuration options *(from Feature 0.3)*
 
 ---
 
@@ -435,7 +435,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L1) Add `RevokedToken` entity to `CoreIdentDbContext`
     - [x] (L2) Inject `TimeProvider` for testability (consistent with in-memory store)
 *   **Component:** Revocation Endpoint
-    - [~] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs` *(endpoint exists; client auth validation requires Feature 0.3)*
+    - [x] (L3) Create `POST /auth/revoke` endpoint in `TokenManagementEndpointsExtensions.cs`
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Support both access tokens and refresh tokens
         *   *Guidance:* For refresh tokens: mark as consumed in `IRefreshTokenStore`
@@ -447,21 +447,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L3) Create token validation middleware that checks revocation store
     - [x] (L3) Integrate `ITokenRevocationStore` check in protected endpoint middleware
 *   **Component:** Revocation Endpoint Enhancement (Post-0.5)
-    - [ ] (L2) Update revocation endpoint to use full `IRefreshTokenStore` for refresh token revocation
-    - [ ] (L2) Validate client owns the token being revoked
+    - [x] (L2) Update revocation endpoint to use full `IRefreshTokenStore` for refresh token revocation
+    - [x] (L2) Validate client owns the token being revoked
 *   **Test Case (Unit):**
     - [x] (L1) `InMemoryTokenRevocationStore` stores and retrieves revocations correctly
     - [x] (L1) Cleanup removes only expired entries
 *   **Test Case (Integration):**
-    - [ ] (L2) `POST /auth/revoke` with valid refresh token invalidates it *(requires Feature 0.5)*
+    - [x] (L2) `POST /auth/revoke` with valid refresh token invalidates it *(requires Feature 0.5)*
     - [x] (L2) `POST /auth/revoke` with valid access token adds to revocation list
     - [x] (L3) Revoked access token is rejected by protected endpoints
-    - [ ] (L2) Revoked refresh token cannot be used for token refresh *(requires Feature 0.5)*
+    - [x] (L2) Revoked refresh token cannot be used for token refresh *(requires Feature 0.5)*
     - [x] (L1) Invalid token revocation returns 200 OK (no information leakage)
-    - [~] (L2) Confidential client must authenticate to revoke tokens *(checks credentials exist; validation against IClientStore requires Feature 0.3)*
+    - [x] (L2) Confidential client must authenticate to revoke tokens
 *   **Documentation:**
-    - [ ] (L1) Add revocation endpoint to README.md
-    - [ ] (L1) Document revocation behavior and client requirements
+    - [x] (L1) Add revocation endpoint to README.md
+    - [x] (L1) Document revocation behavior and client requirements
 
 ---
 
@@ -470,7 +470,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** Introspection of refresh tokens requires Feature 0.5 (Token Issuance) to be complete.
 
 *   **Component:** Introspection Endpoint
-    - [ ] (L3) Create `POST /auth/introspect` endpoint in `TokenManagementEndpointsExtensions.cs`
+    - [x] (L3) Create `POST /auth/introspect` endpoint in `TokenManagementEndpointsExtensions.cs`
         *   *Guidance:* Accept `token` and optional `token_type_hint` parameters
         *   *Guidance:* Require client authentication (resource server credentials)
         *   *Guidance:* Validate token signature, expiry, revocation status
@@ -491,20 +491,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             }
             ```
 *   **Component:** Introspection Response Models
-    - [ ] (L1) Create `TokenIntrospectionRequest` record
-    - [ ] (L1) Create `TokenIntrospectionResponse` record
+    - [x] (L1) Create `TokenIntrospectionRequest` record
+    - [x] (L1) Create `TokenIntrospectionResponse` record
 *   **Test Case (Integration):**
-    - [ ] (L2) Valid access token returns `active: true` with claims
-    - [ ] (L1) Expired token returns `active: false`
-    - [ ] (L2) Revoked token returns `active: false`
-    - [ ] (L1) Invalid token returns `active: false`
-    - [ ] (L1) Unauthenticated request returns 401
-    - [ ] (L2) Response includes all standard claims
-    - [ ] (L2) Valid refresh token returns `active: true` *(requires Feature 0.5)*
-    - [ ] (L2) Revoked/consumed refresh token returns `active: false` *(requires Feature 0.5)*
+    - [x] (L2) Valid access token returns `active: true` with claims
+    - [x] (L1) Expired token returns `active: false`
+    - [x] (L2) Revoked token returns `active: false`
+    - [x] (L1) Invalid token returns `active: false`
+    - [x] (L1) Unauthenticated request returns 401
+    - [x] (L2) Response includes all standard claims
+    - [x] (L2) Valid refresh token returns `active: true` *(requires Feature 0.5)*
+    - [x] (L2) Revoked/consumed refresh token returns `active: false` *(requires Feature 0.5)*
 *   **Documentation:**
-    - [ ] (L1) Add introspection endpoint to README.md
-    - [ ] (L2) Document resource server integration pattern
+    - [x] (L1) Add introspection endpoint to README.md
+    - [x] (L2) Document resource server integration pattern
 
 ---
 
@@ -1599,11 +1599,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Asymmetric Keys (RS256/ES256) | 0 | 0.2 | ✅ Complete |
 | Client Store & Model | 0 | 0.3 | ✅ Complete |
 | Scope & Core Models | 0 | 0.4 | ✅ Complete |
-| Core Registration & Routing | 0 | 0.4.1 | 🔲 Planned |
-| OIDC Discovery Metadata | 0 | 0.4.2 | 🔲 Planned |
-| User Model & Stores | 0 | 0.4.3 | 🔲 Planned |
-| Token Issuance Endpoint | 0 | 0.5 | 🔲 Planned |
-| Token Revocation (RFC 7009) | 0 | 0.6 | 🟡 Partial (access tokens done; refresh tokens pending 0.4-0.5) |
+| Core Registration & Routing | 0 | 0.4.1 | ✅ Complete |
+| OIDC Discovery Metadata | 0 | 0.4.2 | ✅ Complete |
+| User Model & Stores | 0 | 0.4.3 | ✅ Complete |
+| Token Issuance Endpoint | 0 | 0.5 | ✅ Complete |
+| Token Revocation (RFC 7009) | 0 | 0.6 | ✅ Complete |
 | Token Introspection (RFC 7662) | 0 | 0.7 | 🔲 Planned |
 | Test Infrastructure | 0 | 0.8 | 🔲 Planned |
 | OpenTelemetry Metrics | 0 | 0.9 | 🔲 Planned |
@@ -1644,18 +1644,18 @@ The following features were implemented in 0.3.x and will be re-implemented in 0
 
 - [x] (L2) JWKS Endpoint (now with asymmetric keys) — *Covered in Feature 0.2*
 - [x] (L2) JWT Access Tokens — *Covered in Feature 0.2 (JwtTokenService)*
-- [ ] (L2) Refresh Tokens — *Covered in Features 0.4-0.5*
-- [ ] (L3) Refresh Token Rotation & Family Tracking — *Covered in Feature 0.5*
-- [ ] (L3) Token Theft Detection — *Covered in Feature 0.5*
-- [ ] (L2) Client Credentials Flow — *Covered in Feature 0.5*
+- [x] (L2) Refresh Tokens — *Covered in Features 0.4-0.5*
+- [x] (L3) Refresh Token Rotation & Family Tracking — *Covered in Feature 0.5*
+- [x] (L3) Token Theft Detection — *Covered in Feature 0.5*
+- [x] (L2) Client Credentials Flow — *Covered in Feature 0.5*
 - [ ] (L3) OAuth2 Authorization Code Flow with PKCE — *Covered in Feature 1.7*
 - [ ] (L2) ID Token Issuance — *Covered in Feature 1.7 (OIDC ID token)*
-- [ ] (L2) OIDC Discovery Endpoint — *Covered in Feature 0.4.2*
+- [x] (L2) OIDC Discovery Endpoint — *Covered in Feature 0.4.2*
 - [ ] (L2) OIDC UserInfo Endpoint — *Covered in Feature 1.10*
 - [ ] (L2) User Consent Mechanism — *Covered in Feature 1.8*
 - [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
 - [ ] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
-- [ ] (L1) Custom Claims Provider — *Covered in Feature 0.5*
+- [x] (L1) Custom Claims Provider — *Covered in Feature 0.5*
 
 > **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture. Many items are now explicitly covered in Phase 0 features.
 
