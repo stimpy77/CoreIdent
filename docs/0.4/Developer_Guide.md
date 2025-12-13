@@ -1,6 +1,6 @@
 # CoreIdent 0.4 Developer Guide
 
-This guide documents the **CoreIdent 0.4** codebase as it exists on this branch (a ground-up rewrite from 0.3). It is intended to be the “one stop” developer reference for:
+This guide documents the **CoreIdent 0.4** codebase (a ground-up rewrite from 0.3). It is intended to be the “one stop” developer reference for:
 
 - Getting a host app running quickly
 - Understanding how CoreIdent is structured
