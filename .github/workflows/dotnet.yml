@@ -1,0 +1,41 @@
+name: .NET
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_and_test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          include-prerelease: true
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/*.props
+            **/*.targets
+            **/packages.lock.json
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test CoreIdent.sln -c Release --no-build --verbosity normal
