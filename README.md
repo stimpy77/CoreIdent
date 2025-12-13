@@ -31,7 +31,7 @@ CoreIdent 0.4 currently provides a clean, testable core for:
 CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 
 - **Prerequisite**: .NET 10 SDK
-- **Legacy**: the prior 0.3.x implementation is tagged [`legacy-0.3.x-main`](/stimpy77/CoreIdent/tree/legacy-0.3.x-main)
+- **Legacy**: the prior 0.3.x implementation is tagged [`legacy-0.3.x-main`](tree/legacy-0.3.x-main)
 
 ## What CoreIdent 0.4 provides today
 
