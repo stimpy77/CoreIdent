@@ -513,44 +513,44 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** Entity builders (UserBuilder, ClientBuilder, ScopeBuilder) require Features 0.3-0.4 to be complete.
 
 *   **Component:** `CoreIdent.Testing` Package
-    - [ ] (L1) Create new project `tests/CoreIdent.Testing/CoreIdent.Testing.csproj`
-    - [ ] (L1) Add package references: xUnit, Shouldly, Microsoft.AspNetCore.Mvc.Testing
+    - [x] (L1) Create new project `tests/CoreIdent.Testing/CoreIdent.Testing.csproj`
+    - [x] (L1) Add package references: xUnit, Shouldly, Microsoft.AspNetCore.Mvc.Testing
 *   **Component:** `CoreIdentWebApplicationFactory`
-    - [ ] (L3) Create `CoreIdent.Testing/Fixtures/CoreIdentWebApplicationFactory.cs`
+    - [x] (L3) Create `CoreIdent.Testing/Fixtures/CoreIdentWebApplicationFactory.cs`
         *   *Guidance:* Encapsulate SQLite in-memory setup
         *   *Guidance:* Provide `ConfigureTestServices` hook
         *   *Guidance:* Provide `SeedDatabase` hook
         *   *Guidance:* Auto-seed standard OIDC scopes
         *   *Guidance:* Handle connection lifecycle properly
 *   **Component:** `CoreIdentTestFixture` Base Class
-    - [ ] (L2) Create `CoreIdent.Testing/Fixtures/CoreIdentTestFixture.cs`
+    - [x] (L2) Create `CoreIdent.Testing/Fixtures/CoreIdentTestFixture.cs`
         *   *Guidance:* Implement `IAsyncLifetime`
         *   *Guidance:* Provide `Client` (HttpClient) property
         *   *Guidance:* Provide `Services` (IServiceProvider) property
         *   *Guidance:* Provide helper methods: `CreateUserAsync()`, `CreateClientAsync()`, `AuthenticateAsAsync()`
 *   **Component:** Fluent Builders
-    - [ ] (L2) Create `CoreIdent.Testing/Builders/UserBuilder.cs`
+    - [x] (L2) Create `CoreIdent.Testing/Builders/UserBuilder.cs`
         *   *Guidance:* Fluent API: `.WithEmail()`, `.WithPassword()`, `.WithClaim()`
-    - [ ] (L2) Create `CoreIdent.Testing/Builders/ClientBuilder.cs`
+    - [x] (L2) Create `CoreIdent.Testing/Builders/ClientBuilder.cs`
         *   *Guidance:* Fluent API: `.WithClientId()`, `.WithSecret()`, `.AsPublicClient()`, `.AsConfidentialClient()`
-    - [ ] (L1) Create `CoreIdent.Testing/Builders/ScopeBuilder.cs`
+    - [x] (L1) Create `CoreIdent.Testing/Builders/ScopeBuilder.cs`
 *   **Component:** Assertion Extensions
-    - [ ] (L2) Create `CoreIdent.Testing/Extensions/JwtAssertionExtensions.cs`
+    - [x] (L2) Create `CoreIdent.Testing/Extensions/JwtAssertionExtensions.cs`
         *   *Guidance:* `.ShouldBeValidJwt()`, `.ShouldHaveClaim()`, `.ShouldExpireAfter()`
-    - [ ] (L1) Create `CoreIdent.Testing/Extensions/HttpResponseAssertionExtensions.cs`
+    - [x] (L1) Create `CoreIdent.Testing/Extensions/HttpResponseAssertionExtensions.cs`
         *   *Guidance:* `.ShouldBeSuccessful()`, `.ShouldBeUnauthorized()`, `.ShouldBeBadRequest()`
 *   **Component:** Standard Seeders
-    - [ ] (L1) Create `CoreIdent.Testing/Seeders/StandardScopes.cs`
+    - [x] (L1) Create `CoreIdent.Testing/Seeders/StandardScopes.cs`
         *   *Guidance:* Pre-defined openid, profile, email, offline_access scopes
-    - [ ] (L1) Create `CoreIdent.Testing/Seeders/StandardClients.cs`
+    - [x] (L1) Create `CoreIdent.Testing/Seeders/StandardClients.cs`
         *   *Guidance:* Pre-defined test clients (public, confidential)
 *   **Component:** Integration Test Setup
-    - [ ] (L2) Create `CoreIdent.Integration.Tests` project using new fixtures
-    - [ ] (L2) Write initial integration tests using builders
+    - [x] (L2) Create `CoreIdent.Integration.Tests` project using new fixtures
+    - [x] (L2) Write initial integration tests using builders
 *   **Test Case:**
-    - [ ] (L1) Fixture-based tests are simple and readable
-    - [ ] (L1) Test execution time is reasonable
-    - [ ] (L1) Integration smoke test implemented and passing (app boots with test fixture, health/check endpoint returns 200)
+    - [x] (L1) Fixture-based tests are simple and readable
+    - [x] (L1) Test execution time is reasonable
+    - [x] (L1) Integration smoke test implemented and passing (app boots with test fixture, health/check endpoint returns 200)
 
 ---
 
