@@ -49,6 +49,13 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddEntityFrameworkCoreUserStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<IUserStore, EfUserStore>();
+        return services;
+    }
+
     /// <summary>
     /// Adds all EF Core stores (token revocation, client, scope, refresh token).
     /// </summary>
@@ -59,6 +66,7 @@ public static class ServiceCollectionExtensions
         services.AddEntityFrameworkCoreClientStore();
         services.AddEntityFrameworkCoreScopeStore();
         services.AddEntityFrameworkCoreRefreshTokenStore();
+        services.AddEntityFrameworkCoreUserStore();
         return services;
     }
 }

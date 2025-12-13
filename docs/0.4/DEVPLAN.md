@@ -330,36 +330,32 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L1) Create a response model (record/class) for discovery document serialization
 *   **Test Case (Integration):**
     - [x] (L2) Discovery endpoint returns valid JSON with correct issuer and endpoint URLs
-    - [x] (L2) Discovery `jwks_uri` matches configured JWKS path and is reachable
-*   **Documentation:**
-    - [x] (L1) Document discovery endpoint and issuer requirements
 
 ---
 
 ### Feature 0.4.3: User Model & Store Foundation (Required for All User-Based Flows)
-
 *   **Component:** `CoreIdentUser` Model
-    - [ ] (L1) Create `CoreIdent.Core/Models/CoreIdentUser.cs`
+    - [x] (L1) Create `CoreIdent.Core/Models/CoreIdentUser.cs`
         *   *Guidance:* Include at minimum: `Id`, `UserName`, `NormalizedUserName`, `CreatedAt`, `UpdatedAt`
 *   **Component:** `IUserStore` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Stores/IUserStore.cs`
+    - [x] (L1) Create `CoreIdent.Core/Stores/IUserStore.cs`
         *   *Guidance:* Include at minimum: `FindByIdAsync`, `FindByUsernameAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync`
         *   *Guidance:* Include claims support to power token issuance: `GetClaimsAsync(subjectId)`
 *   **Component:** In-Memory User Store
-    - [ ] (L2) Create `InMemoryUserStore` using `ConcurrentDictionary`
+    - [x] (L2) Create `InMemoryUserStore` using `ConcurrentDictionary`
         *   *Guidance:* Normalize usernames consistently
 *   **Component:** EF Core User Store
-    - [ ] (L2) Create `EfUserStore` in `CoreIdent.Storage.EntityFrameworkCore`
-    - [ ] (L1) Add `UserEntity` + DbContext configuration
+    - [x] (L2) Create `EfUserStore` in `CoreIdent.Storage.EntityFrameworkCore`
+    - [x] (L1) Add `UserEntity` + DbContext configuration
 *   **Component:** Password Hashing
-    - [ ] (L1) Create `IPasswordHasher` interface and default implementation using ASP.NET Core Identity hasher
+    - [x] (L1) Create `IPasswordHasher` interface and default implementation using ASP.NET Core Identity hasher
         *   *Guidance:* Password support is optional in Phase 1 flows, but needed for password-based auth where enabled
 *   **Component:** DI Registration
-    - [ ] (L1) Add `AddInMemoryUserStore()` extension method
-    - [ ] (L1) Add `AddEntityFrameworkCoreUserStore()` extension method
+    - [x] (L1) Add `AddInMemoryUserStore()` extension method
+    - [x] (L1) Add `AddEntityFrameworkCoreUserStore()` extension method
 *   **Test Case (Unit):**
-    - [ ] (L1) `InMemoryUserStore` CRUD operations work correctly
-    - [ ] (L1) `EfUserStore` CRUD operations work correctly
+    - [x] (L1) `InMemoryUserStore` CRUD operations work correctly
+    - [x] (L1) `EfUserStore` CRUD operations work correctly
 
 ---
 

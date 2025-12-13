@@ -14,6 +14,7 @@ public class CoreIdentDbContext : DbContext
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
     public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
     public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
+    public DbSet<UserEntity> Users => Set<UserEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,6 +101,32 @@ public class CoreIdentDbContext : DbContext
             entity.HasIndex(x => x.ClientId);
             entity.HasIndex(x => x.FamilyId);
             entity.HasIndex(x => x.ExpiresAt);
+        });
+
+        modelBuilder.Entity<UserEntity>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Id)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.UserName)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(x => x.NormalizedUserName)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(x => x.PasswordHash)
+                .HasMaxLength(500);
+
+            entity.Property(x => x.ClaimsJson)
+                .IsRequired();
+
+            entity.HasIndex(x => x.NormalizedUserName)
+                .IsUnique();
         });
     }
 }
