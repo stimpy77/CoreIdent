@@ -59,6 +59,7 @@ All planning and technical documentation for 0.4 is in the [`docs/0.4/`](docs/0.
 | [**Technical Plan**](Technical_Plan.md) | Detailed specifications, interfaces, and implementation guidance |
 | [**DEVPLAN**](DEVPLAN.md) | Task-level checklist with components, test cases, and documentation requirements |
 | [**Developer Guide**](Developer_Guide.md) | Practical guide to the current 0.4 codebase, endpoints, configuration, and testing |
+| [**CLI Reference**](CLI_Reference.md) | Command reference for the `dotnet coreident` CLI tool |
 
 These documents include:
 - .NET 10 feature reference links for implementers

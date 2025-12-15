@@ -55,6 +55,27 @@ At a high level:
   - Shared test infrastructure: `WebApplicationFactory`, fixture base class, builders, assertion extensions
 - `tests/CoreIdent.TestHost/`
   - A minimal runnable host used by some tests and manual validation
+- `src/CoreIdent.Cli/`
+  - CLI tool package (`dotnet coreident`) for project scaffolding, key generation, and database migrations
+
+---
+
+## CLI Tool
+
+CoreIdent ships a .NET global tool for common development tasks:
+
+```bash
+dotnet tool install -g CoreIdent.Cli
+```
+
+Commands:
+
+- `dotnet coreident init` — Scaffold `appsettings.json` and add package references
+- `dotnet coreident keys generate <rsa|ecdsa>` — Generate signing key pairs
+- `dotnet coreident client add` — Interactive client registration helper
+- `dotnet coreident migrate` — Apply database schema (SQLite, SQL Server, PostgreSQL)
+
+See [`docs/0.4/CLI_Reference.md`](CLI_Reference.md) for full documentation.
 
 ---
 

@@ -581,27 +581,27 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** `client add` command requires Feature 0.3 (Client Store) to be complete.
 
 *   **Component:** CLI Package (`CoreIdent.Cli`)
-    - [ ] (L2) Create .NET tool package
-    - [ ] (L1) Register as `dotnet tool install -g CoreIdent.Cli`
+    - [x] (L2) Create .NET tool package
+    - [x] (L1) Register as `dotnet tool install -g CoreIdent.Cli`
 *   **Component:** `init` Command
-    - [ ] (L2) Scaffold `appsettings.json` with CoreIdent section
-    - [ ] (L2) Generate secure random signing key (for dev)
-    - [ ] (L1) Add package references to `.csproj`
+    - [x] (L2) Scaffold `appsettings.json` with CoreIdent section
+    - [x] (L2) Generate secure random signing key (for dev)
+    - [x] (L1) Add package references to `.csproj`
 *   **Component:** `keys generate` Command
-    - [ ] (L2) Generate RSA key pair (PEM format)
-    - [ ] (L2) Generate ECDSA key pair (PEM format)
-    - [ ] (L1) Output to file or stdout
+    - [x] (L2) Generate RSA key pair (PEM format)
+    - [x] (L2) Generate ECDSA key pair (PEM format)
+    - [x] (L1) Output to file or stdout
 *   **Component:** `client add` Command
-    - [ ] (L2) Interactive client registration
-    - [ ] (L1) Generate client ID and secret
-    - [ ] (L1) Output configuration snippet
+    - [x] (L2) Interactive client registration
+    - [x] (L1) Generate client ID and secret
+    - [x] (L1) Output configuration snippet
 *   **Component:** `migrate` Command
-    - [ ] (L2) Wrapper around EF Core migrations for CoreIdent schema
+    - [x] (L2) Wrapper around EF Core migrations for CoreIdent schema
 *   **Test Case:**
-    - [ ] (L1) Each command works in isolation
-    - [ ] (L2) Generated keys are valid and usable
+    - [x] (L1) Each command works in isolation
+    - [x] (L2) Generated keys are valid and usable
 *   **Documentation:**
-    - [ ] (L1) CLI reference guide
+    - [x] (L1) CLI reference guide
 
 ---
 
