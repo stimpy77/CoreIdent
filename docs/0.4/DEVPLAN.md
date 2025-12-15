@@ -608,15 +608,15 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 0.11: Dev Container Configuration
 
 *   **Component:** `.devcontainer/` Setup
-    - [ ] (L1) Create `devcontainer.json`
-    - [ ] (L1) Configure .NET 10 SDK
-    - [ ] (L1) Include recommended VS Code extensions
-    - [ ] (L1) Pre-configure database (SQLite for simplicity)
+    - [x] (L1) Create `devcontainer.json`
+    - [x] (L1) Configure .NET 10 SDK
+    - [x] (L1) Include recommended VS Code extensions
+    - [x] (L1) Pre-configure database (SQLite for simplicity)
 *   **Component:** Codespaces Support
     - [ ] (L1) Test in GitHub Codespaces
-    - [ ] (L1) Add "Open in Codespaces" badge to README
+    - [x] (L1) Add "Open in Codespaces" badge to README
 *   **Documentation:**
-    - [ ] (L1) Contributing guide with dev container instructions
+    - [x] (L1) Contributing guide with dev container instructions
 
 ---
 
