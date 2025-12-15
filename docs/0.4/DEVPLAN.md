@@ -613,7 +613,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L1) Include recommended VS Code extensions
     - [x] (L1) Pre-configure database (SQLite for simplicity)
 *   **Component:** Codespaces Support
-    - [ ] (L1) Test in GitHub Codespaces
+    - [x] (L1) Test in GitHub Codespaces
     - [x] (L1) Add "Open in Codespaces" badge to README
 *   **Documentation:**
     - [x] (L1) Contributing guide with dev container instructions
