@@ -559,20 +559,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** .NET 10 provides built-in metrics (`aspnetcore.authentication.*`, `aspnetcore.identity.*`). CoreIdent adds supplementary metrics for OAuth/OIDC-specific operations. Requires Feature 0.5 (Token Issuance) for `coreident.token.issued` metric.
 
 *   **Component:** Metrics Instrumentation
-    - [ ] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
-    - [ ] (L2) Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
-    - [ ] (L2) Add CoreIdent-specific metrics:
+    - [x] (L2) Integrate with .NET 10's built-in `Microsoft.AspNetCore.Authentication` metrics
+    - [x] (L2) Integrate with `Microsoft.AspNetCore.Identity` metrics (user ops, sign-ins, 2FA)
+    - [x] (L2) Add CoreIdent-specific metrics:
         - `coreident.token.issued` — Tokens issued (by type)
         - `coreident.token.revoked` — Tokens revoked
         - `coreident.client.authenticated` — Client authentications
 *   **Component:** Metrics Configuration
-    - [ ] (L1) Add `AddCoreIdentMetrics()` extension method
-    - [ ] (L2) Support filtering/sampling
+    - [x] (L1) Add `AddCoreIdentMetrics()` extension method
+    - [x] (L2) Support filtering/sampling
 *   **Test Case:**
-    - [ ] (L2) Metrics are emitted for key operations
-    - [ ] (L2) Metrics integrate with Aspire dashboard
+    - [x] (L2) Metrics are emitted for key operations
+    - [x] (L2) Metrics integrate with Aspire dashboard
 *   **Documentation:**
-    - [ ] (L1) Metrics and observability guide
+    - [x] (L1) Metrics and observability guide
 
 ---
 

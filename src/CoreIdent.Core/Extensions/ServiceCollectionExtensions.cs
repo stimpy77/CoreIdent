@@ -88,6 +88,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<ICustomClaimsProvider, NullCustomClaimsProvider>();
 
+        services.TryAddSingleton<ICoreIdentMetrics, NullCoreIdentMetrics>();
+
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AuthorizationCodeCleanupHostedService>());

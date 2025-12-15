@@ -232,6 +232,66 @@ This makes it possible to host CoreIdent under a path while still generating cor
 - Hosted service:
   - `AuthorizationCodeCleanupHostedService`
 
+---
+
+## 2.4 Metrics and observability
+
+CoreIdent emits metrics using `System.Diagnostics.Metrics`.
+
+### Enable CoreIdent-specific metrics
+
+By default, CoreIdent registers a no-op metrics sink.
+
+To enable CoreIdent metrics emission:
+
+```csharp
+builder.Services.AddCoreIdent(...);
+builder.Services.AddCoreIdentMetrics();
+```
+
+### CoreIdent metric names
+
+**Counters:**
+- `coreident.client.authenticated` — Number of client authentication attempts
+- `coreident.token.issued` — Number of tokens issued
+- `coreident.token.revoked` — Number of tokens revoked
+
+**Histograms:**
+- `coreident.client.authentication.duration` — Duration of client authentication (ms)
+- `coreident.token.issuance.duration` — Duration of token issuance (ms)
+
+### Metric tags
+
+- `coreident.client.authenticated`
+  - `client_type` (`public` / `confidential` / `unknown`)
+  - `success` (`true` / `false`)
+- `coreident.token.issued`
+  - `token_type` (`access_token` / `refresh_token` / `id_token`)
+  - `grant_type` (e.g. `client_credentials`, `authorization_code`, `refresh_token`, `password`)
+- `coreident.token.revoked`
+  - `token_type` (`access_token` / `refresh_token`)
+
+### Filtering and sampling
+
+You can configure filtering and sampling when enabling metrics:
+
+```csharp
+builder.Services.AddCoreIdentMetrics(o =>
+{
+    o.SampleRate = 1.0;
+    o.Filter = ctx => ctx.MetricName != "coreident.token.issued";
+});
+```
+
+### Built-in ASP.NET Core metrics
+
+.NET 10 already emits metrics for:
+
+- `aspnetcore.authentication.*`
+- `aspnetcore.identity.*`
+
+CoreIdent metrics are intended to complement these with OAuth/OIDC-specific counters.
+
 ### Overriding defaults
 
 All store and service registrations use `TryAdd*` patterns so you can override them by registering your own implementations **before** calling `AddCoreIdent()` (or by replacing registrations explicitly).

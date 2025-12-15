@@ -513,6 +513,52 @@ CoreIdent advertises its endpoints (JWKS, token, revocation, introspection) base
 
 ---
 
+## Metrics and Observability (0.4)
+
+CoreIdent emits metrics using `System.Diagnostics.Metrics`, compatible with OpenTelemetry and .NET Aspire.
+
+### Enable Metrics
+
+```csharp
+builder.Services.AddCoreIdent(...);
+builder.Services.AddCoreIdentMetrics();
+```
+
+### Available Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `coreident.client.authenticated` | Counter | Client authentication attempts |
+| `coreident.token.issued` | Counter | Tokens issued |
+| `coreident.token.revoked` | Counter | Tokens revoked |
+| `coreident.client.authentication.duration` | Histogram | Client auth duration (ms) |
+| `coreident.token.issuance.duration` | Histogram | Token issuance duration (ms) |
+
+### Metric Tags
+
+- `coreident.client.authenticated`: `client_type`, `success`
+- `coreident.token.issued`: `token_type`, `grant_type`
+- `coreident.token.revoked`: `token_type`
+
+### Filtering and Sampling
+
+```csharp
+builder.Services.AddCoreIdentMetrics(o =>
+{
+    o.SampleRate = 0.1;  // 10% sampling
+    o.Filter = ctx => ctx.MetricName != "coreident.token.issued";
+});
+```
+
+### Integration with OpenTelemetry
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter("CoreIdent"));
+```
+
+---
+
 ## Key Principles
 
 | Principle | Description |

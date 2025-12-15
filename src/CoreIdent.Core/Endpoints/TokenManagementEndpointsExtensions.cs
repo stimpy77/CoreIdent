@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using CoreIdent.Core.Models;
@@ -30,6 +31,7 @@ public static class TokenManagementEndpointsExtensions
             ISigningKeyProvider signingKeyProvider,
             ITokenRevocationStore tokenRevocationStore,
             IClientStore clientStore,
+            ICoreIdentMetrics metrics,
             ILoggerFactory loggerFactory,
             IServiceProvider services,
             CancellationToken ct) =>
@@ -53,8 +55,11 @@ public static class TokenManagementEndpointsExtensions
 
             var (clientId, clientSecret) = ExtractClientCredentials(request, form);
 
+            var authStart = Stopwatch.GetTimestamp();
+
             if (string.IsNullOrWhiteSpace(clientId))
             {
+                metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication is required." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
@@ -62,13 +67,17 @@ public static class TokenManagementEndpointsExtensions
             if (client is null || !client.Enabled)
             {
                 logger.LogWarning("Revocation request for unknown or disabled client: {ClientId}", clientId);
+                metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication failed." }, statusCode: StatusCodes.Status401Unauthorized);
             }
+
+            var clientTypeLabel = client.ClientType.ToString().ToLowerInvariant();
 
             if (client.ClientType == ClientType.Confidential)
             {
                 if (string.IsNullOrWhiteSpace(clientSecret))
                 {
+                    metrics.ClientAuthenticated(clientTypeLabel, success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                     return Results.Json(new { error = "invalid_client", error_description = "Client secret is required for confidential clients." }, statusCode: StatusCodes.Status401Unauthorized);
                 }
 
@@ -76,15 +85,18 @@ public static class TokenManagementEndpointsExtensions
                 if (!secretValid)
                 {
                     logger.LogWarning("Invalid client secret for revocation request from client: {ClientId}", clientId);
+                    metrics.ClientAuthenticated(clientTypeLabel, success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                     return Results.Json(new { error = "invalid_client", error_description = "Client authentication failed." }, statusCode: StatusCodes.Status401Unauthorized);
                 }
             }
+
+            metrics.ClientAuthenticated(clientTypeLabel, success: true, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
 
             try
             {
                 if (string.Equals(tokenTypeHint, "refresh_token", StringComparison.Ordinal))
                 {
-                    await TryRevokeRefreshTokenAsync(token, clientId, services, logger, ct);
+                    await TryRevokeRefreshTokenAsync(token, clientId, services, metrics, logger, ct);
                     return Results.Ok();
                 }
 
@@ -100,12 +112,13 @@ public static class TokenManagementEndpointsExtensions
                         }
 
                         await tokenRevocationStore.RevokeTokenAsync(validated.Jti, tokenType: "access_token", expiry: validated.ExpiresAtUtc, ct);
+                        metrics.TokenRevoked("access_token");
                     }
 
                     return Results.Ok();
                 }
 
-                await TryRevokeRefreshTokenAsync(token, clientId, services, logger, ct);
+                await TryRevokeRefreshTokenAsync(token, clientId, services, metrics, logger, ct);
                 return Results.Ok();
             }
             catch (Exception ex)
@@ -376,6 +389,7 @@ public static class TokenManagementEndpointsExtensions
         string token,
         string clientId,
         IServiceProvider services,
+        ICoreIdentMetrics metrics,
         ILogger logger,
         CancellationToken ct)
     {
@@ -397,7 +411,11 @@ public static class TokenManagementEndpointsExtensions
             return;
         }
 
-        await refreshTokenStore.RevokeAsync(token, ct);
+        var revoked = await refreshTokenStore.RevokeAsync(token, ct);
+        if (revoked)
+        {
+            metrics.TokenRevoked("refresh_token");
+        }
     }
 
     private static (string? ClientId, string? ClientSecret) ExtractClientCredentials(HttpRequest request, IFormCollection form)

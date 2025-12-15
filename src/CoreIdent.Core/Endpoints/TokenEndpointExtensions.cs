@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -41,6 +42,7 @@ public static class TokenEndpointExtensions
         IPasswordHasher passwordHasher,
         IAuthorizationCodeStore authorizationCodeStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentMetrics metrics,
         IOptions<CoreIdentOptions> coreOptions,
         ILoggerFactory loggerFactory,
         TimeProvider timeProvider,
@@ -59,8 +61,11 @@ public static class TokenEndpointExtensions
 
         var (clientId, clientSecret) = ExtractClientCredentials(request, tokenRequest);
 
+        var authStart = Stopwatch.GetTimestamp();
+
         if (string.IsNullOrWhiteSpace(clientId))
         {
+            metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
             return TokenError(TokenErrors.InvalidClient, "Client authentication is required.", StatusCodes.Status401Unauthorized);
         }
 
@@ -68,13 +73,17 @@ public static class TokenEndpointExtensions
         if (client is null || !client.Enabled)
         {
             logger.LogWarning("Token request for unknown or disabled client: {ClientId}", clientId);
+            metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
             return TokenError(TokenErrors.InvalidClient, "Client authentication failed.", StatusCodes.Status401Unauthorized);
         }
+
+        var clientTypeLabel = client.ClientType.ToString().ToLowerInvariant();
 
         if (client.ClientType == ClientType.Confidential)
         {
             if (string.IsNullOrWhiteSpace(clientSecret))
             {
+                metrics.ClientAuthenticated(clientTypeLabel, success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                 return TokenError(TokenErrors.InvalidClient, "Client secret is required for confidential clients.", StatusCodes.Status401Unauthorized);
             }
 
@@ -82,9 +91,12 @@ public static class TokenEndpointExtensions
             if (!secretValid)
             {
                 logger.LogWarning("Invalid client secret for client: {ClientId}", clientId);
+                metrics.ClientAuthenticated(clientTypeLabel, success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
                 return TokenError(TokenErrors.InvalidClient, "Client authentication failed.", StatusCodes.Status401Unauthorized);
             }
         }
+
+        metrics.ClientAuthenticated(clientTypeLabel, success: true, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
 
         if (!client.AllowedGrantTypes.Contains(tokenRequest.GrantType))
         {
@@ -95,13 +107,13 @@ public static class TokenEndpointExtensions
         return tokenRequest.GrantType switch
         {
             GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, options, timeProvider, logger, ct),
+                client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
+                client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, options, timeProvider, logger, ct),
+                client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.Password => await HandlePasswordGrantAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, options, timeProvider, logger, ct),
+                client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, metrics, options, timeProvider, logger, ct),
             _ => TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.")
         };
     }
@@ -114,11 +126,13 @@ public static class TokenEndpointExtensions
         IUserStore userStore,
         IPasswordHasher passwordHasher,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
         ILogger logger,
         CancellationToken ct)
     {
+        var issuanceStart = Stopwatch.GetTimestamp();
         logger.LogWarning("Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE.");
 
         if (string.IsNullOrWhiteSpace(tokenRequest.Username))
@@ -208,6 +222,14 @@ public static class TokenEndpointExtensions
 
         logger.LogInformation("Issued tokens for subject {SubjectId} via password grant", user.Id);
 
+        var elapsedMs = Stopwatch.GetElapsedTime(issuanceStart).TotalMilliseconds;
+        metrics.TokenIssued("access_token", GrantTypes.Password, elapsedMs);
+
+        if (!string.IsNullOrWhiteSpace(refreshTokenHandle))
+        {
+            metrics.TokenIssued("refresh_token", GrantTypes.Password, elapsedMs);
+        }
+
         return Results.Ok(new TokenResponse
         {
             AccessToken = accessToken,
@@ -226,11 +248,14 @@ public static class TokenEndpointExtensions
         IAuthorizationCodeStore authorizationCodeStore,
         IUserStore userStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
         ILogger logger,
         CancellationToken ct)
     {
+        var issuanceStart = Stopwatch.GetTimestamp();
+
         if (string.IsNullOrWhiteSpace(tokenRequest.Code))
         {
             return TokenError(TokenErrors.InvalidRequest, "The code parameter is required.");
@@ -378,6 +403,19 @@ public static class TokenEndpointExtensions
 
         logger.LogInformation("Issued tokens for subject {SubjectId} via authorization_code grant", code.SubjectId);
 
+        var elapsedMs = Stopwatch.GetElapsedTime(issuanceStart).TotalMilliseconds;
+        metrics.TokenIssued("access_token", GrantTypes.AuthorizationCode, elapsedMs);
+
+        if (!string.IsNullOrWhiteSpace(refreshTokenHandle))
+        {
+            metrics.TokenIssued("refresh_token", GrantTypes.AuthorizationCode, elapsedMs);
+        }
+
+        if (!string.IsNullOrWhiteSpace(idToken))
+        {
+            metrics.TokenIssued("id_token", GrantTypes.AuthorizationCode, elapsedMs);
+        }
+
         return Results.Ok(new TokenResponse
         {
             AccessToken = accessToken,
@@ -395,11 +433,14 @@ public static class TokenEndpointExtensions
         ITokenService tokenService,
         IRefreshTokenStore refreshTokenStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
         ILogger logger,
         CancellationToken ct)
     {
+        var issuanceStart = Stopwatch.GetTimestamp();
+
         var requestedScopes = ParseScopes(tokenRequest.Scope);
         var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes);
 
@@ -443,6 +484,8 @@ public static class TokenEndpointExtensions
 
         logger.LogInformation("Issued access token for client {ClientId} via client_credentials grant", client.ClientId);
 
+        metrics.TokenIssued("access_token", GrantTypes.ClientCredentials, Stopwatch.GetElapsedTime(issuanceStart).TotalMilliseconds);
+
         return Results.Ok(new TokenResponse
         {
             AccessToken = accessToken,
@@ -459,11 +502,14 @@ public static class TokenEndpointExtensions
         IRefreshTokenStore refreshTokenStore,
         IUserStore userStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
         ILogger logger,
         CancellationToken ct)
     {
+        var issuanceStart = Stopwatch.GetTimestamp();
+
         if (string.IsNullOrWhiteSpace(tokenRequest.RefreshToken))
         {
             return TokenError(TokenErrors.InvalidRequest, "The refresh_token parameter is required.");
@@ -583,6 +629,10 @@ public static class TokenEndpointExtensions
         await refreshTokenStore.StoreAsync(newRefreshToken, ct);
 
         logger.LogInformation("Issued new tokens for subject {SubjectId} via refresh_token grant", storedToken.SubjectId);
+
+        var elapsedMs = Stopwatch.GetElapsedTime(issuanceStart).TotalMilliseconds;
+        metrics.TokenIssued("access_token", GrantTypes.RefreshToken, elapsedMs);
+        metrics.TokenIssued("refresh_token", GrantTypes.RefreshToken, elapsedMs);
 
         return Results.Ok(new TokenResponse
         {

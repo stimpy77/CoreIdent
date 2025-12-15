@@ -43,6 +43,17 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - Before changing package versions, run `dotnet list <proj> package --outdated`
 - Upgrade using `dotnet add <proj> package <PackageId> --version <latest>` and keep versions on the latest stable unless the plan requires otherwise
 
+### Documentation Standards
+
+- Keep all documentation in sync with code
+- Update with new features and breaking changes
+  - README.md for high-level feature descriptions
+  - docs/0.4/Developer_Guide.md for detailed consuming developer guides
+  - docs/0.4/README_Detailed.md for summary guides not covered in the root level README
+- Document configuration options and environment variables
+- Add code comments for non-obvious logic or complex algorithms
+- Update this CLAUDE.md document as implementation details evolve
+
 ## Code Priorities
 
 **In order of importance:**
