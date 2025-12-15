@@ -26,6 +26,9 @@ CoreIdent 0.4 currently provides a clean, testable core for:
 - **Standards endpoints** (discovery + JWKS)
 - **Core OAuth flows** (including Authorization Code + PKCE)
 - **Pluggable persistence** (in-memory defaults, EF Core implementations)
+- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
+- **CLI tool** (`dotnet coreident`) for init/key generation/client helper/migrations
+- **Metrics** via `System.Diagnostics.Metrics` (optional)
 
 ## Status
 
@@ -44,6 +47,7 @@ CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 - **Authorization endpoint + consent UI** (`/auth/authorize`, `/auth/consent`)
 - **Token revocation** (RFC 7009) and **introspection** (RFC 7662)
 - **OIDC discovery document** and **JWKS publishing** (public keys only)
+- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
 - **In-memory stores** by default + **EF Core store implementations**
 - **Test infrastructure** under `tests/` (fixtures + integration coverage)
 
@@ -105,6 +109,8 @@ builder.Services.AddEntityFrameworkCoreStores();
   - [docs/0.4/Project_Overview.md](docs/0.4/Project_Overview.md)
   - [docs/0.4/Technical_Plan.md](docs/0.4/Technical_Plan.md)
   - [docs/0.4/DEVPLAN.md](docs/0.4/DEVPLAN.md)
+- **CLI reference**
+  - [docs/0.4/CLI_Reference.md](docs/0.4/CLI_Reference.md)
 - **Detailed reference**
   - [docs/0.4/README_Detailed.md](docs/0.4/README_Detailed.md)
 

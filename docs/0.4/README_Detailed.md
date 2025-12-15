@@ -17,16 +17,16 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 ## What is CoreIdent?
 
-CoreIdent is a **unified authentication solution** for the .NET ecosystem. Whether you need simple embedded auth, integration with external providers, or a full OAuth 2.0/OIDC server—CoreIdent provides a consistent, developer-friendly approach.
+CoreIdent is a **unified authentication solution** for the .NET ecosystem. It is designed to cover the spectrum from simple embedded auth to running a full OAuth 2.0 / OpenID Connect server, with additional capabilities delivered incrementally across phases.
 
 ### Core Scenarios
 
 | Scenario | Description |
 |----------|-------------|
-| **Embedded Auth** | Drop-in authentication for ASP.NET Core apps with minimal configuration |
-| **External Providers** | Easy integration with Google, Microsoft, GitHub, and other OAuth/OIDC providers |
-| **Identity Server** | Full OAuth 2.0 / OIDC server capabilities for apps that need to be identity providers |
-| **Client Libraries** | Secure authentication for MAUI, WPF, Console, and Blazor apps |
+| **Embedded Auth** | Minimal “auth for my app” workflows via resource-owner convenience endpoints (`/auth/register`, `/auth/login`, `/auth/profile`) |
+| **External Providers** | Planned (Phase 2) |
+| **Identity Server** | OAuth/OIDC foundation implemented; additional hardening and advanced features planned (Phase 3+) |
+| **Client Libraries** | Planned (Phase 1.5) |
 
 ---
 
@@ -39,11 +39,13 @@ CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 The 0.4 codebase focuses on:
 
 - **.NET 10** only (`net10.0`)
-- **Passwordless-first** authentication (email magic links, passkeys)
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
-- **Improved developer experience** with better test infrastructure and templates
-- **F# first-class support**
-- **Client libraries** for any .NET application type
+- **OAuth/OIDC foundation** (discovery, JWKS, token endpoint, revocation, introspection)
+- **Authorization Code + PKCE** with a minimal consent UI
+- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
+- **Pluggable persistence** (in-memory defaults, EF Core implementations)
+- **Developer experience**: test infrastructure, CLI tool, devcontainer/Codespaces support
+- **Observability**: optional `System.Diagnostics.Metrics` instrumentation
 
 > Legacy note: the prior 0.3.x implementation is tagged `legacy-0.3.x-main` for reference.
 
@@ -575,6 +577,8 @@ builder.Services.AddOpenTelemetry()
 
 ## Planned Packages
 
+Not all packages listed here exist yet; this section is a roadmap view.
+
 ```
 CoreIdent.Core                    # Core services, interfaces, endpoints
 CoreIdent.Storage.EntityFrameworkCore  # EF Core persistence
@@ -595,8 +599,8 @@ CoreIdent.Testing                 # Test fixtures and utilities
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| **0A** | Foundation (crypto + token lifecycle: keys, JWKS, revocation, introspection) | 🔜 Next |
-| **0B** | Quality & DevEx (test infra, metrics, CLI, devcontainer) | Planned |
+| **0A** | Foundation (crypto + token lifecycle: keys, JWKS, revocation, introspection) | Completed |
+| **0B** | Quality & DevEx (test infra, metrics, CLI, devcontainer) | Completed |
 | **1** | Passwordless (email magic link, passkeys, SMS OTP) | Planned |
 | **1.5** | Client libraries (MAUI, WPF, Console, Blazor) | Planned |
 | **2** | External providers (Google, Microsoft, GitHub) | Planned |
@@ -610,7 +614,7 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed task breakdowns.
 
 ## Contributing
 
-This project is in early development. Contributions welcome once the foundation is established.
+CoreIdent 0.4 is still early in its roadmap, but the Phase 0 foundation is established and contributions are welcome.
 
 Key areas for future contribution:
 - Additional OAuth providers
