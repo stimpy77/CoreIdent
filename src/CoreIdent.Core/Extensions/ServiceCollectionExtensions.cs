@@ -44,6 +44,10 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<CoreIdentAuthorizationCodeOptions>();
 
+        services.AddOptions<PasswordlessEmailOptions>();
+
+        services.AddOptions<SmtpOptions>();
+
         if (configureRoutes is not null)
         {
             services.Configure(configureRoutes);
@@ -87,6 +91,14 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IUserStore>(sp => sp.GetRequiredService<InMemoryUserStore>());
 
         services.TryAddSingleton<ICustomClaimsProvider, NullCustomClaimsProvider>();
+
+        services.TryAddSingleton<PasswordlessEmailTemplateRenderer>();
+
+        services.TryAddSingleton<IEmailSender, SmtpEmailSender>();
+
+        services.TryAddSingleton<InMemoryPasswordlessTokenStore>(sp =>
+            new InMemoryPasswordlessTokenStore(sp.GetService<TimeProvider>(), sp.GetRequiredService<IOptions<PasswordlessEmailOptions>>()));
+        services.TryAddSingleton<IPasswordlessTokenStore>(sp => sp.GetRequiredService<InMemoryPasswordlessTokenStore>());
 
         services.TryAddSingleton<ICoreIdentMetrics, NullCoreIdentMetrics>();
 

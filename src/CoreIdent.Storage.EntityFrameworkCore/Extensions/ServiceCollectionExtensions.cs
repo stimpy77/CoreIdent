@@ -63,6 +63,13 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddEntityFrameworkCorePasswordlessTokenStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<IPasswordlessTokenStore, EfPasswordlessTokenStore>();
+        return services;
+    }
+
     public static IServiceCollection AddEntityFrameworkCoreUserGrantStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -81,6 +88,7 @@ public static class ServiceCollectionExtensions
         services.AddEntityFrameworkCoreScopeStore();
         services.AddEntityFrameworkCoreRefreshTokenStore();
         services.AddEntityFrameworkCoreAuthorizationCodeStore();
+        services.AddEntityFrameworkCorePasswordlessTokenStore();
         services.AddEntityFrameworkCoreUserGrantStore();
         services.AddEntityFrameworkCoreUserStore();
         return services;

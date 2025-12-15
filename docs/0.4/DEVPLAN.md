@@ -633,7 +633,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.1: Email Magic Link Authentication
 
 *   **Component:** `IEmailSender` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Services/IEmailSender.cs`
+    - [x] (L1) Create `CoreIdent.Core/Services/IEmailSender.cs`
         ```csharp
         public interface IEmailSender
         {
@@ -643,10 +643,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         public record EmailMessage(string To, string Subject, string HtmlBody, string? TextBody = null);
         ```
 *   **Component:** `SmtpEmailSender` Implementation
-    - [ ] (L2) Create default SMTP implementation
-    - [ ] (L1) Support configuration via `SmtpOptions` (host, port, credentials, TLS)
+    - [x] (L2) Create default SMTP implementation
+    - [x] (L1) Support configuration via `SmtpOptions` (host, port, credentials, TLS)
 *   **Component:** `IPasswordlessTokenStore` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Stores/IPasswordlessTokenStore.cs`
+    - [x] (L1) Create `CoreIdent.Core/Stores/IPasswordlessTokenStore.cs`
         ```csharp
         public interface IPasswordlessTokenStore
         {
@@ -656,22 +656,22 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `PasswordlessToken` Model
-    - [ ] (L1) Create model with: Id, Email, TokenHash, CreatedAt, ExpiresAt, Consumed, UserId
+    - [x] (L1) Create model with: Id, Email, TokenHash, CreatedAt, ExpiresAt, Consumed, UserId
 *   **Component:** `InMemoryPasswordlessTokenStore`
-    - [ ] (L2) Create in-memory implementation
+    - [x] (L2) Create in-memory implementation
 *   **Component:** `EfPasswordlessTokenStore`
-    - [ ] (L2) Create EF Core implementation
-    - [ ] (L1) Add entity and migration
+    - [x] (L2) Create EF Core implementation
+    - [x] (L1) Add entity mapping (migrations owned by consuming host app)
 *   **Component:** Passwordless Endpoints
-    - [ ] (L3) Create `POST /auth/passwordless/email/start`
+    - [x] (L3) Create `POST /auth/passwordless/email/start`
         *   *Guidance:* Accept email, generate secure token, store hashed, send email
         *   *Guidance:* Rate limit per email address
         *   *Guidance:* Always return success (don't leak email existence)
-    - [ ] (L3) Create `GET /auth/passwordless/email/verify`
+    - [x] (L3) Create `GET /auth/passwordless/email/verify`
         *   *Guidance:* Accept token, validate, consume, create/find user, issue tokens
         *   *Guidance:* Redirect to configured success URL with tokens
 *   **Component:** `PasswordlessEmailOptions`
-    - [ ] (L1) Create configuration class
+    - [x] (L1) Create configuration class
         ```csharp
         public class PasswordlessEmailOptions
         {
@@ -679,27 +679,29 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             public int MaxAttemptsPerHour { get; set; } = 5;
             public string EmailSubject { get; set; } = "Sign in to {AppName}";
             public string? EmailTemplatePath { get; set; }
-            public string VerifyEndpointUrl { get; set; } = "/auth/passwordless/email/verify";
+            public string VerifyEndpointUrl { get; set; } = "passwordless/email/verify";
+            public string? SuccessRedirectUrl { get; set; }
         }
         ```
 *   **Component:** Email Templates
-    - [ ] (L1) Create default HTML email template
-    - [ ] (L2) Support custom template loading
+    - [x] (L1) Create default HTML email template
+    - [x] (L2) Support custom template loading
 *   **Test Case (Unit):**
-    - [ ] (L2) Token generation creates unique, secure tokens
-    - [ ] (L2) Token hashing is one-way and consistent
-    - [ ] (L2) Rate limiting blocks excessive requests
+    - [x] (L2) Token generation creates unique, secure tokens
+    - [x] (L2) Token hashing is one-way and consistent
+    - [x] (L2) Rate limiting blocks excessive requests
 *   **Test Case (Integration):**
-    - [ ] (L2) `POST /auth/passwordless/email/start` sends email (mock sender)
-    - [ ] (L3) `GET /auth/passwordless/email/verify` with valid token issues tokens
-    - [ ] (L1) Expired token returns error
-    - [ ] (L1) Already-consumed token returns error
-    - [ ] (L2) New user is created if email not found
-    - [ ] (L2) Existing user is authenticated if email found
+    - [x] (L2) `POST /auth/passwordless/email/start` sends email (mock sender)
+    - [x] (L3) `GET /auth/passwordless/email/verify` with valid token issues tokens
+    - [x] (L1) Expired token returns error
+    - [x] (L1) Already-consumed token returns error
+    - [x] (L2) New user is created if email not found
+    - [x] (L2) Existing user is authenticated if email found
 *   **Documentation:**
-    - [ ] (L1) Add passwordless email setup guide
-    - [ ] (L1) Document SMTP configuration
-    - [ ] (L1) Provide email template customization examples
+    - [x] (L1) Add passwordless email setup guide
+    - [x] (L1) Document SMTP configuration
+    - [x] (L1) Recommend SMTP for demos/self-hosted; provider email APIs for production; document how to extend CoreIdent with custom `IEmailSender` (separate package/DI swap)
+    - [x] (L1) Provide email template customization examples
 
 ---
 
@@ -1736,7 +1738,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | OpenTelemetry Metrics | 0 | 0.9 | 🔲 Planned |
 | CLI Tool | 0 | 0.10 | 🔲 Planned |
 | Dev Container | 0 | 0.11 | 🔲 Planned |
-| Email Magic Link | 1 | 1.1 | 🔲 Planned |
+| Email Magic Link | 1 | 1.1 | ✅ Complete |
 | Passkey/WebAuthn | 1 | 1.2 | 🔲 Planned |
 | SMS OTP | 1 | 1.3 | 🔲 Planned |
 | F# Compatibility | 1 | 1.4 | 🔲 Planned |

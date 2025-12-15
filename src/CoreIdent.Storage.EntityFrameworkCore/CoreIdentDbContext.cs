@@ -15,6 +15,7 @@ public class CoreIdentDbContext : DbContext
     public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
     public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
     public DbSet<AuthorizationCodeEntity> AuthorizationCodes => Set<AuthorizationCodeEntity>();
+    public DbSet<PasswordlessTokenEntity> PasswordlessTokens => Set<PasswordlessTokenEntity>();
     public DbSet<UserGrantEntity> UserGrants => Set<UserGrantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
 
@@ -123,6 +124,30 @@ public class CoreIdentDbContext : DbContext
             entity.HasIndex(x => x.ClientId);
             entity.HasIndex(x => x.SubjectId);
             entity.HasIndex(x => x.ExpiresAt);
+        });
+
+        modelBuilder.Entity<PasswordlessTokenEntity>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Id)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.Email)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(x => x.TokenHash)
+                .IsRequired()
+                .HasMaxLength(128);
+
+            entity.HasIndex(x => x.TokenHash)
+                .IsUnique();
+
+            entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => x.ExpiresAt);
+            entity.HasIndex(x => x.ConsumedAt);
         });
 
         modelBuilder.Entity<AuthorizationCodeEntity>(entity =>

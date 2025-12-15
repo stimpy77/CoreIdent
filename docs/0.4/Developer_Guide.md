@@ -144,6 +144,9 @@ With defaults, CoreIdent maps:
   - `GET/POST /auth/register`
   - `GET/POST /auth/login`
   - `GET /auth/profile`
+- Passwordless email magic link:
+  - `POST /auth/passwordless/email/start`
+  - `GET /auth/passwordless/email/verify`
 
 > Note: discovery and JWKS are computed based on the `Issuer` URL’s **path** (see “Routing” below). They are not hardcoded to root.
 
@@ -236,12 +239,16 @@ This makes it possible to host CoreIdent under a path while still generating cor
   - `CoreIdentRouteOptions`
   - `CoreIdentResourceOwnerOptions`
   - `CoreIdentAuthorizationCodeOptions`
+  - `PasswordlessEmailOptions`
+  - `SmtpOptions`
 - Core services:
   - `ITokenService` → `JwtTokenService`
   - `IClientSecretHasher` → `DefaultClientSecretHasher`
   - `IPasswordHasher` → `DefaultPasswordHasher`
   - `ICustomClaimsProvider` → `NullCustomClaimsProvider`
   - `TimeProvider` → `TimeProvider.System`
+  - `IEmailSender` → `SmtpEmailSender`
+  - `PasswordlessEmailTemplateRenderer`
 - In-memory stores (defaults):
   - `IClientStore` → `InMemoryClientStore`
   - `IScopeStore` → `InMemoryScopeStore` (pre-seeded with standard OIDC scopes)
@@ -250,6 +257,7 @@ This makes it possible to host CoreIdent under a path while still generating cor
   - `IUserGrantStore` → `InMemoryUserGrantStore`
   - `ITokenRevocationStore` → `InMemoryTokenRevocationStore`
   - `IUserStore` → `InMemoryUserStore`
+  - `IPasswordlessTokenStore` → `InMemoryPasswordlessTokenStore`
 - Hosted service:
   - `AuthorizationCodeCleanupHostedService`
 
@@ -553,6 +561,132 @@ builder.Services.ConfigureResourceOwnerEndpoints(options =>
 ```
 
 Returning `null` falls back to CoreIdent defaults.
+
+---
+
+## 4.7 Passwordless email magic link (Feature 1.1)
+
+CoreIdent provides a simple passwordless flow using **email magic links**:
+
+- `POST /auth/passwordless/email/start` — request a sign-in link
+- `GET /auth/passwordless/email/verify?token=...` — verify the token, create/find the user, and issue tokens
+
+### 4.7.1 Start endpoint (`POST /auth/passwordless/email/start`)
+
+Request body (JSON):
+
+```json
+{ "email": "user@example.com" }
+```
+
+Behavior:
+
+- Always returns `200 OK` (does not leak whether a user exists)
+- Generates a secure random token and stores **only a hash** via `IPasswordlessTokenStore`
+- Enforces per-email rate limiting (`PasswordlessEmailOptions.MaxAttemptsPerHour`)
+- Sends an email using `IEmailSender` with a link to the verify endpoint
+
+### 4.7.2 Verify endpoint (`GET /auth/passwordless/email/verify`)
+
+Behavior:
+
+- Validates and consumes the token (single-use)
+- Creates the user if not found (`IUserStore`)
+- Issues an access token + refresh token
+- If `PasswordlessEmailOptions.SuccessRedirectUrl` is set, redirects there and appends:
+  - `access_token`, `refresh_token`, `token_type=Bearer`, `expires_in`
+
+If the token is invalid, expired, or already consumed, it returns `400 Bad Request`.
+
+### 4.7.3 Configuration (`PasswordlessEmailOptions`)
+
+```csharp
+builder.Services.Configure<PasswordlessEmailOptions>(opts =>
+{
+    opts.TokenLifetime = TimeSpan.FromMinutes(15);
+    opts.MaxAttemptsPerHour = 5;
+    opts.EmailSubject = "Sign in to {AppName}";
+
+    // Relative by default; combined with CoreIdentRouteOptions.BasePath
+    opts.VerifyEndpointUrl = "passwordless/email/verify";
+
+    // Optional redirect that receives tokens in query string
+    opts.SuccessRedirectUrl = "https://client.example/signed-in";
+
+    // Optional custom HTML template
+    // opts.EmailTemplatePath = "EmailTemplates/passwordless.html";
+});
+```
+
+### 4.7.4 SMTP configuration (default `SmtpEmailSender`)
+
+CoreIdent defaults `IEmailSender` to an SMTP implementation. Configure it via `SmtpOptions`.
+
+Example `appsettings.json`:
+
+```json
+{
+  "SmtpOptions": {
+    "Host": "smtp.example.com",
+    "Port": 587,
+    "EnableTls": true,
+    "UserName": "smtp-user",
+    "Password": "smtp-password",
+    "FromAddress": "no-reply@example.com",
+    "FromDisplayName": "CoreIdent"
+  }
+}
+```
+
+And bind options:
+
+```csharp
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("SmtpOptions"));
+```
+
+### 4.7.5 Email template customization
+
+CoreIdent renders a simple HTML email containing a verify link.
+
+- Default template is built into `PasswordlessEmailTemplateRenderer`.
+- To provide your own template, set `PasswordlessEmailOptions.EmailTemplatePath`.
+  - If the path is relative, it is resolved relative to `IHostEnvironment.ContentRootPath`.
+
+Available placeholders:
+
+- `{AppName}` — `IHostEnvironment.ApplicationName`
+- `{Email}` — recipient email
+- `{VerifyUrl}` — absolute verify URL
+
+### 4.7.6 Provider email APIs (recommended for production)
+
+Recommendation:
+
+- SMTP is great for demos and small self-hosted deployments.
+- For production, many teams prefer provider email APIs (SendGrid, Postmark, Mailgun, AWS SES, Azure Communication Services) for deliverability and operational convenience.
+
+CoreIdent is designed to be extended without forking:
+
+1. Implement `IEmailSender` in your host app or a separate package.
+2. Register it in DI to override the default SMTP sender.
+
+Example:
+
+```csharp
+public sealed class MyProviderEmailSender : IEmailSender
+{
+    public Task SendAsync(EmailMessage message, CancellationToken ct = default)
+    {
+        // Call your provider API here.
+        throw new NotImplementedException();
+    }
+}
+
+builder.Services.AddSingleton<IEmailSender, MyProviderEmailSender>();
+builder.Services.AddCoreIdent(...);
+```
+
+Because CoreIdent uses `TryAdd*` for defaults, registering `IEmailSender` before `AddCoreIdent()` will take precedence.
 
 ---
 
