@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "CoreIdent Contributors",
+  "classifications": ["Web", "API", "Authentication"],
+  "identity": "CoreIdent.Templates.Api.FSharp",
+  "name": "CoreIdent API (F#)",
+  "shortName": "coreident-api-fsharp",
+  "tags": {
+    "language": "F#",
+    "type": "project"
+  },
+  "sourceName": "CoreIdentApi",
+  "preferNameDirectory": true
+}

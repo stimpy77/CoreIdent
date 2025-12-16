@@ -831,15 +831,15 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** Moved from Feature 0.1 — verification is more meaningful once core APIs exist.
 
 *   **Component:** F# Compatibility Verification
-    - [ ] (L2) Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
-    - [ ] (L2) Create F# sample project using Giraffe/Saturn
-    - [ ] (L2) Add F# template (`coreident-api-fsharp`)
-    - [ ] (L1) Document F# usage patterns
+    - [x] (L2) Verify all public APIs are F#-friendly (no `out` parameters in critical paths)
+    - [x] (L2) Create F# sample project using Giraffe/Saturn
+    - [x] (L2) Add F# template (`coreident-api-fsharp`)
+    - [x] (L1) Document F# usage patterns
 *   **Test Case:**
-    - [ ] (L1) F# sample project compiles and runs
-    - [ ] (L2) All core interfaces are usable from F#
+    - [x] (L1) F# sample project compiles and runs
+    - [x] (L2) All core interfaces are usable from F#
 *   **Documentation:**
-    - [ ] (L1) F# usage guide
+    - [x] (L1) F# usage guide
 
 ---
 
