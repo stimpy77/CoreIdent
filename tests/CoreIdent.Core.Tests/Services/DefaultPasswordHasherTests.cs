@@ -1,5 +1,6 @@
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
+using CoreIdent.Passwords.AspNetIdentity.Services;
 using Shouldly;
 
 namespace CoreIdent.Core.Tests.Services;

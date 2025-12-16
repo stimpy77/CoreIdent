@@ -1,5 +1,6 @@
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
+using CoreIdent.Passkeys.Stores;
 using CoreIdent.Storage.EntityFrameworkCore.Stores;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -77,6 +78,13 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddEntityFrameworkCorePasskeyCredentialStore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<IPasskeyCredentialStore, EfPasskeyCredentialStore>();
+        return services;
+    }
+
     /// <summary>
     /// Adds all EF Core stores (token revocation, client, scope, refresh token).
     /// </summary>
@@ -91,6 +99,7 @@ public static class ServiceCollectionExtensions
         services.AddEntityFrameworkCorePasswordlessTokenStore();
         services.AddEntityFrameworkCoreUserGrantStore();
         services.AddEntityFrameworkCoreUserStore();
+        services.AddEntityFrameworkCorePasskeyCredentialStore();
         return services;
     }
 }

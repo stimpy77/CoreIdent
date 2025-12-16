@@ -710,7 +710,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** .NET 10 provides built-in passkey support via `IdentityPasskeyOptions` and ASP.NET Core Identity. CoreIdent wraps this for minimal-API scenarios and adds convenience configuration.
 
 *   **Component:** `CoreIdentPasskeyOptions`
-    - [ ] (L2) Create wrapper around .NET 10's `IdentityPasskeyOptions`
+    - [x] (L2) Create wrapper around .NET 10's `IdentityPasskeyOptions`
         ```csharp
         public class CoreIdentPasskeyOptions
         {
@@ -721,30 +721,30 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Passkey Service
-    - [ ] (L1) Create `IPasskeyService` interface
-    - [ ] (L2) Implement using .NET 10's built-in passkey support
-    - [ ] (L2) Handle registration ceremony
-    - [ ] (L2) Handle authentication ceremony
+    - [x] (L1) Create `IPasskeyService` interface
+    - [x] (L2) Implement using .NET 10's built-in passkey support
+    - [x] (L2) Handle registration ceremony
+    - [x] (L2) Handle authentication ceremony
 *   **Component:** Passkey Credential Storage
-    - [ ] (L1) Create `IPasskeyCredentialStore` interface
-    - [ ] (L1) Create `PasskeyCredential` model
-    - [ ] (L2) Implement in-memory store
-    - [ ] (L2) Implement EF Core store
+    - [x] (L1) Create `IPasskeyCredentialStore` interface
+    - [x] (L1) Create `PasskeyCredential` model
+    - [x] (L2) Implement in-memory store
+    - [x] (L2) Implement EF Core store
 *   **Component:** Passkey Endpoints
-    - [ ] (L2) `POST /auth/passkey/register/options` - Get registration options
-    - [ ] (L2) `POST /auth/passkey/register/complete` - Complete registration
-    - [ ] (L2) `POST /auth/passkey/authenticate/options` - Get authentication options
-    - [ ] (L2) `POST /auth/passkey/authenticate/complete` - Complete authentication
+    - [x] (L2) `POST /auth/passkey/register/options` - Get registration options
+    - [x] (L2) `POST /auth/passkey/register/complete` - Complete registration
+    - [x] (L2) `POST /auth/passkey/authenticate/options` - Get authentication options
+    - [x] (L2) `POST /auth/passkey/authenticate/complete` - Complete authentication
 *   **Component:** DI Registration
-    - [ ] (L1) Add `AddPasskeys()` extension method
+    - [x] (L1) Add `AddPasskeys()` extension method
 *   **Test Case (Integration):**
-    - [ ] (L2) Registration flow returns valid options
-    - [ ] (L2) Authentication flow returns valid options
+    - [x] (L2) Registration flow returns valid options
+    - [x] (L2) Authentication flow returns valid options
     - [ ] (Note: Full WebAuthn testing requires browser automation or mocks)
 *   **Documentation:**
-    - [ ] (L1) Add passkey setup guide
-    - [ ] (L1) Document browser requirements
-    - [ ] (L2) Provide JavaScript integration examples
+    - [x] (L1) Add passkey setup guide
+    - [x] (L1) Document browser requirements
+    - [x] (L2) Provide JavaScript integration examples
 
 ---
 

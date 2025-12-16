@@ -1,6 +1,7 @@
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using CoreIdent.Testing.Seeders;
+using CoreIdent.Passwords.AspNetIdentity.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -39,6 +40,8 @@ public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<globa
 
             services.AddDbContext<CoreIdentDbContext>(options => options.UseSqlite(_connection));
             services.AddEntityFrameworkCoreStores();
+
+            services.AddAspNetIdentityPasswordHasher();
 
             ConfigureTestServices?.Invoke(services);
         });

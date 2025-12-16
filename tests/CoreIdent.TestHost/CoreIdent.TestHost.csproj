@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CoreIdent.Core\CoreIdent.Core.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.Passkeys.AspNetIdentity\CoreIdent.Passkeys.AspNetIdentity.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.Passwords.AspNetIdentity\CoreIdent.Passwords.AspNetIdentity.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Storage.EntityFrameworkCore\CoreIdent.Storage.EntityFrameworkCore.csproj" />
   </ItemGroup>
 

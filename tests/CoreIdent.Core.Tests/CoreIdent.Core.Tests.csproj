@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.15.0" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
@@ -28,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CoreIdent.Core\CoreIdent.Core.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.Passwords.AspNetIdentity\CoreIdent.Passwords.AspNetIdentity.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Storage.EntityFrameworkCore\CoreIdent.Storage.EntityFrameworkCore.csproj" />
   </ItemGroup>
 

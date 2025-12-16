@@ -6,6 +6,7 @@ using CoreIdent.Core.Endpoints;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
+using CoreIdent.Passwords.AspNetIdentity.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -183,6 +184,8 @@ public sealed class ResourceOwnerEndpointIntegrationTests
                         });
 
                         services.AddSigningKey(o => o.UseRsaPem(rsaPem));
+
+                        services.AddAspNetIdentityPasswordHasher();
                     })
                     .Configure(app =>
                     {

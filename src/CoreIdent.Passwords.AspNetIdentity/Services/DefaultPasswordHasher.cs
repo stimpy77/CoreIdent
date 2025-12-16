@@ -1,7 +1,8 @@
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using Microsoft.AspNetCore.Identity;
 
-namespace CoreIdent.Core.Services;
+namespace CoreIdent.Passwords.AspNetIdentity.Services;
 
 public sealed class DefaultPasswordHasher : IPasswordHasher
 {

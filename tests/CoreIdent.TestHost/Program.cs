@@ -1,4 +1,7 @@
 using CoreIdent.Core.Extensions;
+using CoreIdent.Passkeys.AspNetIdentity.Endpoints;
+using CoreIdent.Passkeys.AspNetIdentity.Extensions;
+using CoreIdent.Passwords.AspNetIdentity.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using CoreIdent.TestHost;
@@ -20,6 +23,10 @@ builder.Services.AddDbContext<CoreIdentDbContext>(options =>
 
 builder.Services.AddEntityFrameworkCoreStores();
 
+builder.Services.AddAspNetIdentityPasswordHasher();
+
+builder.Services.AddPasskeys();
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = TestHeaderAuthenticationHandler.SchemeName;
@@ -39,6 +46,8 @@ app.UseAuthorization();
 app.MapGet("/health/check", () => Results.Ok());
 
 app.MapCoreIdentEndpoints();
+
+app.MapCoreIdentPasskeyEndpoints();
 
 app.Run();
 

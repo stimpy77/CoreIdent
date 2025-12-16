@@ -18,6 +18,7 @@ public class CoreIdentDbContext : DbContext
     public DbSet<PasswordlessTokenEntity> PasswordlessTokens => Set<PasswordlessTokenEntity>();
     public DbSet<UserGrantEntity> UserGrants => Set<UserGrantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<PasskeyCredentialEntity> PasskeyCredentials => Set<PasskeyCredentialEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,6 +208,32 @@ public class CoreIdentDbContext : DbContext
 
             entity.HasIndex(x => x.NormalizedUserName)
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<PasskeyCredentialEntity>(entity =>
+        {
+            entity.HasKey(x => x.CredentialId);
+
+            entity.Property(x => x.UserId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(x => x.CredentialId)
+                .IsRequired();
+
+            entity.Property(x => x.PublicKey)
+                .IsRequired();
+
+            entity.Property(x => x.CreatedAt)
+                .IsRequired();
+
+            entity.Property(x => x.TransportsJson)
+                .HasMaxLength(2000);
+
+            entity.Property(x => x.Name)
+                .HasMaxLength(200);
+
+            entity.HasIndex(x => x.UserId);
         });
     }
 }

@@ -20,8 +20,6 @@ public static class UserStoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddSingleton<IPasswordHasher, DefaultPasswordHasher>();
-
         services.TryAddSingleton<InMemoryUserStore>();
         services.TryAddSingleton<IUserStore>(sp => sp.GetRequiredService<InMemoryUserStore>());
 
