@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Observability;
 using CoreIdent.Core.Stores;
 using CoreIdent.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -38,8 +39,11 @@ public static class TokenManagementEndpointsExtensions
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.TokenRevocation");
 
+            using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.revoke");
+
             if (!request.HasFormContentType)
             {
+                activity?.SetTag("error", true);
                 return Results.BadRequest(new { error = "invalid_request", error_description = "Form content type is required." });
             }
 
@@ -48,18 +52,24 @@ public static class TokenManagementEndpointsExtensions
             var token = form["token"].ToString();
             var tokenTypeHint = form["token_type_hint"].ToString();
 
+            activity?.SetTag("token_type_hint", tokenTypeHint);
+
             if (string.IsNullOrWhiteSpace(token))
             {
+                activity?.SetTag("error", true);
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
             var (clientId, clientSecret) = ExtractClientCredentials(request, form);
+
+            activity?.SetTag("client_id", clientId);
 
             var authStart = Stopwatch.GetTimestamp();
 
             if (string.IsNullOrWhiteSpace(clientId))
             {
                 metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
+                activity?.SetTag("error", true);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication is required." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
@@ -68,6 +78,7 @@ public static class TokenManagementEndpointsExtensions
             {
                 logger.LogWarning("Revocation request for unknown or disabled client: {ClientId}", clientId);
                 metrics.ClientAuthenticated("unknown", success: false, Stopwatch.GetElapsedTime(authStart).TotalMilliseconds);
+                activity?.SetTag("error", true);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication failed." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
@@ -141,8 +152,11 @@ public static class TokenManagementEndpointsExtensions
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.TokenIntrospection");
 
+            using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.introspect");
+
             if (!request.HasFormContentType)
             {
+                activity?.SetTag("error", true);
                 return Results.BadRequest(new { error = "invalid_request", error_description = "Form content type is required." });
             }
 
@@ -151,15 +165,21 @@ public static class TokenManagementEndpointsExtensions
             var token = form["token"].ToString();
             var tokenTypeHint = form["token_type_hint"].ToString();
 
+            activity?.SetTag("token_type_hint", tokenTypeHint);
+
             if (string.IsNullOrWhiteSpace(token))
             {
+                activity?.SetTag("error", true);
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
             var (clientId, clientSecret) = ExtractClientCredentials(request, form);
 
+            activity?.SetTag("client_id", clientId);
+
             if (string.IsNullOrWhiteSpace(clientId))
             {
+                activity?.SetTag("error", true);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication is required." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
@@ -167,6 +187,7 @@ public static class TokenManagementEndpointsExtensions
             if (client is null || !client.Enabled)
             {
                 logger.LogWarning("Introspection request for unknown or disabled client: {ClientId}", clientId);
+                activity?.SetTag("error", true);
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication failed." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 

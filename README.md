@@ -76,6 +76,8 @@ Then visit:
 
 - **Integrate CoreIdent into an app**
   - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+- **Aspire integration (service defaults)**
+  - [docs/0.4/Aspire_Integration.md](docs/0.4/Aspire_Integration.md)
 - **Add passkeys (WebAuthn)**
   - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
 - **Use the CLI**
@@ -155,6 +157,8 @@ builder.Services.AddEntityFrameworkCoreStores();
 
 - **Developer Guide (recommended starting point)**
   - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+- **Aspire integration**
+  - [docs/0.4/Aspire_Integration.md](docs/0.4/Aspire_Integration.md)
 - **Passkeys (WebAuthn) guide**
   - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
 - **Project docs**

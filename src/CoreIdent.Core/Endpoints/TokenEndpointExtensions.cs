@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Observability;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
@@ -51,8 +52,11 @@ public static class TokenEndpointExtensions
         var logger = loggerFactory.CreateLogger("CoreIdent.TokenEndpoint");
         var options = coreOptions.Value;
 
+        using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.token");
+
         if (!request.HasFormContentType)
         {
+            activity?.SetTag("error", true);
             return TokenError(TokenErrors.InvalidRequest, "Content-Type must be application/x-www-form-urlencoded.");
         }
 
@@ -60,6 +64,9 @@ public static class TokenEndpointExtensions
         var tokenRequest = ParseTokenRequest(form);
 
         var (clientId, clientSecret) = ExtractClientCredentials(request, tokenRequest);
+
+        activity?.SetTag("grant_type", tokenRequest.GrantType);
+        activity?.SetTag("client_id", clientId);
 
         var authStart = Stopwatch.GetTimestamp();
 

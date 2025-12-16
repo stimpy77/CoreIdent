@@ -868,23 +868,25 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.6: Aspire Integration
 
 *   **Component:** `CoreIdent.Aspire` Package
-    - [ ] (L2) Create package targeting Aspire v13
-    - [ ] (L3) Implement `IDistributedApplicationComponent`
+    - [x] (L2) Create package targeting Aspire v13 (net10.0)
+    - [x] (L3) Provide AppHost integration via `IDistributedApplicationBuilder` extension methods (Aspire.Hosting)
 *   **Component:** Dashboard Integration
-    - [ ] (L2) Pre-configured metrics export
-    - [ ] (L2) Structured logging integration
-    - [ ] (L2) Distributed tracing for auth flows
+    - [x] (L2) OpenTelemetry metrics integration that includes CoreIdent `System.Diagnostics.Metrics` meter(s)
+    - [x] (L2) Structured logging integration guidance (OpenTelemetry logging)
+    - [x] (L2) Distributed tracing for auth flows (CoreIdent ActivitySource spans)
 *   **Component:** Health Checks
-    - [ ] (L1) Database connectivity check
-    - [ ] (L1) Key availability check
-    - [ ] (L2) External provider connectivity (if configured)
+    - [x] (L1) Database connectivity check (when EF Core DbContext is configured)
+    - [x] (L1) Key availability check (ISigningKeyProvider)
+    - [x] (L2) External provider connectivity (if configured)
 *   **Component:** Service Defaults
-    - [ ] (L2) `AddCoreIdentDefaults()` extension for Aspire service defaults
+    - [x] (L2) `AddCoreIdentDefaults()` extension for Aspire-style service defaults
+    - [x] (L2) `MapCoreIdentDefaultEndpoints()` helper for mapping `/health` + `/alive`
 *   **Test Case:**
-    - [ ] (L2) Aspire dashboard shows CoreIdent metrics
-    - [ ] (L1) Health checks report correctly
+    - [x] (L2) OpenTelemetry configuration includes CoreIdent meter(s)
+    - [x] (L2) OpenTelemetry configuration includes CoreIdent tracing spans
+    - [x] (L1) Health checks report correctly
 *   **Documentation:**
-    - [ ] (L1) Aspire integration guide
+    - [x] (L1) Aspire integration guide
 
 ---
 
@@ -1141,6 +1143,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   - [ ] (L2) Scan solution for UtcNow instances and consider replacing with TimeProvider (only where appropriate)
 *   - [ ] (??) Scan for explicit use of prefixes like "/auth" etc and determine if there was a missing use of `CoreIdentRouteOptions`
 *   - [ ] (??) Check for undelivered promises in Technical_Plan.md for features already implemented
+*   - [ ] (??) address this from Feature 1.2: "- [ ] (Note: Full WebAuthn testing requires browser automation or mocks)"
+      * (we may need a rich/heavy browser automation test client which will unpack a slew of additional integration test scenarios for many user flows including WebAuthn and other authentication flows)
+*   - [ ] (??) Engage with development lead to determine whether to move docs/0.4 contents out of 0.4 folder and strip out "0.4" mention everywhere in all docs and libs/apps (saw it in CliApp.cs could be in more places)
+*   - [ ] (??) Review and update any incomplete or outdated documentation
+      * CLAUDE.md
+      * README.md
+      * docs/* (all nested files here)
 *   - [ ] (TBD) TBD ~ Engage with development lead to determine additional cleanup items
 
 ---

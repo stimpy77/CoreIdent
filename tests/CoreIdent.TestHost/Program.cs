@@ -1,4 +1,5 @@
 using CoreIdent.Core.Extensions;
+using CoreIdent.Aspire;
 using CoreIdent.Passkeys.AspNetIdentity.Endpoints;
 using CoreIdent.Passkeys.AspNetIdentity.Extensions;
 using CoreIdent.Passwords.AspNetIdentity.Extensions;
@@ -9,6 +10,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddCoreIdentDefaults();
 
 builder.Services.AddCoreIdent(o =>
 {
@@ -43,7 +46,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/health/check", () => Results.Ok());
+app.MapCoreIdentDefaultEndpoints();
 
 app.MapCoreIdentEndpoints();
 

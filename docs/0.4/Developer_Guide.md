@@ -22,6 +22,7 @@ If you are looking for the high-level roadmap and design intent, start with:
 - `docs/0.4/Technical_Plan.md`
 - `docs/0.4/DEVPLAN.md`
 - `docs/0.4/Passkeys.md`
+- `docs/0.4/Aspire_Integration.md`
 
 ---
 
