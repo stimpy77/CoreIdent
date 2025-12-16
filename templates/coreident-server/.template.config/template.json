@@ -1,15 +1,15 @@
 {
   "$schema": "http://json.schemastore.org/template",
   "author": "CoreIdent Contributors",
-  "classifications": ["Web", "API", "Authentication"],
-  "identity": "CoreIdent.Templates.Api.FSharp",
-  "name": "CoreIdent API (F#)",
-  "shortName": "coreident-api-fsharp",
+  "classifications": ["Web", "Authentication"],
+  "identity": "CoreIdent.Templates.Server",
+  "name": "CoreIdent Server",
+  "shortName": "coreident-server",
   "tags": {
-    "language": "F#",
+    "language": "C#",
     "type": "project"
   },
-  "sourceName": "CoreIdentApi",
+  "sourceName": "CoreIdentServer",
   "preferNameDirectory": true,
   "symbols": {
     "usePasswordless": {
@@ -18,11 +18,11 @@
       "defaultValue": "true",
       "description": "Include passwordless email authentication (dev email sender)"
     },
-    "useEfCore": {
+    "usePasskeys": {
       "type": "parameter",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Use Entity Framework Core for storage"
+      "description": "Include passkey endpoints"
     }
   }
 }

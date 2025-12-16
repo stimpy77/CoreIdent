@@ -8,6 +8,9 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 - **Integrate CoreIdent into an app**
   - [Developer Guide](Developer_Guide.md)
+- **Scaffold a host with templates**
+  - `dotnet new install CoreIdent.Templates`
+  - Templates: `coreident-api`, `coreident-server`, `coreident-api-fsharp`
 - **Add passkeys (WebAuthn)**
   - [Passkeys Guide](Passkeys.md)
 - **Use the CLI**

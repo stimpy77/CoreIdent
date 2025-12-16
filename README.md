@@ -45,6 +45,28 @@ If you want to see CoreIdent running quickly, use the test host:
 dotnet run --project tests/CoreIdent.TestHost
 ```
 
+If you want to scaffold a new host app, use the template pack:
+
+```bash
+dotnet new install CoreIdent.Templates
+
+dotnet new coreident-api -n MyCoreIdentApi
+dotnet new coreident-server -n MyCoreIdentServer
+dotnet new coreident-api-fsharp -n MyCoreIdentApiFSharp
+```
+
+Template parameters:
+
+- **`coreident-api`**
+  - `--useEfCore <true|false>`
+  - `--usePasswordless <true|false>`
+- **`coreident-server`**
+  - `--usePasskeys <true|false>`
+  - `--usePasswordless <true|false>`
+- **`coreident-api-fsharp`**
+  - `--useEfCore <true|false>`
+  - `--usePasswordless <true|false>`
+
 Then visit:
 
 - `/.well-known/openid-configuration`

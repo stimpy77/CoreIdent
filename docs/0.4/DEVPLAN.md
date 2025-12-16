@@ -847,21 +847,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Note:** We should support both C# and F# templates
 
 *   **Component:** Template Package Structure
-    - [ ] (L1) Create `templates/` directory structure
-    - [ ] (L1) Create `CoreIdent.Templates.csproj` for packaging
+    - [x] (L1) Create `templates/` directory structure
+    - [x] (L1) Create `CoreIdent.Templates.csproj` for packaging
 *   **Component:** `coreident-api` Template
-    - [ ] (L2) Create minimal API template with CoreIdent auth
-    - [ ] (L2) Include `template.json` with parameters (usePasswordless, useEfCore)
-    - [ ] (L1) Include sample `appsettings.json`
+    - [x] (L2) Create minimal API template with CoreIdent auth
+    - [x] (L2) Include `template.json` with parameters (usePasswordless, useEfCore)
+    - [x] (L1) Include sample `appsettings.json`
 *   **Component:** `coreident-server` Template
-    - [ ] (L2) Create full OAuth/OIDC server template
-    - [ ] (L2) Include EF Core setup
-    - [ ] (L1) Include sample clients and scopes
+    - [x] (L2) Create full OAuth/OIDC server template
+    - [x] (L2) Include EF Core setup
+    - [x] (L1) Include sample clients and scopes
 *   **Component:** Template Testing
-    - [ ] (L2) Create test that instantiates templates and builds them
+    - [x] (L2) Create test that instantiates templates and builds them
 *   **Documentation:**
-    - [ ] (L1) Add template usage to getting started guide
-    - [ ] (L1) Document template parameters
+    - [x] (L1) Add template usage to getting started guide
+    - [x] (L1) Document template parameters
 
 ---
 

@@ -178,6 +178,51 @@ This is a convenient way to manually poke endpoints.
 
 ---
 
+## 1.3 Scaffold a host with `dotnet new`
+
+CoreIdent ships a template pack (`CoreIdent.Templates`) that contains starter host projects.
+
+Install the templates:
+
+```bash
+dotnet new install CoreIdent.Templates
+```
+
+Available templates:
+
+- **`coreident-api`** (C#)
+  - Minimal host for CoreIdent endpoints.
+  - Parameters:
+    - `--useEfCore <true|false>` (default: `true`)
+    - `--usePasswordless <true|false>` (default: `true`)
+- **`coreident-server`** (C#)
+  - Full OAuth/OIDC server host (EF Core stores) with optional passkey endpoints.
+  - Parameters:
+    - `--usePasskeys <true|false>` (default: `true`)
+    - `--usePasswordless <true|false>` (default: `true`)
+- **`coreident-api-fsharp`** (F#)
+  - Minimal host for CoreIdent endpoints.
+  - Parameters:
+    - `--useEfCore <true|false>` (default: `true`)
+    - `--usePasswordless <true|false>` (default: `true`)
+
+Examples:
+
+```bash
+dotnet new coreident-api -n MyCoreIdentApi
+dotnet new coreident-api -n MyCoreIdentApiNoEf --useEfCore false
+
+dotnet new coreident-server -n MyCoreIdentServer
+dotnet new coreident-server -n MyCoreIdentServerNoPasskeys --usePasskeys false
+
+dotnet new coreident-api-fsharp -n MyCoreIdentApiFSharp
+dotnet new coreident-api-fsharp -n MyCoreIdentApiFSharpNoEf --useEfCore false
+```
+
+Each template includes a sample `appsettings.json` with required `CoreIdent` configuration (issuer, audience, dev signing key) and, when applicable, a SQLite connection string.
+
+---
+
 # 2. Configuration and dependency injection
 
 ## 2.1 Core options (`CoreIdentOptions`)
