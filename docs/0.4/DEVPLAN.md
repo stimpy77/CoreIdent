@@ -37,10 +37,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Dev Container | 0 | 0.11 | ✅ Complete |
 | Email Magic Link | 1 | 1.1 | ✅ Complete |
 | Passkey/WebAuthn | 1 | 1.2 | ✅ Complete |
-| SMS OTP | 1 | 1.3 | 🔲 Planned |
-| F# Compatibility | 1 | 1.4 | 🔲 Planned |
-| `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
-| Aspire Integration | 1 | 1.6 | 🔲 Planned |
+| SMS OTP | 1 | 1.3 | ✅ Complete |
+| F# Compatibility | 1 | 1.4 | ✅ Complete |
+| `dotnet new` Templates | 1 | 1.5 | ✅ Complete |
+| Aspire Integration | 1 | 1.6 | ✅ Complete |
 | Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
 | Consent & Grants | 1 | 1.8 | ✅ Complete |
 | Delegated User Store | 1 | 1.9 | ✅ Complete |
@@ -994,20 +994,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.10: OIDC UserInfo Endpoint
 
 *   **Component:** UserInfo Endpoint
-    - [ ] (L3) Implement `GET /auth/userinfo`
+    - [x] (L3) Implement `GET /auth/userinfo`
         *   *Guidance:* Path must be configurable via `CoreIdentRouteOptions.UserInfoPath`
         *   *Guidance:* Require a valid access token (bearer auth)
         *   *Guidance:* Use scopes to determine returned claims (e.g., `profile`, `email`, `address`, `phone`)
         *   *Guidance:* Source claims from `IUserStore` and/or `ICustomClaimsProvider`
         *   *Guidance:* Return standard OIDC claims when present; omit claims not granted by scope
 *   **Component:** UserInfo Response Model
-    - [ ] (L1) Define a response model (record/dictionary) suitable for OIDC userinfo
+    - [x] (L1) Define a response model (record/dictionary) suitable for OIDC userinfo
 *   **Test Case (Integration):**
-    - [ ] (L2) Unauthenticated request returns 401
-    - [ ] (L3) With `openid profile` scope, userinfo returns `sub` and profile claims
-    - [ ] (L2) With `openid email` scope, userinfo returns `email`
+    - [x] (L2) Unauthenticated request returns 401
+    - [x] (L3) With `openid profile` scope, userinfo returns `sub` and profile claims
+    - [x] (L2) With `openid email` scope, userinfo returns `email`
 *   **Documentation:**
-    - [ ] (L1) Document userinfo endpoint behavior and scope-to-claims mapping
+    - [x] (L1) Document userinfo endpoint behavior and scope-to-claims mapping
 
 ---
 

@@ -257,7 +257,7 @@ Defaults:
   - `RevocationPath = "revoke"`
   - `IntrospectionPath = "introspect"`
   - `ConsentPath = "consent"`
-  - `UserInfoPath = "userinfo"` (future)
+  - `UserInfoPath = "userinfo"`
   - `RegisterPath = "register"`
   - `LoginPath = "login"`
   - `ProfilePath = "profile"`
@@ -839,6 +839,44 @@ To use a real provider, register your own `ISmsProvider` implementation:
 ```csharp
 builder.Services.AddSingleton<ISmsProvider, MySmsProvider>();
 ```
+
+---
+
+## 4.9 UserInfo endpoint (`GET /auth/userinfo`, Feature 1.10)
+
+CoreIdent exposes a minimal OpenID Connect **UserInfo** endpoint:
+
+- `GET /auth/userinfo`
+
+Behavior:
+
+- Requires a valid bearer access token
+- Requires that the access token includes the `openid` scope
+- Returns a JSON object that always includes:
+  - `sub`
+
+### Scope to claims mapping
+
+CoreIdent returns claims based on granted scopes:
+
+- `openid`
+  - `sub`
+- `profile`
+  - `name`, `family_name`, `given_name`, `middle_name`, `nickname`, `preferred_username`, `profile`, `picture`, `website`, `gender`, `birthdate`, `zoneinfo`, `locale`, `updated_at`
+- `email`
+  - `email`, `email_verified`
+- `address`
+  - `address`
+- `phone`
+  - `phone_number`, `phone_number_verified`
+
+Claims are sourced from:
+
+- `IUserStore.GetClaimsAsync(subjectId)`
+- `ICustomClaimsProvider.GetIdTokenClaimsAsync(...)`
+
+Claims not granted by scope are omitted.
+
 ---
 
 # 5. Token revocation and resource server enforcement

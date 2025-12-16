@@ -66,6 +66,9 @@ public static class EndpointRouteBuilderExtensions
         var profilePath = routeOptions.CombineWithBase(routeOptions.ProfilePath);
         endpoints.MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath);
 
+        var userInfoPath = routeOptions.CombineWithBase(routeOptions.UserInfoPath);
+        endpoints.MapCoreIdentUserInfoEndpoint(userInfoPath);
+
         var passwordlessEmailStartPath = routeOptions.CombineWithBase("passwordless/email/start");
         var passwordlessEmailVerifyPath = routeOptions.CombineWithBase("passwordless/email/verify");
         endpoints.MapCoreIdentPasswordlessEmailEndpoints(passwordlessEmailStartPath, passwordlessEmailVerifyPath);
