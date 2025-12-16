@@ -10,9 +10,12 @@ let webApp : HttpHandler =
         route "/" >=> text "CoreIdent F# sample is running"
     ]
 
-let builder = WebApplication.CreateBuilder()
+let builder = WebApplication.CreateBuilder(Environment.GetCommandLineArgs())
 
-builder.Services.AddCoreIdent() |> ignore
+builder.Services.AddCoreIdent(fun o ->
+    o.Issuer <- "http://localhost:5080"
+    o.Audience <- "http://localhost:5080"
+) |> ignore
 
 builder.Services.AddSigningKey(fun o ->
     o.UseSymmetric("this-is-a-dev-only-secret-please-change") |> ignore
