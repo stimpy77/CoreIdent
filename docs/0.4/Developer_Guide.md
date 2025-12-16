@@ -385,6 +385,35 @@ CoreIdent metrics are intended to complement these with OAuth/OIDC-specific coun
 
 All store and service registrations use `TryAdd*` patterns so you can override them by registering your own implementations **before** calling `AddCoreIdent()` (or by replacing registrations explicitly).
 
+### Delegated user store adapter (integrate existing user systems)
+
+If you already have an existing user system (database + credential verification) and you want CoreIdent to **delegate user lookup and credential validation**, use `CoreIdent.Adapters.DelegatedUserStore`.
+
+Registration:
+
+```csharp
+using CoreIdent.Adapters.DelegatedUserStore.Extensions;
+
+builder.Services.AddCoreIdentDelegatedUserStore(o =>
+{
+    o.FindUserByIdAsync = (id, ct) => myUsers.FindByIdAsync(id, ct);
+    o.FindUserByUsernameAsync = (username, ct) => myUsers.FindByUsernameAsync(username, ct);
+    o.ValidateCredentialsAsync = (user, password, ct) => myUsers.ValidatePasswordAsync(user, password, ct);
+
+    // Optional: provide claims that will be emitted into tokens.
+    o.GetClaimsAsync = (subjectId, ct) => myUsers.GetClaimsAsync(subjectId, ct);
+});
+```
+
+Notes:
+
+- The adapter **replaces** `IUserStore` and `IPasswordHasher` registrations.
+- CoreIdent will **not** store password hashes when using this adapter (credential validation is delegated).
+- You are responsible for:
+  - secure credential storage and verification (hashing, rate limiting, lockout, MFA, etc.)
+  - preventing credential leakage in logs and telemetry
+  - ensuring usernames are normalized consistently with your system
+
 ---
 
 # 3. Signing keys and JWKS

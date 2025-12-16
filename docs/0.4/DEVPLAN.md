@@ -43,7 +43,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Aspire Integration | 1 | 1.6 | 🔲 Planned |
 | Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
 | Consent & Grants | 1 | 1.8 | ✅ Complete |
-| Delegated User Store | 1 | 1.9 | 🔲 Planned |
+| Delegated User Store | 1 | 1.9 | ✅ Complete |
 | OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
 | Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
 | Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
@@ -970,24 +970,24 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.9: Delegated User Store Adapter (Integrate Existing User Systems)
 
 *   **Component:** Delegated User Store Options
-    - [ ] (L1) Create `DelegatedUserStoreOptions` with required delegates:
+    - [x] (L1) Create `DelegatedUserStoreOptions` with required delegates:
         *   `FindUserByIdAsync`
         *   `FindUserByUsernameAsync`
         *   `ValidateCredentialsAsync`
         *   optional: `GetClaimsAsync`
 *   **Component:** `DelegatedUserStore` Implementation
-    - [ ] (L2) Implement `IUserStore` via configured delegates
+    - [x] (L2) Implement `IUserStore` via configured delegates
         *   *Guidance:* Must never store password hashes; credential validation is delegated
 *   **Component:** Validation
-    - [ ] (L1) Add startup validation to ensure required delegates are provided
+    - [x] (L1) Add startup validation to ensure required delegates are provided
 *   **Component:** DI Registration
-    - [ ] (L1) Add `AddCoreIdentDelegatedUserStore(...)` extension method
+    - [x] (L1) Add `AddCoreIdentDelegatedUserStore(...)` extension method
         *   *Guidance:* Should replace any previously-registered `IUserStore`
 *   **Test Case (Unit):**
-    - [ ] (L2) Missing required delegates fails validation on startup
-    - [ ] (L2) Delegates are invoked correctly for find + credential validation
+    - [x] (L2) Missing required delegates fails validation on startup
+    - [x] (L2) Delegates are invoked correctly for find + credential validation
 *   **Documentation:**
-    - [ ] (L1) Document integration pattern and security responsibilities
+    - [x] (L1) Document integration pattern and security responsibilities
 
 ---
 
