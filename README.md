@@ -37,6 +37,32 @@ CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 - **Prerequisite**: .NET 10 SDK
 - **Legacy**: the prior 0.3.x implementation is tagged [`legacy-0.3.x-main`](../../tree/legacy-0.3.x-main)
 
+## Quickstart (2 minutes)
+
+If you want to see CoreIdent running quickly, use the test host:
+
+```bash
+dotnet run --project tests/CoreIdent.TestHost
+```
+
+Then visit:
+
+- `/.well-known/openid-configuration`
+- `/.well-known/jwks.json`
+
+## Choose your path
+
+- **Integrate CoreIdent into an app**
+  - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+- **Add passkeys (WebAuthn)**
+  - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
+- **Use the CLI**
+  - [docs/0.4/CLI_Reference.md](docs/0.4/CLI_Reference.md)
+- **Understand the roadmap / implementation status**
+  - [docs/0.4/DEVPLAN.md](docs/0.4/DEVPLAN.md)
+- **Contribute / development environment**
+  - [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ## What CoreIdent 0.4 provides today
 
 - **Token endpoint** (`/auth/token`)
@@ -50,13 +76,12 @@ CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 - **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
 - **In-memory stores** by default + **EF Core store implementations**
 - **Test infrastructure** under `tests/` (fixtures + integration coverage)
+- **Passwordless authentication**
+  - Email magic links
+  - Passkeys/WebAuthn
+  - SMS OTP (planned)
 
 ## What’s next
-
-- **Passwordless authentication**
-  - Email magic links (available)
-  - Passkeys/WebAuthn (available)
-  - SMS OTP (planned)
 - **External providers** (Google/Microsoft/GitHub, etc.)
 - **Client libraries** and broader “drop-in auth for apps” experiences
 

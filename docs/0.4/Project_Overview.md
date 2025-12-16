@@ -13,6 +13,22 @@ CoreIdent wraps and extends .NET 10's built-in identity primitives, dramatically
 
 ---
 
+## How to use this document
+
+- If you want to integrate CoreIdent into an app, start with `docs/0.4/Developer_Guide.md`.
+- If you want implementation details and interface-level specs, see `docs/0.4/Technical_Plan.md`.
+- If you want the authoritative implementation status and remaining work, see `docs/0.4/DEVPLAN.md`.
+
+---
+
+## What CoreIdent Is NOT
+
+- **Not a Keycloak replacement** — We're not building a full IAM platform with admin UIs for enterprise policy management
+- **Not competing on obscure protocols** — No SAML, WS-Fed, or legacy enterprise federation (use specialized tools)
+- **Not blockchain/Web3 focused** — Removed from core roadmap (community can add later)
+
+---
+
 ## Core Principles
 
 | Principle | Description |
@@ -70,14 +86,6 @@ CoreIdent is built as a **composable ecosystem of packages**, not a monolithic f
 | SMS Delivery | `ISmsProvider` | Custom SMS providers |
 | Rate Limiting | `IRateLimiter` | Custom rate limit logic |
 | Audit Logging | `IAuditLogger` | Custom audit destinations |
-
----
-
-## What CoreIdent Is NOT
-
-- **Not a Keycloak replacement** — We're not building a full IAM platform with admin UIs for enterprise policy management
-- **Not competing on obscure protocols** — No SAML, WS-Fed, or legacy enterprise federation (use specialized tools)
-- **Not blockchain/Web3 focused** — Removed from core roadmap (community can add later)
 
 ---
 

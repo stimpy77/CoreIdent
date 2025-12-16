@@ -9,6 +9,13 @@ This guide documents the **CoreIdent 0.4** codebase (a ground-up rewrite from 0.
 - Persisting CoreIdent state with EF Core
 - Writing unit/integration tests using the provided test infrastructure
 
+## You will achieve
+
+- Run a minimal CoreIdent host and exercise key endpoints
+- Configure signing keys, routes, clients, and scopes
+- Enable persistence with EF Core
+- Understand the implemented endpoint surface and how to map it
+
 If you are looking for the high-level roadmap and design intent, start with:
 
 - `docs/0.4/Project_Overview.md`

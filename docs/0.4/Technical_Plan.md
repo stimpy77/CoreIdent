@@ -2,6 +2,12 @@
 
 This document provides detailed technical specifications, architecture decisions, and implementation guidance for CoreIdent 0.4.
 
+## How to use this document
+
+- If you are integrating CoreIdent into an app, start with `docs/0.4/Developer_Guide.md`.
+- If you want the authoritative implementation status and remaining work, see `docs/0.4/DEVPLAN.md`.
+- This document is intended to capture design intent and technical guidance.
+
 ---
 
 ## Technology Stack
@@ -801,7 +807,7 @@ src/
 
 ---
 
-## Implementation Priority
+## Sequencing (non-authoritative)
 
 Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describes the intended sequencing without using checkbox-based completion markers.
 

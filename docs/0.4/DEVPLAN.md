@@ -17,6 +17,53 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 - `[ ]` — Not started
 - `[~]` — Partial / needs revisit after prior feature is implemented
 
+## TL;DR: Protocol & Feature Status Summary
+
+| Protocol / Feature | Phase | Feature | Status |
+|-------------------|-------|---------|--------|
+| .NET 10 Migration | 0 | 0.1 | ✅ Complete |
+| Asymmetric Keys (RS256/ES256) | 0 | 0.2 | ✅ Complete |
+| Client Store & Model | 0 | 0.3 | ✅ Complete |
+| Scope & Core Models | 0 | 0.4 | ✅ Complete |
+| Core Registration & Routing | 0 | 0.4.1 | ✅ Complete |
+| OIDC Discovery Metadata | 0 | 0.4.2 | ✅ Complete |
+| User Model & Stores | 0 | 0.4.3 | ✅ Complete |
+| Token Issuance Endpoint | 0 | 0.5 | ✅ Complete |
+| Token Revocation (RFC 7009) | 0 | 0.6 | ✅ Complete |
+| Token Introspection (RFC 7662) | 0 | 0.7 | ✅ Complete |
+| Test Infrastructure | 0 | 0.8 | ✅ Complete |
+| OpenTelemetry Metrics | 0 | 0.9 | ✅ Complete |
+| CLI Tool | 0 | 0.10 | ✅ Complete |
+| Dev Container | 0 | 0.11 | ✅ Complete |
+| Email Magic Link | 1 | 1.1 | ✅ Complete |
+| Passkey/WebAuthn | 1 | 1.2 | ✅ Complete |
+| SMS OTP | 1 | 1.3 | 🔲 Planned |
+| F# Compatibility | 1 | 1.4 | 🔲 Planned |
+| `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
+| Aspire Integration | 1 | 1.6 | 🔲 Planned |
+| Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
+| Consent & Grants | 1 | 1.8 | ✅ Complete |
+| Delegated User Store | 1 | 1.9 | 🔲 Planned |
+| OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
+| Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
+| Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
+| Google Provider | 2 | 2.2 | 🔲 Planned |
+| Microsoft Provider | 2 | 2.3 | 🔲 Planned |
+| GitHub Provider | 2 | 2.4 | 🔲 Planned |
+| Key Rotation | 3 | 3.1 | 🔲 Planned |
+| OIDC Logout | 3 | 3.2 | 🔲 Planned |
+| Dynamic Client Registration | 3 | 3.3 | 🔲 Planned |
+| Device Authorization Flow | 3 | 3.4 | 🔲 Planned |
+| PAR (RFC 9126) | 3 | 3.5 | 🔲 Planned |
+| DPoP (RFC 9449) | 3 | 3.6 | 🔲 Planned |
+| RAR (RFC 9396) | 3 | 3.7 | 🔲 Planned |
+| UI Package | 4 | 4.1 | 🔲 Planned |
+| Admin API | 4 | 4.3 | 🔲 Planned |
+| MFA Framework | 5 | 5.1 | 🔲 Planned |
+| SCIM | 5 | 5.4 | 🔲 Planned |
+| SPIFFE/SPIRE | 5 | 5.5 | 🔲 Planned |
+| Verifiable Credentials | 5 | 5.10 | 🔲 Planned |
+
 ---
 
 ## Phase 0: Foundation Reset
@@ -1724,50 +1771,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ## Protocol & Feature Status Summary
 
-| Protocol / Feature | Phase | Feature | Status |
-|-------------------|-------|---------|--------|
-| .NET 10 Migration | 0 | 0.1 | ✅ Complete |
-| Asymmetric Keys (RS256/ES256) | 0 | 0.2 | ✅ Complete |
-| Client Store & Model | 0 | 0.3 | ✅ Complete |
-| Scope & Core Models | 0 | 0.4 | ✅ Complete |
-| Core Registration & Routing | 0 | 0.4.1 | ✅ Complete |
-| OIDC Discovery Metadata | 0 | 0.4.2 | ✅ Complete |
-| User Model & Stores | 0 | 0.4.3 | ✅ Complete |
-| Token Issuance Endpoint | 0 | 0.5 | ✅ Complete |
-| Token Revocation (RFC 7009) | 0 | 0.6 | ✅ Complete |
-| Token Introspection (RFC 7662) | 0 | 0.7 | ✅ Complete |
-| Test Infrastructure | 0 | 0.8 | ✅ Complete |
-| OpenTelemetry Metrics | 0 | 0.9 | ✅ Complete |
-| CLI Tool | 0 | 0.10 | ✅ Complete |
-| Dev Container | 0 | 0.11 | ✅ Complete |
-| Email Magic Link | 1 | 1.1 | ✅ Complete |
-| Passkey/WebAuthn | 1 | 1.2 | ✅ Complete |
-| SMS OTP | 1 | 1.3 | 🔲 Planned |
-| F# Compatibility | 1 | 1.4 | 🔲 Planned |
-| `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
-| Aspire Integration | 1 | 1.6 | 🔲 Planned |
-| Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
-| Consent & Grants | 1 | 1.8 | ✅ Complete |
-| Delegated User Store | 1 | 1.9 | 🔲 Planned |
-| OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
-| Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
-| Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
-| Google Provider | 2 | 2.2 | 🔲 Planned |
-| Microsoft Provider | 2 | 2.3 | 🔲 Planned |
-| GitHub Provider | 2 | 2.4 | 🔲 Planned |
-| Key Rotation | 3 | 3.1 | 🔲 Planned |
-| OIDC Logout | 3 | 3.2 | 🔲 Planned |
-| Dynamic Client Registration | 3 | 3.3 | 🔲 Planned |
-| Device Authorization Flow | 3 | 3.4 | 🔲 Planned |
-| PAR (RFC 9126) | 3 | 3.5 | 🔲 Planned |
-| DPoP (RFC 9449) | 3 | 3.6 | 🔲 Planned |
-| RAR (RFC 9396) | 3 | 3.7 | 🔲 Planned |
-| UI Package | 4 | 4.1 | 🔲 Planned |
-| Admin API | 4 | 4.3 | 🔲 Planned |
-| MFA Framework | 5 | 5.1 | 🔲 Planned |
-| SCIM | 5 | 5.4 | 🔲 Planned |
-| SPIFFE/SPIRE | 5 | 5.5 | 🔲 Planned |
-| Verifiable Credentials | 5 | 5.10 | 🔲 Planned |
+This summary is shown near the top of the document.
 
 ---
 

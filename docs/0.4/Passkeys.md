@@ -2,6 +2,19 @@
 
 This guide covers configuring CoreIdent passkey endpoints (WebAuthn/FIDO2) using the `CoreIdent.Passkeys.AspNetIdentity` package.
 
+## At a glance
+
+- **Packages:** `CoreIdent.Passkeys.AspNetIdentity` (plus `CoreIdent.Storage.EntityFrameworkCore` if you want EF Core persistence)
+- **Map endpoints:** `app.MapCoreIdentPasskeyEndpoints()`
+- **Endpoints:**
+  - `POST /auth/passkey/register/options`
+  - `POST /auth/passkey/register/complete`
+  - `POST /auth/passkey/authenticate/options`
+  - `POST /auth/passkey/authenticate/complete`
+- **Auth requirements:**
+  - `register/*` requires a **CoreIdent bearer token** (user must already be authenticated)
+  - `authenticate/*` is used to sign-in (server returns CoreIdent tokens)
+
 ## Prerequisites
 
 - Your app must run on **HTTPS**.

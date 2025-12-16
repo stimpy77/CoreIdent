@@ -4,6 +4,17 @@ This document is the **detailed reference** for CoreIdent 0.4.
 
 The root `README.md` is intended to be a concise, friendly entry point; use this file when you want the deeper configuration and endpoint reference.
 
+## Quick links
+
+- **Integrate CoreIdent into an app**
+  - [Developer Guide](Developer_Guide.md)
+- **Add passkeys (WebAuthn)**
+  - [Passkeys Guide](Passkeys.md)
+- **Use the CLI**
+  - [CLI Reference](CLI_Reference.md)
+- **Understand the roadmap / implementation status**
+  - [DEVPLAN](DEVPLAN.md)
+
 ---
 
 # CoreIdent
@@ -53,7 +64,7 @@ The 0.4 codebase focuses on:
 
 ## Documentation
 
-All planning and technical documentation for 0.4 is in the [`docs/0.4/`](docs/0.4/) folder:
+All planning and technical documentation for 0.4 is in this folder (`docs/0.4/`):
 
 | Document | Description |
 |----------|-------------|
