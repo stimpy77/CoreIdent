@@ -800,7 +800,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.3: SMS OTP (Pluggable Provider)
 
 *   **Component:** `ISmsProvider` Interface
-    - [ ] (L1) Create `CoreIdent.Core/Services/ISmsProvider.cs`
+    - [x] (L1) Create `CoreIdent.Core/Services/ISmsProvider.cs`
         ```csharp
         public interface ISmsProvider
         {
@@ -808,21 +808,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** `ConsoleSmsProvider` (Dev/Testing)
-    - [ ] (L1) Create implementation that logs to console
+    - [x] (L1) Create implementation that logs to console
 *   **Component:** SMS OTP Endpoints
-    - [ ] (L2) `POST /auth/passwordless/sms/start` - Send OTP
-    - [ ] (L2) `POST /auth/passwordless/sms/verify` - Verify OTP
+    - [x] (L2) `POST /auth/passwordless/sms/start` - Send OTP
+    - [x] (L2) `POST /auth/passwordless/sms/verify` - Verify OTP
 *   **Component:** OTP Generation and Storage
-    - [ ] (L1) Reuse `IPasswordlessTokenStore` with SMS-specific token type
-    - [ ] (L1) Generate 6-digit numeric OTP
+    - [x] (L1) Reuse `IPasswordlessTokenStore` with SMS-specific token type
+    - [x] (L1) Generate 6-digit numeric OTP
 *   **Test Case (Integration):**
-    - [ ] (L1) OTP is sent via provider (mock)
-    - [ ] (L2) Valid OTP authenticates user
-    - [ ] (L1) Expired OTP fails
-    - [ ] (L2) Rate limiting works
+    - [x] (L1) OTP is sent via provider (mock)
+    - [x] (L2) Valid OTP authenticates user
+    - [x] (L1) Expired OTP fails
+    - [x] (L2) Rate limiting works
 *   **Documentation:**
-    - [ ] (L1) Document SMS provider interface
-    - [ ] (L2) Provide Twilio implementation example (separate package)
+    - [x] (L1) Document SMS provider interface
+    - [x] (L2) Provide Twilio implementation example (separate package)
 
 ---
 
@@ -844,6 +844,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ---
 
 ### Feature 1.5: `dotnet new` Templates
+> **Note:** We should support both C# and F# templates
 
 *   **Component:** Template Package Structure
     - [ ] (L1) Create `templates/` directory structure
@@ -1132,6 +1133,15 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Documentation:**
     - [x] (L1) Document password grant with deprecation notice
     - [x] (L1) Recommend migration to authorization code flow
+
+### Feature 1.13: Follow-Up Cleanup
+
+**Goal:** Clean up inconsistencies and loose ends.
+
+*   - [ ] (L2) Scan solution for UtcNow instances and consider replacing with TimeProvider (only where appropriate)
+*   - [ ] (??) Scan for explicit use of prefixes like "/auth" etc and determine if there was a missing use of `CoreIdentRouteOptions`
+*   - [ ] (??) Check for undelivered promises in Technical_Plan.md for features already implemented
+*   - [ ] (TBD) TBD ~ Engage with development lead to determine additional cleanup items
 
 ---
 

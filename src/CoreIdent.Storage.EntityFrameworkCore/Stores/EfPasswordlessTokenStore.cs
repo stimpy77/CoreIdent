@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using CoreIdent.Storage.EntityFrameworkCore.Models;
 using Microsoft.EntityFrameworkCore;
@@ -14,16 +15,25 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
     private readonly CoreIdentDbContext _context;
     private readonly TimeProvider _timeProvider;
     private readonly IOptions<PasswordlessEmailOptions> _emailOptions;
+    private readonly IOptions<PasswordlessSmsOptions> _smsOptions;
 
-    public EfPasswordlessTokenStore(CoreIdentDbContext context, IOptions<PasswordlessEmailOptions> emailOptions)
-        : this(context, emailOptions, timeProvider: null)
+    public EfPasswordlessTokenStore(
+        CoreIdentDbContext context,
+        IOptions<PasswordlessEmailOptions> emailOptions,
+        IOptions<PasswordlessSmsOptions> smsOptions)
+        : this(context, emailOptions, smsOptions, timeProvider: null)
     {
     }
 
-    public EfPasswordlessTokenStore(CoreIdentDbContext context, IOptions<PasswordlessEmailOptions> emailOptions, TimeProvider? timeProvider)
+    public EfPasswordlessTokenStore(
+        CoreIdentDbContext context,
+        IOptions<PasswordlessEmailOptions> emailOptions,
+        IOptions<PasswordlessSmsOptions> smsOptions,
+        TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _emailOptions = emailOptions ?? throw new ArgumentNullException(nameof(emailOptions));
+        _smsOptions = smsOptions ?? throw new ArgumentNullException(nameof(smsOptions));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -31,28 +41,34 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
     {
         ArgumentNullException.ThrowIfNull(token);
 
-        var normalizedEmail = (token.Email ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        var tokenType = NormalizeTokenType(token.TokenType);
+
+        var recipient = (token.Recipient ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(recipient))
         {
-            throw new ArgumentException("Email is required.", nameof(token));
+            throw new ArgumentException("Recipient is required.", nameof(token));
         }
 
-        var options = _emailOptions.Value;
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        await EnforceRateLimitAsync(normalizedEmail, now, options.MaxAttemptsPerHour, ct);
+        var (lifetime, maxAttemptsPerHour) = GetOptions(tokenType);
 
-        var rawToken = GenerateToken();
+        await EnforceRateLimitAsync(tokenType, recipient, now, maxAttemptsPerHour, ct);
+
+        var rawToken = tokenType == PasswordlessTokenTypes.SmsOtp
+            ? GenerateOtp()
+            : GenerateToken();
         var tokenHash = ComputeTokenHash(rawToken);
 
         var expiresAt = token.ExpiresAt == default
-            ? _timeProvider.GetUtcNow().Add(options.TokenLifetime).UtcDateTime
+            ? _timeProvider.GetUtcNow().Add(lifetime).UtcDateTime
             : token.ExpiresAt;
 
         var entity = new PasswordlessTokenEntity
         {
             Id = string.IsNullOrWhiteSpace(token.Id) ? Guid.NewGuid().ToString("N") : token.Id,
-            Email = normalizedEmail,
+            Email = recipient,
+            TokenType = tokenType,
             TokenHash = tokenHash,
             CreatedAt = token.CreatedAt == default ? now : token.CreatedAt,
             ExpiresAt = expiresAt,
@@ -68,6 +84,11 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
 
     public async Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, CancellationToken ct = default)
     {
+        return await ValidateAndConsumeAsync(token, tokenType: null, recipient: null, ct);
+    }
+
+    public async Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, string? tokenType, string? recipient, CancellationToken ct = default)
+    {
         if (string.IsNullOrWhiteSpace(token))
         {
             return null;
@@ -78,6 +99,17 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
             .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
 
         if (entity is null)
+        {
+            return null;
+        }
+
+        var expectedType = NormalizeTokenType(tokenType);
+        if (!string.IsNullOrWhiteSpace(expectedType) && !string.Equals(entity.TokenType, expectedType, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(entity.Email, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
@@ -102,6 +134,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         {
             Id = entity.Id,
             Email = entity.Email,
+            TokenType = entity.TokenType,
             TokenHash = entity.TokenHash,
             CreatedAt = entity.CreatedAt,
             ExpiresAt = entity.ExpiresAt,
@@ -119,7 +152,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
             .ExecuteDeleteAsync(ct);
     }
 
-    private async Task EnforceRateLimitAsync(string email, DateTime nowUtc, int maxAttemptsPerHour, CancellationToken ct)
+    private async Task EnforceRateLimitAsync(string tokenType, string recipient, DateTime nowUtc, int maxAttemptsPerHour, CancellationToken ct)
     {
         if (maxAttemptsPerHour <= 0)
         {
@@ -130,13 +163,41 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
 
         var count = await _context.PasswordlessTokens
             .AsNoTracking()
-            .Where(t => t.Email == email && t.CreatedAt >= windowStart)
+            .Where(t => t.TokenType == tokenType && t.Email == recipient && t.CreatedAt >= windowStart)
             .CountAsync(ct);
 
         if (count >= maxAttemptsPerHour)
         {
             throw new PasswordlessRateLimitExceededException();
         }
+    }
+
+    private static string NormalizeTokenType(string? tokenType)
+    {
+        if (string.IsNullOrWhiteSpace(tokenType))
+        {
+            return PasswordlessTokenTypes.EmailMagicLink;
+        }
+
+        return tokenType.Trim();
+    }
+
+    private (TimeSpan Lifetime, int MaxAttemptsPerHour) GetOptions(string tokenType)
+    {
+        if (string.Equals(tokenType, PasswordlessTokenTypes.SmsOtp, StringComparison.Ordinal))
+        {
+            var options = _smsOptions.Value;
+            return (options.OtpLifetime, options.MaxAttemptsPerHour);
+        }
+
+        var email = _emailOptions.Value;
+        return (email.TokenLifetime, email.MaxAttemptsPerHour);
+    }
+
+    private static string GenerateOtp()
+    {
+        var value = RandomNumberGenerator.GetInt32(0, 1_000_000);
+        return value.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static string GenerateToken()

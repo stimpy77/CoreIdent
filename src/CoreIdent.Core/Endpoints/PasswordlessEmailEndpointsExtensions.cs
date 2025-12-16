@@ -64,7 +64,8 @@ public static class PasswordlessEmailEndpointsExtensions
         {
             var tokenModel = new PasswordlessToken
             {
-                Email = normalizedEmail,
+                Recipient = normalizedEmail,
+                TokenType = PasswordlessTokenTypes.EmailMagicLink,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -107,13 +108,13 @@ public static class PasswordlessEmailEndpointsExtensions
         var request = httpContext.Request;
         var token = request.Query["token"].ToString();
 
-        var validated = await tokenStore.ValidateAndConsumeAsync(token, ct);
+        var validated = await tokenStore.ValidateAndConsumeAsync(token, PasswordlessTokenTypes.EmailMagicLink, recipient: null, ct);
         if (validated is null)
         {
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid or expired token.");
         }
 
-        var email = validated.Email;
+        var email = validated.Recipient;
         if (!TryValidateEmail(email, out var normalizedEmail))
         {
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid token.");

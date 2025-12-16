@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Stores.InMemory;
@@ -10,43 +11,53 @@ namespace CoreIdent.Core.Stores.InMemory;
 public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 {
     private readonly ConcurrentDictionary<string, PasswordlessToken> _tokensByHash = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _attemptsByEmail = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _attemptsByKey = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly TimeProvider _timeProvider;
     private readonly IOptions<PasswordlessEmailOptions> _emailOptions;
+    private readonly IOptions<PasswordlessSmsOptions> _smsOptions;
 
-    public InMemoryPasswordlessTokenStore(TimeProvider? timeProvider, IOptions<PasswordlessEmailOptions> emailOptions)
+    public InMemoryPasswordlessTokenStore(
+        TimeProvider? timeProvider,
+        IOptions<PasswordlessEmailOptions> emailOptions,
+        IOptions<PasswordlessSmsOptions> smsOptions)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
         _emailOptions = emailOptions;
+        _smsOptions = smsOptions;
     }
 
     public Task<string> CreateTokenAsync(PasswordlessToken token, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(token);
 
-        var normalizedEmail = (token.Email ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        var tokenType = NormalizeTokenType(token.TokenType);
+
+        var recipient = (token.Recipient ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(recipient))
         {
-            throw new ArgumentException("Email is required.", nameof(token));
+            throw new ArgumentException("Recipient is required.", nameof(token));
         }
 
-        var options = _emailOptions.Value;
         var now = _timeProvider.GetUtcNow();
 
-        EnforceRateLimit(normalizedEmail, now, options.MaxAttemptsPerHour);
+        var (lifetime, maxAttemptsPerHour) = GetOptions(tokenType);
+        EnforceRateLimit(BuildRateLimitKey(tokenType, recipient), now, maxAttemptsPerHour);
 
-        var rawToken = GenerateToken();
+        var rawToken = tokenType == PasswordlessTokenTypes.SmsOtp
+            ? GenerateOtp()
+            : GenerateToken();
         var tokenHash = ComputeTokenHash(rawToken);
 
         var expiresAt = token.ExpiresAt == default
-            ? now.Add(options.TokenLifetime).UtcDateTime
+            ? now.Add(lifetime).UtcDateTime
             : token.ExpiresAt;
 
         var stored = new PasswordlessToken
         {
             Id = string.IsNullOrWhiteSpace(token.Id) ? Guid.NewGuid().ToString("N") : token.Id,
-            Email = normalizedEmail,
+            Email = recipient,
+            TokenType = tokenType,
             TokenHash = tokenHash,
             CreatedAt = token.CreatedAt == default ? now.UtcDateTime : token.CreatedAt,
             ExpiresAt = expiresAt,
@@ -61,6 +72,11 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 
     public Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, CancellationToken ct = default)
     {
+        return ValidateAndConsumeAsync(token, tokenType: null, recipient: null, ct);
+    }
+
+    public Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, string? tokenType, string? recipient, CancellationToken ct = default)
+    {
         if (string.IsNullOrWhiteSpace(token))
         {
             return Task.FromResult<PasswordlessToken?>(null);
@@ -68,6 +84,17 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 
         var tokenHash = ComputeTokenHash(token);
         if (!_tokensByHash.TryGetValue(tokenHash, out var stored))
+        {
+            return Task.FromResult<PasswordlessToken?>(null);
+        }
+
+        var expectedType = NormalizeTokenType(tokenType);
+        if (!string.IsNullOrWhiteSpace(expectedType) && !string.Equals(stored.TokenType, expectedType, StringComparison.Ordinal))
+        {
+            return Task.FromResult<PasswordlessToken?>(null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(stored.Email, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult<PasswordlessToken?>(null);
         }
@@ -110,7 +137,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
             return;
         }
 
-        var list = _attemptsByEmail.GetOrAdd(email, _ => []);
+        var list = _attemptsByKey.GetOrAdd(email, _ => []);
         lock (list)
         {
             var windowStart = now.AddHours(-1);
@@ -123,6 +150,41 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 
             list.Add(now);
         }
+    }
+
+    private static string NormalizeTokenType(string? tokenType)
+    {
+        if (string.IsNullOrWhiteSpace(tokenType))
+        {
+            return PasswordlessTokenTypes.EmailMagicLink;
+        }
+
+        return tokenType.Trim();
+    }
+
+    private (TimeSpan Lifetime, int MaxAttemptsPerHour) GetOptions(string tokenType)
+    {
+        if (string.Equals(tokenType, PasswordlessTokenTypes.SmsOtp, StringComparison.Ordinal))
+        {
+            var options = _smsOptions.Value;
+            return (options.OtpLifetime, options.MaxAttemptsPerHour);
+        }
+
+        var email = _emailOptions.Value;
+        return (email.TokenLifetime, email.MaxAttemptsPerHour);
+    }
+
+    private static string BuildRateLimitKey(string tokenType, string recipient)
+    {
+        return string.IsNullOrWhiteSpace(tokenType)
+            ? recipient
+            : $"{tokenType}:{recipient}";
+    }
+
+    private static string GenerateOtp()
+    {
+        var value = RandomNumberGenerator.GetInt32(0, 1_000_000);
+        return value.ToString("D6", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static string GenerateToken()

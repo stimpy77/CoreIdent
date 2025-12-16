@@ -155,6 +155,9 @@ With defaults, CoreIdent maps:
 - Passwordless email magic link:
   - `POST /auth/passwordless/email/start`
   - `GET /auth/passwordless/email/verify`
+- Passwordless SMS OTP:
+  - `POST /auth/passwordless/sms/start`
+  - `POST /auth/passwordless/sms/verify`
 - Passkeys (WebAuthn): see `docs/0.4/Passkeys.md` (mapped via `app.MapCoreIdentPasskeyEndpoints()`)
 
 > Note: discovery and JWKS are computed based on the `Issuer` URL’s **path** (see “Routing” below). They are not hardcoded to root.
@@ -244,11 +247,12 @@ This makes it possible to host CoreIdent under a path while still generating cor
 `builder.Services.AddCoreIdent(...)` registers:
 
 - Options:
-  - `CoreIdentOptions` (+ validation)
+  - `CoreIdentOptions`
   - `CoreIdentRouteOptions`
   - `CoreIdentResourceOwnerOptions`
   - `CoreIdentAuthorizationCodeOptions`
   - `PasswordlessEmailOptions`
+  - `PasswordlessSmsOptions`
   - `SmtpOptions`
 - Core services:
   - `ITokenService` → `JwtTokenService`
@@ -257,6 +261,7 @@ This makes it possible to host CoreIdent under a path while still generating cor
   - `ICustomClaimsProvider` → `NullCustomClaimsProvider`
   - `TimeProvider` → `TimeProvider.System`
   - `IEmailSender` → `SmtpEmailSender`
+- `ISmsProvider` → `ConsoleSmsProvider`
   - `PasswordlessEmailTemplateRenderer`
 - In-memory stores (defaults):
   - `IClientStore` → `InMemoryClientStore`
@@ -697,6 +702,65 @@ builder.Services.AddCoreIdent(...);
 
 Because CoreIdent uses `TryAdd*` for defaults, registering `IEmailSender` before `AddCoreIdent()` will take precedence.
 
+---
+
+## 4.8 Passwordless SMS OTP (Feature 1.3)
+
+CoreIdent provides a simple passwordless flow using **SMS one-time passcodes**:
+
+- `POST /auth/passwordless/sms/start` — request an OTP
+- `POST /auth/passwordless/sms/verify` — verify the OTP, create/find the user, and issue tokens
+
+### 4.8.1 Start endpoint (`POST /auth/passwordless/sms/start`)
+
+Request body (JSON):
+
+```json
+{ "phone_number": "+15551234567" }
+```
+
+Behavior:
+
+- Always returns `200 OK` (does not leak whether a user exists)
+- Generates a 6-digit numeric OTP and stores **only a hash** via `IPasswordlessTokenStore`
+- Enforces per-phone rate limiting (`PasswordlessSmsOptions.MaxAttemptsPerHour`)
+- Sends an SMS using `ISmsProvider`
+
+### 4.8.2 Verify endpoint (`POST /auth/passwordless/sms/verify`)
+
+Request body (JSON):
+
+```json
+{ "phone_number": "+15551234567", "otp": "123456" }
+```
+
+Behavior:
+
+- Validates and consumes the OTP (single-use)
+- Creates the user if not found (`IUserStore`)
+- Issues an access token + refresh token
+
+If the OTP is invalid, expired, or already consumed, it returns `400 Bad Request`.
+
+### 4.8.3 Configuration (`PasswordlessSmsOptions`)
+
+```csharp
+builder.Services.Configure<PasswordlessSmsOptions>(opts =>
+{
+    opts.OtpLifetime = TimeSpan.FromMinutes(5);
+    opts.MaxAttemptsPerHour = 5;
+});
+```
+
+### 4.8.4 Providing an SMS provider
+
+CoreIdent registers a default `ConsoleSmsProvider` for development.
+
+To use a real provider, register your own `ISmsProvider` implementation:
+
+```csharp
+builder.Services.AddSingleton<ISmsProvider, MySmsProvider>();
+```
 ---
 
 # 5. Token revocation and resource server enforcement

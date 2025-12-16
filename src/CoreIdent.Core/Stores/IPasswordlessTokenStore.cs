@@ -8,5 +8,7 @@ public interface IPasswordlessTokenStore
 
     Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, CancellationToken ct = default);
 
+    Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, string? tokenType, string? recipient, CancellationToken ct = default);
+
     Task CleanupExpiredAsync(CancellationToken ct = default);
 }

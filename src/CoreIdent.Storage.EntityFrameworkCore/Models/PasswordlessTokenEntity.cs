@@ -6,6 +6,8 @@ public sealed class PasswordlessTokenEntity
 
     public string Email { get; set; } = string.Empty;
 
+    public string TokenType { get; set; } = string.Empty;
+
     public string TokenHash { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }

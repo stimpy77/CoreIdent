@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
 using CoreIdent.Testing.Fixtures;
+using CoreIdent.Testing.Mocks;
+using CoreIdent.Testing.TestUtilities;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,12 +17,12 @@ namespace CoreIdent.Integration.Tests.ResourceOwner;
 
 public sealed class PasswordlessEmailEndpointsFixtureTests : CoreIdentTestFixture
 {
-    private CapturingEmailSender _emailSender = null!;
+    private MockEmailSender _emailSender = null!;
     private MutableTimeProvider _timeProvider = null!;
 
     protected override void ConfigureFactory(CoreIdentWebApplicationFactory factory)
     {
-        _emailSender = new CapturingEmailSender();
+        _emailSender = new MockEmailSender();
         _timeProvider = new MutableTimeProvider(new DateTimeOffset(2025, 12, 12, 0, 0, 0, TimeSpan.Zero));
 
         factory.ConfigureTestServices = services =>
@@ -37,7 +39,7 @@ public sealed class PasswordlessEmailEndpointsFixtureTests : CoreIdentTestFixtur
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton(_emailSender);
-            services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<CapturingEmailSender>());
+            services.AddSingleton<IEmailSender>(sp => sp.GetRequiredService<MockEmailSender>());
         };
     }
 
@@ -152,38 +154,5 @@ public sealed class PasswordlessEmailEndpointsFixtureTests : CoreIdentTestFixtur
     {
         var match = Regex.Match(html, "href=\"(?<url>[^\"]+)\"", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         return match.Success ? match.Groups["url"].Value : string.Empty;
-    }
-
-    private sealed class CapturingEmailSender : IEmailSender
-    {
-        public EmailMessage? LastMessage { get; private set; }
-
-        public void Clear()
-        {
-            LastMessage = null;
-        }
-
-        public Task SendAsync(EmailMessage message, CancellationToken ct = default)
-        {
-            LastMessage = message;
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class MutableTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _utcNow;
-
-        public MutableTimeProvider(DateTimeOffset utcNow)
-        {
-            _utcNow = utcNow;
-        }
-
-        public void Advance(TimeSpan delta)
-        {
-            _utcNow = _utcNow.Add(delta);
-        }
-
-        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 }

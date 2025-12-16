@@ -139,6 +139,10 @@ public class CoreIdentDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(256);
 
+            entity.Property(x => x.TokenType)
+                .IsRequired()
+                .HasMaxLength(50);
+
             entity.Property(x => x.TokenHash)
                 .IsRequired()
                 .HasMaxLength(128);
@@ -147,6 +151,7 @@ public class CoreIdentDbContext : DbContext
                 .IsUnique();
 
             entity.HasIndex(x => x.Email);
+            entity.HasIndex(x => new { x.TokenType, x.Email });
             entity.HasIndex(x => x.ExpiresAt);
             entity.HasIndex(x => x.ConsumedAt);
         });

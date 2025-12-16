@@ -1,5 +1,6 @@
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
 using CoreIdent.Core.Stores.InMemory;
 using CoreIdent.Core.Tests.TestUtilities;
@@ -21,7 +22,13 @@ public sealed class InMemoryPasswordlessTokenStoreTests
             TokenLifetime = TimeSpan.FromMinutes(15)
         });
 
-        var store = new InMemoryPasswordlessTokenStore(time, options);
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
         var t1 = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
         var t2 = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
@@ -42,7 +49,13 @@ public sealed class InMemoryPasswordlessTokenStoreTests
             TokenLifetime = TimeSpan.FromMinutes(15)
         });
 
-        var store = new InMemoryPasswordlessTokenStore(time, options);
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
         var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
         var consumed = await store.ValidateAndConsumeAsync(raw);
@@ -66,7 +79,13 @@ public sealed class InMemoryPasswordlessTokenStoreTests
             TokenLifetime = TimeSpan.FromMinutes(15)
         });
 
-        var store = new InMemoryPasswordlessTokenStore(time, options);
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
         await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
 
@@ -93,7 +112,13 @@ public sealed class InMemoryPasswordlessTokenStoreTests
             TokenLifetime = TimeSpan.FromMinutes(10)
         });
 
-        var store = new InMemoryPasswordlessTokenStore(time, options);
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
         var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
 
@@ -113,7 +138,13 @@ public sealed class InMemoryPasswordlessTokenStoreTests
             TokenLifetime = TimeSpan.FromMinutes(15)
         });
 
-        var store = new InMemoryPasswordlessTokenStore(time, options);
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
         var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
 
@@ -123,6 +154,35 @@ public sealed class InMemoryPasswordlessTokenStoreTests
         first.Consumed.ShouldBeTrue("token should be marked consumed after validation");
 
         (await store.ValidateAndConsumeAsync(raw)).ShouldBeNull("token should be single use");
+    }
+
+    [Fact]
+    public async Task CreateTokenAsync_ForSmsOtp_GeneratesSixDigitNumericOtp()
+    {
+        var time = new MutableTimeProvider(new DateTimeOffset(2025, 12, 12, 0, 0, 0, TimeSpan.Zero));
+
+        var emailOptions = Options.Create(new PasswordlessEmailOptions
+        {
+            MaxAttemptsPerHour = 10,
+            TokenLifetime = TimeSpan.FromMinutes(15)
+        });
+
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 10,
+            OtpLifetime = TimeSpan.FromMinutes(5)
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, emailOptions, smsOptions);
+
+        var otp = await store.CreateTokenAsync(new PasswordlessToken
+        {
+            Email = "+15551234567",
+            TokenType = PasswordlessTokenTypes.SmsOtp
+        });
+
+        otp.Length.ShouldBe(6, "otp should be 6 digits");
+        otp.All(char.IsDigit).ShouldBeTrue("otp should be numeric");
     }
 
     private static string ComputeSha256HexLower(string input)
