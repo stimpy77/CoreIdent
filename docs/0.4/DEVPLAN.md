@@ -868,7 +868,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.6: Aspire Integration
 
 *   **Component:** `CoreIdent.Aspire` Package
-    - [ ] (L2) Create package targeting Aspire 9.0+
+    - [ ] (L2) Create package targeting Aspire v13
     - [ ] (L3) Implement `IDistributedApplicationComponent`
 *   **Component:** Dashboard Integration
     - [ ] (L2) Pre-configured metrics export
