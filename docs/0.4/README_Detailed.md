@@ -61,6 +61,7 @@ All planning and technical documentation for 0.4 is in the [`docs/0.4/`](docs/0.
 | [**Technical Plan**](Technical_Plan.md) | Detailed specifications, interfaces, and implementation guidance |
 | [**DEVPLAN**](DEVPLAN.md) | Task-level checklist with components, test cases, and documentation requirements |
 | [**Developer Guide**](Developer_Guide.md) | Practical guide to the current 0.4 codebase, endpoints, configuration, and testing |
+| [**Passkeys Guide**](Passkeys.md) | Passkeys (WebAuthn) setup guide |
 | [**CLI Reference**](CLI_Reference.md) | Command reference for the `dotnet coreident` CLI tool |
 
 These documents include:
@@ -601,7 +602,7 @@ CoreIdent.Testing                 # Test fixtures and utilities
 |-------|-------|--------|
 | **0A** | Foundation (crypto + token lifecycle: keys, JWKS, revocation, introspection) | Completed |
 | **0B** | Quality & DevEx (test infra, metrics, CLI, devcontainer) | Completed |
-| **1** | Passwordless (email magic link, passkeys, SMS OTP) | Planned |
+| **1** | Passwordless (email magic link, passkeys, SMS OTP) | In progress |
 | **1.5** | Client libraries (MAUI, WPF, Console, Blazor) | Planned |
 | **2** | External providers (Google, Microsoft, GitHub) | Planned |
 | **3** | OAuth/OIDC hardening (key rotation, DPoP, RAR, device flow, revocable access for controlled distributed systems) | Planned |
@@ -637,5 +638,6 @@ Key areas for future contribution:
 - [Technical Plan](Technical_Plan.md)
 - [Development Plan](DEVPLAN.md)
 - [Developer Guide](Developer_Guide.md)
+- [Passkeys Guide](Passkeys.md)
 - [.NET 10 What's New](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/overview)
 - [.NET 10: What’s New for Authentication and Authorization (Auth0)](https://auth0.com/blog/authentication-authorization-enhancements-dotnet-10/)

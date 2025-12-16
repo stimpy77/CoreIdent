@@ -14,6 +14,7 @@ If you are looking for the high-level roadmap and design intent, start with:
 - `docs/0.4/Project_Overview.md`
 - `docs/0.4/Technical_Plan.md`
 - `docs/0.4/DEVPLAN.md`
+- `docs/0.4/Passkeys.md`
 
 ---
 
@@ -147,6 +148,7 @@ With defaults, CoreIdent maps:
 - Passwordless email magic link:
   - `POST /auth/passwordless/email/start`
   - `GET /auth/passwordless/email/verify`
+- Passkeys (WebAuthn): see `docs/0.4/Passkeys.md` (mapped via `app.MapCoreIdentPasskeyEndpoints()`)
 
 > Note: discovery and JWKS are computed based on the `Issuer` URL’s **path** (see “Routing” below). They are not hardcoded to root.
 

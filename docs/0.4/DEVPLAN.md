@@ -1737,11 +1737,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Token Revocation (RFC 7009) | 0 | 0.6 | ✅ Complete |
 | Token Introspection (RFC 7662) | 0 | 0.7 | ✅ Complete |
 | Test Infrastructure | 0 | 0.8 | ✅ Complete |
-| OpenTelemetry Metrics | 0 | 0.9 | 🔲 Planned |
-| CLI Tool | 0 | 0.10 | 🔲 Planned |
-| Dev Container | 0 | 0.11 | 🔲 Planned |
+| OpenTelemetry Metrics | 0 | 0.9 | ✅ Complete |
+| CLI Tool | 0 | 0.10 | ✅ Complete |
+| Dev Container | 0 | 0.11 | ✅ Complete |
 | Email Magic Link | 1 | 1.1 | ✅ Complete |
-| Passkey/WebAuthn | 1 | 1.2 | 🔲 Planned |
+| Passkey/WebAuthn | 1 | 1.2 | ✅ Complete |
 | SMS OTP | 1 | 1.3 | 🔲 Planned |
 | F# Compatibility | 1 | 1.4 | 🔲 Planned |
 | `dotnet new` Templates | 1 | 1.5 | 🔲 Planned |
@@ -1750,8 +1750,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Consent & Grants | 1 | 1.8 | ✅ Complete |
 | Delegated User Store | 1 | 1.9 | 🔲 Planned |
 | OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
-| Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | 🔲 Planned |
-| Password Grant (ROPC) | 1 | 1.12 | 🔲 Planned |
+| Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
+| Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
 | Google Provider | 2 | 2.2 | 🔲 Planned |
 | Microsoft Provider | 2 | 2.3 | 🔲 Planned |
 | GitHub Provider | 2 | 2.4 | 🔲 Planned |

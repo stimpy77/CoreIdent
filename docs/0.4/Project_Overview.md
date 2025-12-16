@@ -265,17 +265,19 @@ var accessToken = await authClient.GetAccessTokenAsync();
 
 ## Phased Development Plan
 
+Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describes the intended roadmap without using checkbox-based completion markers.
+
 ### Phase 0A: Foundation Reset — Crypto + Core Token Lifecycle (0.4)
 **Goal:** Establish production-ready cryptographic foundation and essential OAuth/OIDC token lifecycle endpoints on **.NET 10**.
 
 **Deliverables:**
-- [ ] Migrate to .NET 10 (`net10.0` only)
-- [ ] **Asymmetric key support (RS256, ES256)** — Non-negotiable for production
-- [ ] Key management infrastructure (loading, rotation preparation)
-- [ ] Update JWKS endpoint for asymmetric keys
-- [ ] Token Revocation endpoint (RFC 7009)
-- [ ] Token Introspection endpoint (RFC 7662)
-- [ ] Remove/deprecate HS256-only code paths (keep as opt-in for dev/testing)
+- Migrate to .NET 10 (`net10.0` only)
+- **Asymmetric key support (RS256, ES256)** — Non-negotiable for production
+- Key management infrastructure (loading, rotation preparation)
+- Update JWKS endpoint for asymmetric keys
+- Token Revocation endpoint (RFC 7009)
+- Token Introspection endpoint (RFC 7662)
+- Remove/deprecate HS256-only code paths (keep as opt-in for dev/testing)
 
 > **Note on JWT revocation:** Revoking a JWT access token only works for resource servers that perform an online check (e.g., introspection or a shared revocation store). Default guidance is short-lived access tokens + refresh token rotation/revocation. See Phase 3 for “revocable access” in controlled distributed systems.
 
@@ -285,10 +287,10 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Make CoreIdent easy to test, ship, and contribute to.
 
 **Deliverables:**
-- [ ] **Unified test infrastructure** — Reusable `WebApplicationFactory` base, fixtures, seeders
-- [ ] **CLI Tool (`dotnet coreident`)** — `init`, `keys generate`, `client add` commands
-- [ ] **.devcontainer configuration** — One-click dev environment for contributors
-- [ ] OpenTelemetry metrics integration (leverage .NET 10 built-in authentication/identity metrics)
+- **Unified test infrastructure** — Reusable `WebApplicationFactory` base, fixtures, seeders
+- **CLI Tool (`dotnet coreident`)** — `init`, `keys generate`, `client add` commands
+- **.devcontainer configuration** — One-click dev environment for contributors
+- OpenTelemetry metrics integration (leverage .NET 10 built-in authentication/identity metrics)
 
 **Why This First:** Nothing else matters if tokens can't be validated securely in production.
 
@@ -298,26 +300,26 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Make passwordless authentication trivially easy; establish the "5-minute auth" story.
 
 **Deliverables:**
-- [ ] **Email Magic Link Authentication**
+- **Email Magic Link Authentication**
   - `IEmailSender` abstraction with SMTP default implementation
   - Token generation, storage, validation flow
   - Configurable expiry, rate limiting
-- [ ] **Passkey Integration** (wrapping .NET 10's built-in support)
+- **Passkey Integration** (wrapping .NET 10's built-in support)
   - Simplified configuration over `IdentityPasskeyOptions`
   - Registration and authentication ceremonies
   - Storage abstraction for credentials
-- [ ] **SMS OTP** (pluggable provider interface)
+- **SMS OTP** (pluggable provider interface)
   - `ISmsProvider` abstraction
   - Twilio reference implementation (separate package)
-- [ ] **ClaimsPrincipal Extensions** (C# 14 extension members)
+- **ClaimsPrincipal Extensions** (C# 14 extension members)
   - `User.Email`, `User.UserId`, `User.GetClaim<T>("custom")`
-- [ ] **`dotnet new` Templates**
+- **`dotnet new` Templates**
   - `coreident-api` — Minimal API with CoreIdent auth
   - `coreident-server` — Full OAuth/OIDC server setup
-- [ ] **Aspire Integration** (`CoreIdent.Aspire`)
+- **Aspire Integration** (`CoreIdent.Aspire`)
   - Pre-configured dashboard integration
   - Health checks, metrics, traces out of the box
-- [ ] Comprehensive getting-started documentation
+- Comprehensive getting-started documentation
 
 ---
 
@@ -325,16 +327,16 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Seamless integration with third-party OAuth/OIDC providers.
 
 **Deliverables:**
-- [ ] **Provider Abstraction Layer** (`CoreIdent.Providers.Abstractions`)
+- **Provider Abstraction Layer** (`CoreIdent.Providers.Abstractions`)
   - Standardized callback handling
   - User profile mapping
   - Account linking support
-- [ ] **Built-in Providers**
+- **Built-in Providers**
   - Google (`CoreIdent.Providers.Google`)
   - Microsoft/Entra ID (`CoreIdent.Providers.Microsoft`)
   - GitHub (`CoreIdent.Providers.GitHub`)
-- [ ] Provider configuration via `appsettings.json`
-- [ ] Integration tests for each provider (using test accounts/mocks)
+- Provider configuration via `appsettings.json`
+- Integration tests for each provider (using test accounts/mocks)
 
 ---
 
@@ -342,19 +344,19 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Production-grade OAuth 2.0 / OIDC server capabilities.
 
 **Deliverables:**
-- [ ] **Key Rotation** — Automated rotation with grace period for old keys
-- [ ] **Session Management** — OIDC logout, back-channel logout, session tracking
-- [ ] **Dynamic Client Registration** (RFC 7591)
-- [ ] **Device Authorization Flow** (RFC 8628) — For IoT/TV apps
-- [ ] **Pushed Authorization Requests** (RFC 9126) — Enhanced security
-- [ ] **DPoP - Demonstrating Proof of Possession** (RFC 9449) — Sender-constrained tokens
-- [ ] **Rich Authorization Requests** (RFC 9396) — Fine-grained authorization
-- [ ] **Token Exchange** (RFC 8693) — Impersonation, delegation, cross-service auth
-- [ ] **JWT-Secured Authorization Request (JAR)** — Signed/encrypted auth requests
-- [ ] **Revocable access for controlled distributed systems** — Introspection-first validation middleware + optional opaque/reference access tokens (for resource servers you control)
-- [ ] **Webhook System** — Events for user.created, login, token.issued, consent.granted
-- [ ] OIDC Conformance test suite integration
-- [ ] Rate limiting and abuse prevention
+- **Key Rotation** — Automated rotation with grace period for old keys
+- **Session Management** — OIDC logout, back-channel logout, session tracking
+- **Dynamic Client Registration** (RFC 7591)
+- **Device Authorization Flow** (RFC 8628) — For IoT/TV apps
+- **Pushed Authorization Requests** (RFC 9126) — Enhanced security
+- **DPoP - Demonstrating Proof of Possession** (RFC 9449) — Sender-constrained tokens
+- **Rich Authorization Requests** (RFC 9396) — Fine-grained authorization
+- **Token Exchange** (RFC 8693) — Impersonation, delegation, cross-service auth
+- **JWT-Secured Authorization Request (JAR)** — Signed/encrypted auth requests
+- **Revocable access for controlled distributed systems** — Introspection-first validation middleware + optional opaque/reference access tokens (for resource servers you control)
+- **Webhook System** — Events for user.created, login, token.issued, consent.granted
+- OIDC Conformance test suite integration
+- Rate limiting and abuse prevention
 
 ---
 
@@ -362,19 +364,19 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Optional UI components for common flows.
 
 **Deliverables:**
-- [ ] **`CoreIdent.UI.Web`** — Razor/Blazor components
+- **`CoreIdent.UI.Web`** — Razor/Blazor components
   - Login page (with passwordless options)
   - Registration page
   - Consent page
   - Account management (change email, manage passkeys)
-- [ ] **Self-Service User Portal**
+- **Self-Service User Portal**
   - Account settings (email, password, MFA)
   - Session management (view/revoke active sessions)
   - Linked accounts management
   - Audit log viewer (user's own activity)
-- [ ] **Admin API** — Programmatic user/client management
-- [ ] Basic admin dashboard (optional package)
-- [ ] **Multi-tenancy Support**
+- **Admin API** — Programmatic user/client management
+- Basic admin dashboard (optional package)
+- **Multi-tenancy Support**
   - Multiple issuers in one instance
   - Per-tenant configuration (keys, providers, branding)
   - Tenant isolation and data separation
@@ -385,25 +387,25 @@ var accessToken = await authClient.GetAccessTokenAsync();
 **Goal:** Extended capabilities for specialized use cases.
 
 **Deliverables:**
-- [ ] MFA framework (TOTP, backup codes)
-- [ ] Fine-grained authorization (FGA/RBAC) integration points
-- [ ] Audit logging infrastructure
-- [ ] Anomaly detection hooks
-- [ ] Community provider packages (Apple, Twitter, LinkedIn, etc.)
-- [ ] **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
-- [ ] **Verifiable Credentials** — W3C VC integration points
-- [ ] **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
-- [ ] **Risk-Based Authentication**
+- MFA framework (TOTP, backup codes)
+- Fine-grained authorization (FGA/RBAC) integration points
+- Audit logging infrastructure
+- Anomaly detection hooks
+- Community provider packages (Apple, Twitter, LinkedIn, etc.)
+- **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
+- **Verifiable Credentials** — W3C VC integration points
+- **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
+- **Risk-Based Authentication**
   - Device fingerprinting
   - Geo-location checks
   - Step-up auth for sensitive operations
-- [ ] **Credential Breach Detection**
+- **Credential Breach Detection**
   - HaveIBeenPwned API integration
   - Compromised credential alerts
-- [ ] **API Gateway Integration Patterns**
+- **API Gateway Integration Patterns**
   - YARP integration examples
   - Token exchange for downstream services
-- [ ] **Blazor Server Integration** (`CoreIdent.Client.BlazorServer`)
+- **Blazor Server Integration** (`CoreIdent.Client.BlazorServer`)
   - Circuit-aware token management
   - Server-side session handling
 

@@ -803,33 +803,35 @@ src/
 
 ## Implementation Priority
 
+Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describes the intended sequencing without using checkbox-based completion markers.
+
 ### Week 1-2: Phase 0 Foundation
-- [ ] Asymmetric key infrastructure
-- [ ] Update JWKS endpoint
-- [ ] Token revocation endpoint
-- [ ] Token introspection endpoint
+- Asymmetric key infrastructure
+- Update JWKS endpoint
+- Token revocation endpoint
+- Token introspection endpoint
 
 ### Week 3-4: Test Infrastructure
-- [ ] Create `CoreIdent.Testing` package
-- [ ] Implement fixtures and builders
-- [ ] Refactor existing tests to use new infrastructure
-- [ ] Ensure all existing tests pass
+- Create `CoreIdent.Testing` package
+- Implement fixtures and builders
+- Refactor existing tests to use new infrastructure
+- Ensure all existing tests pass
 
 ### Week 4-5: Phase 0 DevEx & Tooling
-- [ ] OpenTelemetry metrics integration
-- [ ] CLI tool (`dotnet coreident`)
-- [ ] `.devcontainer` configuration
+- OpenTelemetry metrics integration
+- CLI tool (`dotnet coreident`)
+- `.devcontainer` configuration
 
 ### Week 5-6: Passwordless
-- [ ] Email magic link flow
-- [ ] Passkey wrapper
-- [ ] SMS abstraction (interface only)
+- Email magic link flow
+- Passkey wrapper
+- SMS abstraction (interface only)
 
 ### Week 7-8: Developer Experience
-- [ ] `dotnet new` templates
-- [ ] ClaimsPrincipal extensions
-- [ ] Documentation site setup
-- [ ] Migration guide from 0.3.x
+- `dotnet new` templates
+- ClaimsPrincipal extensions
+- Documentation site setup
+- Migration guide from 0.3.x
 
 ---
 

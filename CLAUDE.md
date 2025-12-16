@@ -11,6 +11,7 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 | [`docs/0.4/Project_Overview.md`](docs/0.4/Project_Overview.md) | Vision, architecture, phased roadmap |
 | [`docs/0.4/Technical_Plan.md`](docs/0.4/Technical_Plan.md) | Specifications, interfaces, .NET 10 reference links |
 | [`docs/0.4/DEVPLAN.md`](docs/0.4/DEVPLAN.md) | **Task-level checklist** — drives implementation |
+| [`docs/0.4/Passkeys.md`](docs/0.4/Passkeys.md) | Passkeys (WebAuthn) setup guide |
 
 ## Development Workflow
 

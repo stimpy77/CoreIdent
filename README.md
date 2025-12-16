@@ -53,7 +53,10 @@ CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
 
 ## What’s next
 
-- **Passwordless authentication** (email magic links, passkeys)
+- **Passwordless authentication**
+  - Email magic links (available)
+  - Passkeys/WebAuthn (available)
+  - SMS OTP (planned)
 - **External providers** (Google/Microsoft/GitHub, etc.)
 - **Client libraries** and broader “drop-in auth for apps” experiences
 
@@ -105,6 +108,8 @@ builder.Services.AddEntityFrameworkCoreStores();
 
 - **Developer Guide (recommended starting point)**
   - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+- **Passkeys (WebAuthn) guide**
+  - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
 - **Project docs**
   - [docs/0.4/Project_Overview.md](docs/0.4/Project_Overview.md)
   - [docs/0.4/Technical_Plan.md](docs/0.4/Technical_Plan.md)
