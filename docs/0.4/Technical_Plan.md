@@ -572,27 +572,26 @@ Wrap .NET 10's built-in `IdentityPasskeyOptions` with CoreIdent's simplified con
 ```csharp
 public class CoreIdentPasskeyOptions
 {
+    public string ClientId { get; set; } = "passkey"; // Used for token issuance
     public string? RelyingPartyId { get; set; } // Domain, e.g., "example.com"
     public string RelyingPartyName { get; set; } = "CoreIdent";
     public TimeSpan ChallengeTimeout { get; set; } = TimeSpan.FromMinutes(5);
-    public AuthenticatorAttachment? PreferredAttachment { get; set; } // platform, cross-platform
-    public UserVerificationRequirement UserVerification { get; set; } = UserVerificationRequirement.Preferred;
+    public int ChallengeSize { get; set; } = 32;
+    // ~~AuthenticatorAttachment? PreferredAttachment~~ — not exposed by .NET 10's IdentityPasskeyOptions
+    // ~~UserVerificationRequirement UserVerification~~ — not exposed by .NET 10's IdentityPasskeyOptions
 }
 
-// Extension method
-public static IServiceCollection AddCoreIdentPasskeys(
+// Extension method (actual name: AddPasskeys)
+public static IServiceCollection AddPasskeys(
     this IServiceCollection services, 
     Action<CoreIdentPasskeyOptions>? configure = null)
 {
-    var options = new CoreIdentPasskeyOptions();
-    configure?.Invoke(options);
-    
-    // Map to .NET 10's IdentityPasskeyOptions
+    // Registers Identity services, passkey store, and maps options to IdentityPasskeyOptions
     services.Configure<IdentityPasskeyOptions>(identityOptions =>
     {
         identityOptions.ServerDomain = options.RelyingPartyId;
         identityOptions.AuthenticatorTimeout = options.ChallengeTimeout;
-        // ... other mappings
+        identityOptions.ChallengeSize = options.ChallengeSize;
     });
     
     return services;

@@ -714,10 +714,12 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         ```csharp
         public class CoreIdentPasskeyOptions
         {
+            public string ClientId { get; set; } = "passkey";
             public string? RelyingPartyId { get; set; }
             public string RelyingPartyName { get; set; } = "CoreIdent";
             public TimeSpan ChallengeTimeout { get; set; } = TimeSpan.FromMinutes(5);
-            public UserVerificationRequirement UserVerification { get; set; } = UserVerificationRequirement.Preferred;
+            public int ChallengeSize { get; set; } = 32;
+            // ~~UserVerificationRequirement UserVerification~~ — not exposed by .NET 10's IdentityPasskeyOptions
         }
         ```
 *   **Component:** Passkey Service
