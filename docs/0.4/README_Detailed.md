@@ -64,7 +64,7 @@ The 0.4 codebase focuses on:
 
 ## Documentation
 
-All planning and technical documentation for 0.4 is in this folder (`docs/0.4/`):
+All planning and technical documentation for 0.4 is in the [`docs/0.4/`](./) folder:
 
 | Document | Description |
 |----------|-------------|
