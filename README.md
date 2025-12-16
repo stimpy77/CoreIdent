@@ -96,6 +96,7 @@ Then visit:
   - `password` (deprecated; logs a warning)
 - **Authorization endpoint + consent UI** (`/auth/authorize`, `/auth/consent`)
 - **Token revocation** (RFC 7009) and **introspection** (RFC 7662)
+- **OIDC UserInfo endpoint** (`/auth/userinfo`)
 - **OIDC discovery document** and **JWKS publishing** (public keys only)
 - **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
 - **In-memory stores** by default + **EF Core store implementations**
