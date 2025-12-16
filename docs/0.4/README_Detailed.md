@@ -62,6 +62,16 @@ The 0.4 codebase focuses on:
 
 ---
 
+## Passwordless authentication
+
+CoreIdent includes passwordless flows:
+
+- Email magic links
+- Passkeys/WebAuthn
+- SMS one-time passcodes (OTP)
+
+For the SMS OTP endpoint and configuration reference, see the Developer Guide section [4.8 Passwordless SMS OTP](Developer_Guide.md#48-passwordless-sms-otp-feature-13).
+
 ## Documentation
 
 All planning and technical documentation for 0.4 is in the [`docs/0.4/`](./) folder:

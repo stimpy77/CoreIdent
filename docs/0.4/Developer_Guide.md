@@ -719,9 +719,12 @@ Request body (JSON):
 { "phone_number": "+15551234567" }
 ```
 
+Phone numbers must be in E.164 format (for example: `+15551234567`). CoreIdent applies minimal normalization before validation (trims whitespace, removes spaces/hyphens/parentheses, and converts a leading `00` prefix to `+`).
+
 Behavior:
 
 - Always returns `200 OK` (does not leak whether a user exists)
+- If the phone number is missing or invalid, CoreIdent still returns `200 OK` with the same response message
 - Generates a 6-digit numeric OTP and stores **only a hash** via `IPasswordlessTokenStore`
 - Enforces per-phone rate limiting (`PasswordlessSmsOptions.MaxAttemptsPerHour`)
 - Sends an SMS using `ISmsProvider`
@@ -740,7 +743,7 @@ Behavior:
 - Creates the user if not found (`IUserStore`)
 - Issues an access token + refresh token
 
-If the OTP is invalid, expired, or already consumed, it returns `400 Bad Request`.
+If the phone number is missing or invalid, or if the OTP is invalid, expired, or already consumed, it returns `400 Bad Request`.
 
 ### 4.8.3 Configuration (`PasswordlessSmsOptions`)
 

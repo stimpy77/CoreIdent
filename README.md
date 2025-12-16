@@ -79,7 +79,7 @@ Then visit:
 - **Passwordless authentication**
   - Email magic links
   - Passkeys/WebAuthn
-  - SMS OTP (planned)
+  - SMS OTP
 
 ## What’s next
 - **External providers** (Google/Microsoft/GitHub, etc.)
