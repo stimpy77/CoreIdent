@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Observability;
 using CoreIdent.Core.Services;
@@ -55,6 +56,7 @@ public static class TokenEndpointExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.TokenEndpoint");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
         var options = coreOptions.Value;
 
         using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.token");

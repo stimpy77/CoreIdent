@@ -661,6 +661,34 @@ Returning `null` falls back to CoreIdent defaults.
 
 ---
 
+## 4.6.1 Error responses (RFC 7807) and correlation IDs
+
+For endpoints that are not required to return OAuth 2.0 error objects (for example, the resource-owner and passwordless convenience endpoints), CoreIdent returns **RFC 7807 Problem Details** for JSON clients.
+
+When you send `Accept: application/json` (or `Content-Type: application/json` where applicable), error responses are returned with:
+
+- `Content-Type: application/problem+json`
+- A standard Problem Details body containing:
+  - `type` (currently `about:blank`)
+  - `title`
+  - `status`
+  - `detail`
+  - `instance`
+  - extension members:
+    - `error_code`
+    - `correlation_id`
+    - `trace_id`
+
+CoreIdent also emits an `X-Correlation-Id` response header for requests handled by CoreIdent endpoints. If the client provides an `X-Correlation-Id` request header, CoreIdent will reuse it; otherwise it will fall back to the current activity id / trace identifier.
+
+### Notes
+
+- OAuth/OIDC endpoints such as `/auth/token`, `/auth/revoke`, and `/auth/introspect` continue to return OAuth 2.0 style error objects (`error`, `error_description`) as required by their respective RFCs.
+- Structured logging uses a scope that includes `correlation_id` and `trace_id` for easier log correlation.
+- Passwordless endpoints avoid logging raw email/phone values; values are masked/redacted.
+
+---
+
 ## 4.7 Passwordless email magic link (Feature 1.1)
 
 CoreIdent provides a simple passwordless flow using **email magic links**:

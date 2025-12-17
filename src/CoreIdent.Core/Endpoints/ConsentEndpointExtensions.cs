@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +43,7 @@ public static class ConsentEndpointExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ConsentEndpoint");
+        using var logScope = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         if (httpContext.User?.Identity?.IsAuthenticated != true)
         {
@@ -82,8 +84,12 @@ public static class ConsentEndpointExtensions
         IUserGrantStore userGrantStore,
         IOptions<CoreIdentRouteOptions> routeOptions,
         TimeProvider timeProvider,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CoreIdent.ConsentEndpoint");
+        using var logScope = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
         if (httpContext.User?.Identity?.IsAuthenticated != true)
         {
             return Results.Challenge();

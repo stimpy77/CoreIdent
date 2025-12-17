@@ -1,4 +1,5 @@
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
@@ -25,13 +26,23 @@ public static class DiscoveryEndpointsExtensions
         var discoveryPath = routeOptions.GetDiscoveryPath(coreOptions);
 
         endpoints.MapGet(discoveryPath, async (
+            HttpRequest request,
             ISigningKeyProvider signingKeyProvider,
             IScopeStore scopeStore,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
+            var logger = loggerFactory.CreateLogger("CoreIdent.OpenIdConfiguration");
+            using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
+
             if (string.IsNullOrWhiteSpace(coreOptions.Issuer))
             {
-                return Results.Problem(title: "Configuration error", detail: "Issuer is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+                return CoreIdentProblemDetails.Create(
+                    request,
+                    StatusCodes.Status500InternalServerError,
+                    errorCode: "configuration_error",
+                    title: "Configuration error",
+                    detail: "Issuer is not configured.");
             }
 
             var issuerUri = new Uri(coreOptions.Issuer, UriKind.Absolute);
@@ -76,10 +87,12 @@ public static class DiscoveryEndpointsExtensions
 
         endpoints.MapGet(jwksPath, async (
             ISigningKeyProvider signingKeyProvider,
+            HttpRequest request,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.Jwks");
+            using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
 
             var keys = (await signingKeyProvider.GetValidationKeysAsync(ct)).ToList();
 

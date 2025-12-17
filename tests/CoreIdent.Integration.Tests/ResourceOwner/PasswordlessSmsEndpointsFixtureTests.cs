@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
@@ -109,6 +110,14 @@ public sealed class PasswordlessSmsEndpointsFixtureTests : CoreIdentTestFixture
 
         var verifyResponse = await Client.SendAsync(verifyRequest);
         verifyResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        verifyResponse.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json", "Expired OTP should return RFC 7807 Problem Details for JSON clients.");
+
+        var body = await verifyResponse.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        doc.RootElement.GetProperty("status").GetInt32().ShouldBe((int)HttpStatusCode.BadRequest);
+        doc.RootElement.GetProperty("error_code").GetString().ShouldBe("invalid_request");
+        doc.RootElement.GetProperty("correlation_id").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 
     [Fact]

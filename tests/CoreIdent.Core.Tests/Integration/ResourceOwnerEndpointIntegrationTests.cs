@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using CoreIdent.Core.Endpoints;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
@@ -64,6 +65,18 @@ public sealed class ResourceOwnerEndpointIntegrationTests
 
         var second = await client.PostAsJsonAsync("/auth/register", new { email, password });
         second.StatusCode.ShouldBe(HttpStatusCode.BadRequest, "Duplicate registration should be rejected.");
+
+        second.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json", "Duplicate registration should return RFC 7807 Problem Details for JSON clients.");
+
+        var body = await second.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+
+        doc.RootElement.GetProperty("title").GetString().ShouldBe("Invalid request", "ProblemDetails title should be consistent.");
+        doc.RootElement.GetProperty("status").GetInt32().ShouldBe((int)HttpStatusCode.BadRequest, "ProblemDetails status should match response.");
+        doc.RootElement.GetProperty("detail").GetString().ShouldNotBeNullOrWhiteSpace("ProblemDetails should include detail.");
+        doc.RootElement.GetProperty("error_code").GetString().ShouldBe("invalid_request", "ProblemDetails should include an error_code.");
+        doc.RootElement.GetProperty("correlation_id").GetString().ShouldNotBeNullOrWhiteSpace("ProblemDetails should include correlation_id.");
+        doc.RootElement.GetProperty("trace_id").GetString().ShouldNotBeNullOrWhiteSpace("ProblemDetails should include trace_id.");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -43,6 +45,9 @@ public static class UserInfoEndpointExtensions
         IOptions<CoreIdentOptions> coreOptions,
         CancellationToken ct)
     {
+        var logger = httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("CoreIdent.UserInfo");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
         var principal = await TryValidateBearerTokenAsync(httpContext.Request, signingKeyProvider, coreOptions.Value, ct);
         if (principal is null)
         {

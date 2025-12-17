@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
@@ -92,8 +93,19 @@ public sealed class PasswordlessEmailEndpointsFixtureTests : CoreIdentTestFixtur
 
         _timeProvider.Advance(TimeSpan.FromMinutes(16));
 
-        var verifyResponse = await Client.GetAsync(verifyUrl);
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Get, verifyUrl);
+        verifyRequest.Headers.Accept.ParseAdd("application/json");
+
+        var verifyResponse = await Client.SendAsync(verifyRequest);
         verifyResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        verifyResponse.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json", "Expired token should return RFC 7807 Problem Details for JSON clients.");
+
+        var body = await verifyResponse.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        doc.RootElement.GetProperty("status").GetInt32().ShouldBe((int)HttpStatusCode.BadRequest);
+        doc.RootElement.GetProperty("error_code").GetString().ShouldBe("invalid_request");
+        doc.RootElement.GetProperty("correlation_id").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -114,8 +126,19 @@ public sealed class PasswordlessEmailEndpointsFixtureTests : CoreIdentTestFixtur
         var first = await Client.GetAsync(verifyUrl);
         first.StatusCode.ShouldBe(HttpStatusCode.Redirect);
 
-        var second = await Client.GetAsync(verifyUrl);
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Get, verifyUrl);
+        secondRequest.Headers.Accept.ParseAdd("application/json");
+
+        var second = await Client.SendAsync(secondRequest);
         second.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        second.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json", "Consumed token should return RFC 7807 Problem Details for JSON clients.");
+
+        var body = await second.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        doc.RootElement.GetProperty("status").GetInt32().ShouldBe((int)HttpStatusCode.BadRequest);
+        doc.RootElement.GetProperty("error_code").GetString().ShouldBe("invalid_request");
+        doc.RootElement.GetProperty("correlation_id").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 
     [Fact]

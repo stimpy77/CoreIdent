@@ -1186,17 +1186,17 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.3: Technical Debt from Technical_Plan.md
 
 *   **Component:** RFC 7807 Problem Details
-    - [ ] (L3) Audit error responses across all endpoints for consistency
-    - [ ] (L3) Consider adopting `Results.Problem()` / `ProblemDetails` for error responses
-    - [ ] (L2) Create `CoreIdentProblemDetails` helper or extension for standardized error formatting
-    - [ ] (L2) Document error response format in Developer_Guide.md
+    - [x] (L3) Audit error responses across all endpoints for consistency
+    - [x] (L3) Consider adopting `Results.Problem()` / `ProblemDetails` for error responses
+    - [x] (L2) Create `CoreIdentProblemDetails` helper or extension for standardized error formatting
+    - [x] (L2) Document error response format in Developer_Guide.md
 *   **Component:** Structured Logging
-    - [ ] (L2) Audit logging statements for structured logging best practices
-    - [ ] (L2) Add correlation ID support (e.g., `Activity.Current?.Id` or custom header)
-    - [ ] (L2) Ensure sensitive data (tokens, passwords, PII) is never logged
-    - [ ] (L1) Document logging configuration in Developer_Guide.md
+    - [x] (L2) Audit logging statements for structured logging best practices
+    - [x] (L2) Add correlation ID support (e.g., `Activity.Current?.Id` or custom header)
+    - [x] (L2) Ensure sensitive data (tokens, passwords, PII) is never logged
+    - [x] (L1) Document logging configuration in Developer_Guide.md
 *   **Test Case:**
-    - [ ] (L2) Error responses include consistent structure (error code, message, optional details)
+    - [x] (L2) Error responses include consistent structure (error code, message, optional details)
 
 ---
 

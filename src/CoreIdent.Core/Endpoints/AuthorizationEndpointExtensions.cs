@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
@@ -48,6 +49,7 @@ public static class AuthorizationEndpointExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.AuthorizeEndpoint");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
         var query = request.Query;

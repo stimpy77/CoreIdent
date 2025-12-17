@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Observability;
 using CoreIdent.Core.Stores;
@@ -54,6 +55,7 @@ public static class TokenManagementEndpointsExtensions
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.TokenRevocation");
+            using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
 
             using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.revoke");
 
@@ -167,6 +169,7 @@ public static class TokenManagementEndpointsExtensions
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.TokenIntrospection");
+            using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
 
             using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.introspect");
 

@@ -2,6 +2,7 @@ using System.Net.Mime;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
@@ -67,6 +68,7 @@ public static class ResourceOwnerEndpointsExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ResourceOwner.Register");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
 
@@ -134,6 +136,7 @@ public static class ResourceOwnerEndpointsExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ResourceOwner.Login");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
 
@@ -247,6 +250,7 @@ public static class ResourceOwnerEndpointsExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ResourceOwner.Profile");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
 
@@ -365,7 +369,14 @@ public static class ResourceOwnerEndpointsExtensions
     {
         if (WantsJson(request))
         {
-            return Results.Json(new { error = message }, statusCode: statusCode);
+            var (errorCode, title) = statusCode switch
+            {
+                StatusCodes.Status401Unauthorized => ("unauthorized", "Unauthorized"),
+                StatusCodes.Status403Forbidden => ("forbidden", "Forbidden"),
+                _ => ("invalid_request", "Invalid request")
+            };
+
+            return CoreIdentProblemDetails.Create(request, statusCode, errorCode, title, message);
         }
 
         var escaped = HtmlEncoder.Default.Encode(message);

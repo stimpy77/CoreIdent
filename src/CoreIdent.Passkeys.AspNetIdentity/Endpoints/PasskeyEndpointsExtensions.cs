@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using System.Security.Claims;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -59,8 +61,12 @@ public static class PasskeyEndpointsExtensions
         IPasskeyService passkeyService,
         ISigningKeyProvider signingKeyProvider,
         IOptions<CoreIdentOptions> coreOptions,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CoreIdent.Passkeys.Register.Options");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
+
         var principal = await TryValidateBearerTokenAsync(request, signingKeyProvider, coreOptions.Value, ct);
         if (principal is null)
         {
@@ -93,9 +99,13 @@ public static class PasskeyEndpointsExtensions
         IPasskeyService passkeyService,
         ISigningKeyProvider signingKeyProvider,
         IOptions<CoreIdentOptions> coreOptions,
+        ILoggerFactory loggerFactory,
         RegisterCompleteRequest body,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CoreIdent.Passkeys.Register.Complete");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
+
         var principal = await TryValidateBearerTokenAsync(request, signingKeyProvider, coreOptions.Value, ct);
         if (principal is null)
         {
@@ -123,7 +133,7 @@ public static class PasskeyEndpointsExtensions
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return CoreIdentProblemDetails.Create(request, StatusCodes.Status400BadRequest, "invalid_request", "Invalid request", ex.Message);
         }
     }
 
@@ -131,9 +141,14 @@ public static class PasskeyEndpointsExtensions
 
     private static async Task<IResult> HandleAuthenticateOptionsAsync(
         IPasskeyService passkeyService,
+        HttpContext httpContext,
+        ILoggerFactory loggerFactory,
         AuthenticateOptionsRequest body,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CoreIdent.Passkeys.Authenticate.Options");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
         var optionsJson = await passkeyService.GetAuthenticationOptionsJsonAsync(body.Username, ct);
         return Results.Text(optionsJson, MediaTypeNames.Application.Json);
     }
@@ -149,9 +164,13 @@ public static class PasskeyEndpointsExtensions
         IOptions<CoreIdentOptions> coreOptions,
         IOptions<CoreIdentPasskeyOptions> passkeyOptions,
         TimeProvider timeProvider,
+        ILoggerFactory loggerFactory,
         AuthenticateCompleteRequest body,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CoreIdent.Passkeys.Authenticate.Complete");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
+
         var user = await passkeyService.AuthenticateAsync(body.CredentialJson, ct);
         if (user is null)
         {

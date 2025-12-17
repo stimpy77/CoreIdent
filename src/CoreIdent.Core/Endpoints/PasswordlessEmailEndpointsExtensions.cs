@@ -2,6 +2,7 @@ using System.Net.Mime;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
 using CoreIdent.Core.Stores;
@@ -57,6 +58,7 @@ public static class PasswordlessEmailEndpointsExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.Passwordless.Email.Start");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
         var email = await ReadEmailAsync(request, ct);
@@ -86,11 +88,11 @@ public static class PasswordlessEmailEndpointsExtensions
         }
         catch (PasswordlessRateLimitExceededException)
         {
-            logger.LogWarning("Passwordless email rate limit exceeded for {Email}", normalizedEmail);
+            logger.LogWarning("Passwordless email rate limit exceeded for {Email}", CoreIdentRedaction.MaskEmail(normalizedEmail));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to send passwordless email to {Email}", normalizedEmail);
+            logger.LogError(ex, "Failed to send passwordless email to {Email}", CoreIdentRedaction.MaskEmail(normalizedEmail));
         }
 
         return Results.Ok(new { message = "If the email exists, a sign-in link will be sent." });
@@ -110,6 +112,7 @@ public static class PasswordlessEmailEndpointsExtensions
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.Passwordless.Email.Verify");
+        using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
         var request = httpContext.Request;
         var token = request.Query["token"].ToString();
@@ -268,7 +271,14 @@ public static class PasswordlessEmailEndpointsExtensions
 
         if (wantsJson)
         {
-            return Results.Json(new { error = message }, statusCode: statusCode);
+            var (errorCode, title) = statusCode switch
+            {
+                StatusCodes.Status401Unauthorized => ("unauthorized", "Unauthorized"),
+                StatusCodes.Status403Forbidden => ("forbidden", "Forbidden"),
+                _ => ("invalid_request", "Invalid request")
+            };
+
+            return CoreIdentProblemDetails.Create(request, statusCode, errorCode, title, message);
         }
 
         var escaped = HtmlEncoder.Default.Encode(message);
