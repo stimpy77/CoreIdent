@@ -22,7 +22,7 @@ public class EfUserStoreTests : IDisposable
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
 
-        _store = new EfUserStore(_context);
+        _store = new EfUserStore(_context, TimeProvider.System);
     }
 
     public void Dispose()

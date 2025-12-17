@@ -47,6 +47,7 @@ public static class PasswordlessEmailEndpointsExtensions
         IOptions<PasswordlessEmailOptions> options,
         IOptions<CoreIdentRouteOptions> routeOptions,
         IHostEnvironment environment,
+        TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -66,7 +67,7 @@ public static class PasswordlessEmailEndpointsExtensions
             {
                 Recipient = normalizedEmail,
                 TokenType = PasswordlessTokenTypes.EmailMagicLink,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
             var rawToken = await tokenStore.CreateTokenAsync(tokenModel, ct);
@@ -127,7 +128,7 @@ public static class PasswordlessEmailEndpointsExtensions
             {
                 UserName = normalizedEmail,
                 NormalizedUserName = normalizedEmail.ToUpperInvariant(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
             await userStore.CreateAsync(user, ct);

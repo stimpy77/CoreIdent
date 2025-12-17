@@ -53,6 +53,7 @@ public static class ResourceOwnerEndpointsExtensions
         IUserStore userStore,
         IPasswordHasher passwordHasher,
         IOptions<CoreIdentResourceOwnerOptions> resourceOwnerOptions,
+        TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -82,7 +83,7 @@ public static class ResourceOwnerEndpointsExtensions
         {
             UserName = normalizedEmail,
             NormalizedUserName = normalizedEmail.ToUpperInvariant(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
 
         user.PasswordHash = passwordHasher.HashPassword(user, password);

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Stores.InMemory;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 
 namespace CoreIdent.Core.Tests.Stores;
@@ -74,6 +75,25 @@ public class InMemoryUserStoreTests
 
         user.Id.ShouldNotBeNullOrWhiteSpace("user id should be auto-generated");
         (await store.FindByIdAsync(user.Id)).ShouldNotBeNull("user should be persisted with generated id");
+    }
+
+    [Fact]
+    public async Task CreateAsync_SetsCreatedAt_FromTimeProvider_WhenNotProvided()
+    {
+        var start = new DateTimeOffset(2030, 01, 02, 03, 04, 05, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(start);
+        var store = new InMemoryUserStore(timeProvider);
+
+        var user = new CoreIdentUser
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserName = "test@example.com",
+            NormalizedUserName = "TEST@EXAMPLE.COM"
+        };
+
+        await store.CreateAsync(user);
+
+        user.CreatedAt.ShouldBe(timeProvider.GetUtcNow().UtcDateTime, "created timestamp should be taken from injected TimeProvider");
     }
 
     [Fact]

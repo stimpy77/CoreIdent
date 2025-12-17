@@ -44,6 +44,7 @@ public static class PasswordlessSmsEndpointsExtensions
         HttpContext httpContext,
         IPasswordlessTokenStore tokenStore,
         ISmsProvider smsProvider,
+        TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -64,7 +65,7 @@ public static class PasswordlessSmsEndpointsExtensions
             {
                 Recipient = phoneNumber,
                 TokenType = PasswordlessTokenTypes.SmsOtp,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
             var otp = await tokenStore.CreateTokenAsync(tokenModel, ct);
@@ -126,7 +127,7 @@ public static class PasswordlessSmsEndpointsExtensions
             {
                 UserName = phoneNumber,
                 NormalizedUserName = phoneNumber.ToUpperInvariant(),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
             await userStore.CreateAsync(user, ct);

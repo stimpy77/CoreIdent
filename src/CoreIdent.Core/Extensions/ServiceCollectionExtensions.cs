@@ -89,7 +89,8 @@ public static class ServiceCollectionExtensions
             new InMemoryTokenRevocationStore(sp.GetService<TimeProvider>()));
 
         services.TryAddSingleton<IPasswordHasher, ThrowingPasswordHasher>();
-        services.TryAddSingleton<InMemoryUserStore>();
+        services.TryAddSingleton<InMemoryUserStore>(sp =>
+            new InMemoryUserStore(sp.GetService<TimeProvider>()));
         services.TryAddSingleton<IUserStore>(sp => sp.GetRequiredService<InMemoryUserStore>());
 
         services.TryAddSingleton<ICustomClaimsProvider, NullCustomClaimsProvider>();

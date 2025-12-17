@@ -1148,15 +1148,15 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.1: TimeProvider Consistency
 
 *   **Component:** Replace `DateTime.UtcNow` with `TimeProvider`
-    - [ ] (L2) `InMemoryUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
-    - [ ] (L2) `EfUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
-    - [ ] (L2) `CliApp.cs` — Replace `DateTime.UtcNow` in client creation (or accept as CLI-only exception)
-    - [ ] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
-    - [ ] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
-    - [ ] (L2) `ResourceOwnerEndpointsExtensions.cs` — Replace instance with `TimeProvider`
-    - [ ] (L1) Ensure `TimeProvider` is registered in DI (already done in `ServiceCollectionExtensions.cs`)
+    - [x] (L2) `InMemoryUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
+    - [x] (L2) `EfUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
+    - [x] (L2) `CliApp.cs` — Replace `DateTime.UtcNow` in client creation (or accept as CLI-only exception)
+    - [x] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
+    - [x] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
+    - [x] (L2) `ResourceOwnerEndpointsExtensions.cs` — Replace instance with `TimeProvider`
+    - [x] (L1) Ensure `TimeProvider` is registered in DI (already done in `ServiceCollectionExtensions.cs`)
 *   **Test Case:**
-    - [ ] (L2) Unit tests can control time via `FakeTimeProvider` for user creation timestamps
+    - [x] (L2) Unit tests can control time via `FakeTimeProvider` for user creation timestamps
 
 ---
 

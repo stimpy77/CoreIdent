@@ -10,6 +10,18 @@ public sealed class InMemoryUserStore : IUserStore
     private readonly ConcurrentDictionary<string, string> _idByNormalizedUsername = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, List<Claim>> _claimsBySubjectId = new(StringComparer.Ordinal);
 
+    private readonly TimeProvider _timeProvider;
+
+    public InMemoryUserStore()
+        : this(timeProvider: null)
+    {
+    }
+
+    public InMemoryUserStore(TimeProvider? timeProvider)
+    {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
     public Task<CoreIdentUser?> FindByIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -70,7 +82,7 @@ public sealed class InMemoryUserStore : IUserStore
 
         if (user.CreatedAt == default)
         {
-            user.CreatedAt = DateTime.UtcNow;
+            user.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         return Task.CompletedTask;

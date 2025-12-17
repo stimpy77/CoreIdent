@@ -275,7 +275,7 @@ public static class CliApp
             AllowedGrantTypes = [GrantTypes.AuthorizationCode],
             RequirePkce = true,
             Enabled = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = TimeProvider.System.GetUtcNow().UtcDateTime
         };
 
         if (clientType == ClientType.Confidential)
@@ -304,7 +304,7 @@ public static class CliApp
         Console.WriteLine($"    AllowedGrantTypes = [{string.Join(", ", client.AllowedGrantTypes.Select(g => $"\"{g}\""))}],");
         Console.WriteLine($"    RequirePkce = {client.RequirePkce.ToString().ToLowerInvariant()},");
         Console.WriteLine($"    Enabled = {client.Enabled.ToString().ToLowerInvariant()},");
-        Console.WriteLine("    CreatedAt = DateTime.UtcNow");
+        Console.WriteLine("    CreatedAt = TimeProvider.System.GetUtcNow().UtcDateTime");
         Console.WriteLine("};");
         if (clientSecret is not null)
         {

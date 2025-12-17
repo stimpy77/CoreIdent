@@ -11,9 +11,12 @@ public sealed class EfUserStore : IUserStore
 {
     private readonly CoreIdentDbContext _context;
 
-    public EfUserStore(CoreIdentDbContext context)
+    private readonly TimeProvider _timeProvider;
+
+    public EfUserStore(CoreIdentDbContext context, TimeProvider timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<CoreIdentUser?> FindByIdAsync(string id, CancellationToken ct = default)
@@ -63,7 +66,7 @@ public sealed class EfUserStore : IUserStore
 
         if (user.CreatedAt == default)
         {
-            user.CreatedAt = DateTime.UtcNow;
+            user.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         var entity = ToEntity(user);
