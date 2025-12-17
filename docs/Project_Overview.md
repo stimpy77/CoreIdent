@@ -89,6 +89,186 @@ CoreIdent is built as a **composable ecosystem of packages**, not a monolithic f
 
 ---
 
+## Sister projects (pre-planning)
+
+CoreIdent is intended to remain a **lean, composable foundation**. Some “full product” capabilities that teams often expect from an identity platform are deliberately planned as **sister projects** built on top of `CoreIdent.Core`.
+
+The goal is:
+
+- Keep `CoreIdent.Core` focused on secure OAuth/OIDC primitives and a clean extension model
+- Enable a rich “membership + admin” experience for apps that want it
+- Keep enterprise IAM surface area (realms, SAML/LDAP, etc.) modular and optional
+
+The sections below capture *pre-planning/spec thinking* for the sister projects we discussed. These are intentionally written as plans and do not imply implementation in CoreIdent.Core.
+
+### Sister project: Membership + Administration
+
+**Projected names (pick one later):**
+
+- `CoreIdent.Membership`
+- `CoreIdent.Admin` (or `CoreIdent.Management`) as the “admin surface” companion package
+
+**Purpose / positioning:**
+
+Deliver a production-ready answer to the README-level promise of:
+
+- “I just need auth in my app”
+
+…by adding the **membership** and **administration** capabilities that real apps typically need, while keeping the CoreIdent core focused.
+
+**Primary use cases:**
+
+- Apps that need a **user database + lifecycle management** (create/disable users, verification, resets)
+- Teams that need a **GUI/API to administer OAuth clients and scopes**
+- Apps that want a **self-service account experience** (profile, security settings, sessions)
+- .NET teams that want a “drop-in identity server + membership + admin portal” without adopting a full enterprise IAM platform
+
+**High-level feature checklist (what it would cover):**
+
+**Membership (core app needs):**
+
+- User profile management
+  - richer profile fields (display name, avatar, status flags)
+  - account state (active/disabled/locked)
+- Account lifecycle workflows
+  - email verification
+  - password reset (if passwords are enabled)
+  - account recovery flows
+- Authentication hardening (optional, but common)
+  - MFA (TOTP, passkeys, recovery codes)
+  - lockout / throttling policies
+- Groups/roles and claims
+  - group membership and role assignment
+  - mapping groups/roles to token claims
+
+**Administration (operator needs):**
+
+- Client & scope administration
+  - manage OAuth clients, secrets, redirect URIs, allowed grants/scopes
+  - rotate client secrets
+- Consent and grants administration (where supported)
+  - view/revoke user grants
+- Key visibility and rotation workflows (depending on how keys are managed)
+- Audit/event views
+  - “who changed what” for admin actions
+
+**Self-service UI (end-user needs):**
+
+- Profile page(s)
+- Security settings
+  - change email/password
+  - manage passkeys / MFA methods
+- Sessions/devices (as CoreIdent grows this surface)
+  - list sessions, logout everywhere
+
+**Packaging note:**
+
+This could ship as:
+
+- a library-first set of packages (admin API + optional UI), or
+- a “ready-to-run server” template built from those packages.
+
+**What CoreIdent.Core must provide to support it (foundation requirements):**
+
+- Clean store seams for membership to build on
+  - user persistence via `IUserStore`
+  - OAuth entities via `IClientStore`, `IScopeStore`, token/grant stores
+- Predictable claims enrichment
+  - `IUserStore.GetClaimsAsync(...)` and `ICustomClaimsProvider` as the main hooks
+- Override-friendly “embedded auth” endpoints
+  - resource-owner convenience endpoints must be configurable/overrideable so production apps can use them without forks
+- Minimal coupling to any specific persistence technology
+  - the sister project should not need to reach into EF-specific internals to perform admin operations
+
+### Sister project: Enterprise
+
+**Projected names (pick one later):**
+
+- `CoreIdent.Enterprise`
+- `CoreIdent.Platform.Enterprise`
+
+**Purpose / positioning:**
+
+Provide optional enterprise IAM capabilities that are typically the reason teams adopt products like Keycloak: multi-tenant realms, federation/brokering, directory integration, and deep admin policy tooling.
+
+**Key framing (feature parity vs maturity):**
+
+Even if an Enterprise project eventually reaches feature parity with Keycloak checklists, “closing the gap” in practice also requires operational hardening, upgrade/migration strategy, ecosystem integrations, and time-in-production.
+
+**Primary use cases:**
+
+- Organizations that need CoreIdent to act as an **enterprise SSO hub**
+- Customers that require **SAML and/or LDAP/AD** integration
+- B2B SaaS that requires strong **tenant isolation** (realms)
+
+**High-level feature checklist (what it would need to cover):**
+
+**Realms / multi-tenancy (Keycloak’s core differentiator):**
+
+- Per-realm issuer and audience
+- Per-realm signing keys (and key rotation policies)
+- Per-realm clients, scopes, and configuration
+- Per-realm admin boundaries and isolation guarantees
+- Per-realm branding/theming
+
+**Federation / identity brokering:**
+
+- External IdP connections
+- Account linking/unlinking
+- Identity mapping rules
+- Just-in-time provisioning
+
+**LDAP/AD integration:**
+
+- Directory authentication (credential validation)
+- Group/role lookup and mapping
+- Sync/provisioning strategies
+- Connection health, caching, conflict handling
+
+**SAML support:**
+
+- SAML 2.0 capabilities (IdP and/or SP/broker behavior depending on scope)
+- Metadata management
+- Signing/encryption configuration
+- Attribute mapping
+- Logout behavior
+
+**Admin-grade policy and operational tooling:**
+
+- Admin console with permission model (admin RBAC)
+- Audit/event pipeline
+- Session and device management
+  - global logout
+  - session listings/termination
+  - device trust (if in scope)
+- Theming/localization
+- Operational hardening
+  - clustering/HA story
+  - migrations/upgrades at scale
+  - secrets/keys rotation story
+  - performance and observability expectations
+
+**Protocols/standards implicated (reference list):**
+
+- OAuth 2.0 / OpenID Connect
+- SAML 2.0
+- LDAP / Active Directory
+- SCIM 2.0 (user/group provisioning)
+
+**What CoreIdent.Core must provide to support it (foundation requirements):**
+
+- A realm-ready foundation so multi-tenancy can be layered on without forking endpoints
+  - realm resolution/context
+  - realm-aware issuer/audience selection
+  - realm-aware signing key selection
+  - realm-aware store abstractions (or adapters)
+- A stable claims pipeline to express enterprise identity and authorization state
+- Clear boundaries between:
+  - Core token/OAuth mechanics
+  - Enterprise integrations and admin policy tooling
+
+---
+
 ## Target Scenarios
 
 ### Scenario 1: "I just need auth for my app"
