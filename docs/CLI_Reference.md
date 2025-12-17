@@ -1,4 +1,4 @@
-# CoreIdent CLI Reference (0.4)
+# CoreIdent CLI Reference (1.0)
 
 CoreIdent ships a .NET tool package that provides a `dotnet coreident` command.
 

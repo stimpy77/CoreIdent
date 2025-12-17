@@ -49,6 +49,72 @@ CoreIdent is not trying to be “everything at once” yet. The focus is **secur
 
 ---
 
+## Third-party extensibility opportunities
+
+CoreIdent is designed so third parties can build “flavors” (membership systems, admin surfaces, hosted identity offerings, etc.) **without forking** `CoreIdent.Core`.
+
+The primary rule is: prefer replacing behavior via **DI + interfaces** rather than editing CoreIdent code.
+
+### Replace storage (or add a storage package)
+
+CoreIdent’s persistence is expressed as store interfaces. A third party can provide:
+
+- `IUserStore` (users + claim storage)
+- `IClientStore` (OAuth clients)
+- `IScopeStore` (scopes used by discovery + token issuance)
+- `IAuthorizationCodeStore` (authorization codes)
+- `IRefreshTokenStore` (refresh tokens, rotation, family revocation)
+- `IUserGrantStore` (consent grants)
+- `ITokenRevocationStore` (revoked access token tracking)
+- `IPasswordlessTokenStore` (passwordless token/OTP storage)
+
+Notes:
+
+- `IScopeStore` is currently a **read-only** interface. If you need scope administration, own a write model (DB tables + admin API) and expose a read projection via `IScopeStore`.
+- Store defaults are registered with `TryAdd*` patterns, so registering your implementation before calling `AddCoreIdent()` takes precedence.
+
+### Customize token claims and identity surfaces
+
+There are two main “claims seams”:
+
+- `IUserStore.GetClaimsAsync(subjectId, ...)` for user-owned claims (roles/groups/flags owned by your membership layer)
+- `ICustomClaimsProvider` for computed/derived claims added during token issuance
+
+This enables membership and enterprise layers to inject authorization state into access tokens and ID tokens without modifying CoreIdent endpoints.
+
+### Customize signing keys and key management
+
+Token signing and JWKS publishing use `ISigningKeyProvider`.
+
+Third parties can integrate external key systems by implementing `ISigningKeyProvider` (for example, loading from an HSM, Key Vault, KMS, or a per-tenant certificate store) and registering it via `AddSigningKey(...)`.
+
+### Customize and/or replace endpoint behavior
+
+For the resource-owner convenience endpoints, you can override response behavior via `CoreIdentResourceOwnerOptions`:
+
+- `RegisterHandler`
+- `LoginHandler`
+- `ProfileHandler`
+
+You can also avoid `MapCoreIdentEndpoints()` and map only the endpoints you want using the granular mapping extensions.
+
+### Integrate passwordless providers
+
+For production deployments, third parties commonly replace the default delivery providers:
+
+- Implement `IEmailSender` to use an email API provider
+- Implement `ISmsProvider` to use an SMS provider
+
+Passwordless storage is similarly replaceable via `IPasswordlessTokenStore`.
+
+### Delegate user identity to an existing system
+
+If you already have a user database and credential validation, you can avoid forking by using `CoreIdent.Adapters.DelegatedUserStore` to delegate:
+
+- user lookup (`FindUserByIdAsync`, `FindUserByUsernameAsync`)
+- credential validation
+- optional `GetClaimsAsync` for membership/roles
+
 ## Embedded Auth vs Membership (Guidance Placeholder)
 
 This section is a placeholder for DEVPLAN 1.13.6.

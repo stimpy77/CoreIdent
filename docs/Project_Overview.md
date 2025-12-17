@@ -172,7 +172,8 @@ This could ship as:
 
 - Clean store seams for membership to build on
   - user persistence via `IUserStore`
-  - OAuth entities via `IClientStore`, `IScopeStore`, token/grant stores
+  - OAuth entities via `IClientStore`, `IScopeStore`, `IAuthorizationCodeStore`, `IRefreshTokenStore`, `IUserGrantStore`, `ITokenRevocationStore`
+  - Note: `IScopeStore` is currently a read-only interface. A sister project that needs scope administration should own a write model (DB + admin API) and keep `IScopeStore` as the read-side used by token issuance and discovery.
 - Predictable claims enrichment
   - `IUserStore.GetClaimsAsync(...)` and `ICustomClaimsProvider` as the main hooks
 - Override-friendly “embedded auth” endpoints
@@ -262,6 +263,7 @@ Even if an Enterprise project eventually reaches feature parity with Keycloak ch
   - realm-aware issuer/audience selection
   - realm-aware signing key selection
   - realm-aware store abstractions (or adapters)
+  - See also: [Realms (draft design)](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md)
 - A stable claims pipeline to express enterprise identity and authorization state
 - Clear boundaries between:
   - Core token/OAuth mechanics
