@@ -7,6 +7,7 @@ using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Observability;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -42,13 +43,15 @@ public static class TokenEndpointExtensions
 
     private static async Task<IResult> HandleTokenRequest(
         HttpRequest request,
-        IClientStore clientStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmClientStore clientStore,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
-        IUserStore userStore,
+        IRealmRefreshTokenStore refreshTokenStore,
+        IRealmUserStore userStore,
         IPasswordHasher passwordHasher,
-        IAuthorizationCodeStore authorizationCodeStore,
+        IRealmAuthorizationCodeStore authorizationCodeStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         ICoreIdentMetrics metrics,
         IOptions<CoreIdentOptions> coreOptions,
         ILoggerFactory loggerFactory,
@@ -58,6 +61,8 @@ public static class TokenEndpointExtensions
         var logger = loggerFactory.CreateLogger("CoreIdent.TokenEndpoint");
         using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
         var options = coreOptions.Value;
+
+        var realmId = realmContext.RealmId;
 
         using var activity = CoreIdentActivitySource.ActivitySource.StartActivity("coreident.token");
 
@@ -83,7 +88,7 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidClient, "Client authentication is required.", StatusCodes.Status401Unauthorized);
         }
 
-        var client = await clientStore.FindByClientIdAsync(clientId, ct);
+        var client = await clientStore.FindByClientIdAsync(realmId, clientId, ct);
         if (client is null || !client.Enabled)
         {
             logger.LogWarning("Token request for unknown or disabled client: {ClientId}", clientId);
@@ -101,7 +106,7 @@ public static class TokenEndpointExtensions
                 return TokenError(TokenErrors.InvalidClient, "Client secret is required for confidential clients.", StatusCodes.Status401Unauthorized);
             }
 
-            var secretValid = await clientStore.ValidateClientSecretAsync(clientId, clientSecret, ct);
+            var secretValid = await clientStore.ValidateClientSecretAsync(realmId, clientId, clientSecret, ct);
             if (!secretValid)
             {
                 logger.LogWarning("Invalid client secret for client: {ClientId}", clientId);
@@ -121,25 +126,27 @@ public static class TokenEndpointExtensions
         return tokenRequest.GrantType switch
         {
             GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
+                realmId, client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, issuerAudienceProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
+                realmId, client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, issuerAudienceProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
+                realmId, client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, issuerAudienceProvider, metrics, options, timeProvider, logger, ct),
             GrantTypes.Password => await HandlePasswordGrantAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, metrics, options, timeProvider, logger, ct),
+                realmId, client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, issuerAudienceProvider, metrics, options, timeProvider, logger, ct),
             _ => TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.")
         };
     }
 
     private static async Task<IResult> HandlePasswordGrantAsync(
+        string realmId,
         CoreIdentClient client,
         TokenRequest tokenRequest,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
-        IUserStore userStore,
+        IRealmRefreshTokenStore refreshTokenStore,
+        IRealmUserStore userStore,
         IPasswordHasher passwordHasher,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
@@ -159,7 +166,7 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidRequest, "The password parameter is required.");
         }
 
-        var user = await userStore.FindByUsernameAsync(tokenRequest.Username, ct);
+        var user = await userStore.FindByUsernameAsync(realmId, tokenRequest.Username, ct);
         if (user is null)
         {
             return TokenError(TokenErrors.InvalidGrant, "Invalid resource owner credentials.");
@@ -192,7 +199,7 @@ public static class TokenEndpointExtensions
             claims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
         }
 
-        var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, user.Id, ct);
         claims.AddRange(userClaims);
 
         var claimsContext = new ClaimsContext
@@ -206,9 +213,10 @@ public static class TokenEndpointExtensions
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
         claims.AddRange(customClaims);
 
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             claims,
             accessTokenExpiresAt,
             ct);
@@ -231,7 +239,7 @@ public static class TokenEndpointExtensions
                 ExpiresAt = now.Add(refreshTokenLifetime)
             };
 
-            await refreshTokenStore.StoreAsync(refreshToken, ct);
+            await refreshTokenStore.StoreAsync(realmId, refreshToken, ct);
         }
 
         logger.LogInformation("Issued tokens for subject {SubjectId} via password grant", user.Id);
@@ -255,13 +263,15 @@ public static class TokenEndpointExtensions
     }
 
     private static async Task<IResult> HandleAuthorizationCodeAsync(
+        string realmId,
         CoreIdentClient client,
         TokenRequest tokenRequest,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
-        IAuthorizationCodeStore authorizationCodeStore,
-        IUserStore userStore,
+        IRealmRefreshTokenStore refreshTokenStore,
+        IRealmAuthorizationCodeStore authorizationCodeStore,
+        IRealmUserStore userStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
@@ -285,7 +295,7 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidRequest, "The code_verifier parameter is required.");
         }
 
-        var code = await authorizationCodeStore.GetAsync(tokenRequest.Code, ct);
+        var code = await authorizationCodeStore.GetAsync(realmId, tokenRequest.Code, ct);
         if (code is null)
         {
             return TokenError(TokenErrors.InvalidGrant, "The authorization code is invalid or expired.");
@@ -326,7 +336,7 @@ public static class TokenEndpointExtensions
             }
         }
 
-        var consumed = await authorizationCodeStore.ConsumeAsync(tokenRequest.Code, ct);
+        var consumed = await authorizationCodeStore.ConsumeAsync(realmId, tokenRequest.Code, ct);
         if (!consumed)
         {
             return TokenError(TokenErrors.InvalidGrant, "The authorization code is invalid or has already been used.");
@@ -348,7 +358,7 @@ public static class TokenEndpointExtensions
             accessTokenClaims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
         }
 
-        var userClaims = await userStore.GetClaimsAsync(code.SubjectId, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, code.SubjectId, ct);
         accessTokenClaims.AddRange(userClaims);
 
         var claimsContext = new ClaimsContext
@@ -362,9 +372,10 @@ public static class TokenEndpointExtensions
         var customAccessClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
         accessTokenClaims.AddRange(customAccessClaims);
 
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             accessTokenClaims,
             accessTokenExpiresAt,
             ct);
@@ -386,7 +397,7 @@ public static class TokenEndpointExtensions
                 ExpiresAt = now.Add(refreshTokenLifetime)
             };
 
-            await refreshTokenStore.StoreAsync(refreshToken, ct);
+            await refreshTokenStore.StoreAsync(realmId, refreshToken, ct);
         }
 
         string? idToken = null;
@@ -407,8 +418,9 @@ public static class TokenEndpointExtensions
             idTokenClaims.AddRange(customIdClaims);
 
             // audience for id_token is the client_id
+            var (issuerForIdToken, _) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
             idToken = await tokenService.CreateJwtAsync(
-                options.Issuer!,
+                issuerForIdToken,
                 client.ClientId,
                 idTokenClaims,
                 expiresAt: accessTokenExpiresAt,
@@ -442,11 +454,13 @@ public static class TokenEndpointExtensions
     }
 
     private static async Task<IResult> HandleClientCredentialsAsync(
+        string realmId,
         CoreIdentClient client,
         TokenRequest tokenRequest,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
+        IRealmRefreshTokenStore refreshTokenStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
@@ -489,9 +503,10 @@ public static class TokenEndpointExtensions
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
         claims.AddRange(customClaims);
 
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             claims,
             expiresAt,
             ct);
@@ -510,12 +525,14 @@ public static class TokenEndpointExtensions
     }
 
     private static async Task<IResult> HandleRefreshTokenAsync(
+        string realmId,
         CoreIdentClient client,
         TokenRequest tokenRequest,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
-        IUserStore userStore,
+        IRealmRefreshTokenStore refreshTokenStore,
+        IRealmUserStore userStore,
         ICustomClaimsProvider customClaimsProvider,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         ICoreIdentMetrics metrics,
         CoreIdentOptions options,
         TimeProvider timeProvider,
@@ -529,7 +546,7 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidRequest, "The refresh_token parameter is required.");
         }
 
-        var storedToken = await refreshTokenStore.GetAsync(tokenRequest.RefreshToken, ct);
+        var storedToken = await refreshTokenStore.GetAsync(realmId, tokenRequest.RefreshToken, ct);
         if (storedToken is null)
         {
             logger.LogWarning("Refresh token not found");
@@ -564,13 +581,13 @@ public static class TokenEndpointExtensions
 
             if (!string.IsNullOrWhiteSpace(storedToken.FamilyId))
             {
-                await refreshTokenStore.RevokeFamilyAsync(storedToken.FamilyId, ct);
+                await refreshTokenStore.RevokeFamilyAsync(realmId, storedToken.FamilyId, ct);
             }
 
             return TokenError(TokenErrors.InvalidGrant, "The refresh token has already been used.");
         }
 
-        var consumed = await refreshTokenStore.ConsumeAsync(tokenRequest.RefreshToken, ct);
+        var consumed = await refreshTokenStore.ConsumeAsync(realmId, tokenRequest.RefreshToken, ct);
         if (!consumed)
         {
             logger.LogWarning("Failed to consume refresh token for subject {SubjectId}", storedToken.SubjectId);
@@ -607,7 +624,7 @@ public static class TokenEndpointExtensions
             claims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
         }
 
-        var userClaims = await userStore.GetClaimsAsync(storedToken.SubjectId, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, storedToken.SubjectId, ct);
         claims.AddRange(userClaims);
 
         var claimsContext = new ClaimsContext
@@ -621,9 +638,10 @@ public static class TokenEndpointExtensions
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
         claims.AddRange(customClaims);
 
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             claims,
             accessTokenExpiresAt,
             ct);
@@ -640,7 +658,7 @@ public static class TokenEndpointExtensions
             ExpiresAt = now.Add(refreshTokenLifetime)
         };
 
-        await refreshTokenStore.StoreAsync(newRefreshToken, ct);
+        await refreshTokenStore.StoreAsync(realmId, newRefreshToken, ct);
 
         logger.LogInformation("Issued new tokens for subject {SubjectId} via refresh_token grant", storedToken.SubjectId);
 

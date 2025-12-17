@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CoreIdent.Core.Services.Realms;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -7,13 +8,18 @@ namespace CoreIdent.Core.Services;
 
 public class JwtTokenService : ITokenService
 {
-    private readonly ISigningKeyProvider _signingKeyProvider;
+    private readonly ICoreIdentRealmContext _realmContext;
+    private readonly IRealmSigningKeyProviderResolver _signingKeyProviderResolver;
     private readonly ILogger<JwtTokenService> _logger;
     private readonly JsonWebTokenHandler _handler = new();
 
-    public JwtTokenService(ISigningKeyProvider signingKeyProvider, ILogger<JwtTokenService> logger)
+    public JwtTokenService(
+        ICoreIdentRealmContext realmContext,
+        IRealmSigningKeyProviderResolver signingKeyProviderResolver,
+        ILogger<JwtTokenService> logger)
     {
-        _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
+        _realmContext = realmContext ?? throw new ArgumentNullException(nameof(realmContext));
+        _signingKeyProviderResolver = signingKeyProviderResolver ?? throw new ArgumentNullException(nameof(signingKeyProviderResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -36,7 +42,9 @@ public class JwtTokenService : ITokenService
 
         ArgumentNullException.ThrowIfNull(claims);
 
-        var signingCredentials = await _signingKeyProvider.GetSigningCredentialsAsync(ct);
+        var realmId = _realmContext.RealmId;
+        var signingKeyProvider = await _signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+        var signingCredentials = await signingKeyProvider.GetSigningCredentialsAsync(ct);
 
         if (string.IsNullOrWhiteSpace(signingCredentials.Key.KeyId))
         {

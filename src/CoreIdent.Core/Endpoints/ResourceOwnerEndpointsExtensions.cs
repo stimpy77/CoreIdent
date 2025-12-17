@@ -4,7 +4,9 @@ using System.Text.Encodings.Web;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Observability;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -245,8 +247,9 @@ public static class ResourceOwnerEndpointsExtensions
     private static async Task<IResult> HandleProfileAsync(
         HttpContext httpContext,
         IUserStore userStore,
-        ISigningKeyProvider signingKeyProvider,
-        IOptions<CoreIdentOptions> coreOptions,
+        ICoreIdentRealmContext realmContext,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
+        IRealmSigningKeyProviderResolver signingKeyProviderResolver,
         IOptions<CoreIdentResourceOwnerOptions> resourceOwnerOptions,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
@@ -256,7 +259,11 @@ public static class ResourceOwnerEndpointsExtensions
 
         var request = httpContext.Request;
 
-        var principal = await TryValidateBearerTokenAsync(request, signingKeyProvider, coreOptions.Value, ct);
+        var realmId = realmContext.RealmId;
+        var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
+
+        var principal = await TryValidateBearerTokenAsync(request, signingKeyProvider, issuer, audience, ct);
         if (principal is null)
         {
             return Results.Unauthorized();
@@ -388,12 +395,22 @@ public static class ResourceOwnerEndpointsExtensions
     private static async Task<ClaimsPrincipal?> TryValidateBearerTokenAsync(
         HttpRequest request,
         ISigningKeyProvider signingKeyProvider,
-        CoreIdentOptions options,
+        string issuer,
+        string audience,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(signingKeyProvider);
-        ArgumentNullException.ThrowIfNull(options);
+
+        if (string.IsNullOrWhiteSpace(issuer))
+        {
+            throw new ArgumentException("Issuer is required.", nameof(issuer));
+        }
+
+        if (string.IsNullOrWhiteSpace(audience))
+        {
+            throw new ArgumentException("Audience is required.", nameof(audience));
+        }
 
         var auth = request.Headers.Authorization.ToString();
         if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -418,9 +435,9 @@ public static class ResourceOwnerEndpointsExtensions
         var result = await handler.ValidateTokenAsync(token, new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = options.Issuer,
+            ValidIssuer = issuer,
             ValidateAudience = true,
-            ValidAudience = options.Audience,
+            ValidAudience = audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1),
             RequireSignedTokens = true,

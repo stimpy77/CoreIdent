@@ -2,10 +2,12 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -27,32 +29,28 @@ public static class DiscoveryEndpointsExtensions
 
         endpoints.MapGet(discoveryPath, async (
             HttpRequest request,
-            ISigningKeyProvider signingKeyProvider,
-            IScopeStore scopeStore,
+            ICoreIdentRealmContext realmContext,
+            ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
+            IRealmSigningKeyProviderResolver signingKeyProviderResolver,
+            IRealmScopeStore scopeStore,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.OpenIdConfiguration");
             using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
 
-            if (string.IsNullOrWhiteSpace(coreOptions.Issuer))
-            {
-                return CoreIdentProblemDetails.Create(
-                    request,
-                    StatusCodes.Status500InternalServerError,
-                    errorCode: "configuration_error",
-                    title: "Configuration error",
-                    detail: "Issuer is not configured.");
-            }
+            var (issuer, _) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
+            var issuerUri = new Uri(issuer, UriKind.Absolute);
 
-            var issuerUri = new Uri(coreOptions.Issuer, UriKind.Absolute);
+            var realmId = realmContext.RealmId;
+            var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
 
             var jwksUri = new Uri(issuerUri, routeOptions.GetJwksPath(coreOptions)).ToString();
             var tokenEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.TokenPath)).ToString();
             var revocationEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.RevocationPath)).ToString();
             var introspectionEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.IntrospectionPath)).ToString();
 
-            var scopes = (await scopeStore.GetAllAsync(ct))
+            var scopes = (await scopeStore.GetAllAsync(realmId, ct))
                 .Where(s => s.ShowInDiscoveryDocument)
                 .Select(s => s.Name)
                 .Distinct(StringComparer.Ordinal)
@@ -60,7 +58,7 @@ public static class DiscoveryEndpointsExtensions
                 .ToList();
 
             var document = new OpenIdConfigurationDocument(
-                Issuer: coreOptions.Issuer,
+                Issuer: issuer,
                 JwksUri: jwksUri,
                 TokenEndpoint: tokenEndpoint,
                 RevocationEndpoint: revocationEndpoint,
@@ -86,13 +84,29 @@ public static class DiscoveryEndpointsExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(jwksPath);
 
         endpoints.MapGet(jwksPath, async (
-            ISigningKeyProvider signingKeyProvider,
-            HttpRequest request,
-            ILoggerFactory loggerFactory,
+            HttpContext httpContext,
             CancellationToken ct) =>
         {
+            var request = httpContext.Request;
+            var loggerFactory = httpContext.RequestServices.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("CoreIdent.Jwks");
-            using var _ = CoreIdentCorrelation.BeginScope(logger, request.HttpContext);
+            using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
+            var realmId = "default";
+            if (httpContext.RequestServices.GetService<ICoreIdentRealmContext>() is { } realmContext)
+            {
+                realmId = realmContext.RealmId;
+            }
+
+            ISigningKeyProvider signingKeyProvider;
+            if (httpContext.RequestServices.GetService<IRealmSigningKeyProviderResolver>() is { } signingKeyProviderResolver)
+            {
+                signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+            }
+            else
+            {
+                signingKeyProvider = httpContext.RequestServices.GetRequiredService<ISigningKeyProvider>();
+            }
 
             var keys = (await signingKeyProvider.GetValidationKeysAsync(ct)).ToList();
 

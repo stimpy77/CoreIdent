@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -18,7 +19,10 @@ public class JwtTokenServiceTests
             Microsoft.Extensions.Options.Options.Create(new CoreIdent.Core.Configuration.CoreIdentKeyOptions { RsaKeySize = 2048 }),
             NullLogger<RsaSigningKeyProvider>.Instance);
 
-        var tokenService = new JwtTokenService(keyProvider, NullLogger<JwtTokenService>.Instance);
+        var realmContext = new TestRealmContext("default");
+        var resolver = new TestRealmSigningKeyProviderResolver(keyProvider);
+
+        var tokenService = new JwtTokenService(realmContext, resolver, NullLogger<JwtTokenService>.Instance);
 
         var token = await tokenService.CreateJwtAsync(
             issuer: "test-issuer",
@@ -43,5 +47,30 @@ public class JwtTokenServiceTests
         });
 
         result.IsValid.ShouldBeTrue("Token should validate against provider validation keys.");
+    }
+
+    private sealed class TestRealmContext : ICoreIdentRealmContext
+    {
+        public TestRealmContext(string realmId)
+        {
+            RealmId = realmId;
+        }
+
+        public string RealmId { get; }
+    }
+
+    private sealed class TestRealmSigningKeyProviderResolver : IRealmSigningKeyProviderResolver
+    {
+        private readonly ISigningKeyProvider _provider;
+
+        public TestRealmSigningKeyProviderResolver(ISigningKeyProvider provider)
+        {
+            _provider = provider;
+        }
+
+        public Task<ISigningKeyProvider> GetSigningKeyProviderAsync(string realmId, CancellationToken ct = default)
+        {
+            return Task.FromResult(_provider);
+        }
     }
 }

@@ -3,6 +3,7 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,16 +40,21 @@ public static class UserInfoEndpointExtensions
 
     private static async Task<IResult> HandleUserInfoAsync(
         HttpContext httpContext,
-        IUserStore userStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmUserStore userStore,
         ICustomClaimsProvider customClaimsProvider,
-        ISigningKeyProvider signingKeyProvider,
-        IOptions<CoreIdentOptions> coreOptions,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
+        IRealmSigningKeyProviderResolver signingKeyProviderResolver,
         CancellationToken ct)
     {
         var logger = httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("CoreIdent.UserInfo");
         using var _ = CoreIdentCorrelation.BeginScope(logger, httpContext);
 
-        var principal = await TryValidateBearerTokenAsync(httpContext.Request, signingKeyProvider, coreOptions.Value, ct);
+        var realmId = realmContext.RealmId;
+        var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
+
+        var principal = await TryValidateBearerTokenAsync(httpContext.Request, signingKeyProvider, issuer, audience, ct);
         if (principal is null)
         {
             return Results.Unauthorized();
@@ -62,7 +68,7 @@ public static class UserInfoEndpointExtensions
             return Results.Unauthorized();
         }
 
-        var user = await userStore.FindByIdAsync(subjectId, ct);
+        var user = await userStore.FindByIdAsync(realmId, subjectId, ct);
         if (user is null)
         {
             return Results.Unauthorized();
@@ -81,7 +87,7 @@ public static class UserInfoEndpointExtensions
             ["sub"] = subjectId
         };
 
-        var userClaims = await userStore.GetClaimsAsync(subjectId, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, subjectId, ct);
 
         var clientId = principal.FindFirst("client_id")?.Value ?? string.Empty;
 
@@ -219,12 +225,22 @@ public static class UserInfoEndpointExtensions
     private static async Task<ClaimsPrincipal?> TryValidateBearerTokenAsync(
         HttpRequest request,
         ISigningKeyProvider signingKeyProvider,
-        CoreIdentOptions options,
+        string issuer,
+        string audience,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(signingKeyProvider);
-        ArgumentNullException.ThrowIfNull(options);
+
+        if (string.IsNullOrWhiteSpace(issuer))
+        {
+            throw new ArgumentException("Issuer is required.", nameof(issuer));
+        }
+
+        if (string.IsNullOrWhiteSpace(audience))
+        {
+            throw new ArgumentException("Audience is required.", nameof(audience));
+        }
 
         var auth = request.Headers.Authorization.ToString();
         if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -249,9 +265,9 @@ public static class UserInfoEndpointExtensions
         var result = await handler.ValidateTokenAsync(token, new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = options.Issuer,
+            ValidIssuer = issuer,
             ValidateAudience = true,
-            ValidAudience = options.Audience,
+            ValidAudience = audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1),
             RequireSignedTokens = true,

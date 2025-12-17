@@ -5,6 +5,7 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Observability;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using CoreIdent.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -46,12 +47,13 @@ public static class TokenManagementEndpointsExtensions
 
         endpoints.MapPost(revokePath, async (
             HttpRequest request,
-            ISigningKeyProvider signingKeyProvider,
-            ITokenRevocationStore tokenRevocationStore,
-            IClientStore clientStore,
+            ICoreIdentRealmContext realmContext,
+            IRealmSigningKeyProviderResolver signingKeyProviderResolver,
+            IRealmTokenRevocationStore tokenRevocationStore,
+            IRealmClientStore clientStore,
+            IRealmRefreshTokenStore refreshTokenStore,
             ICoreIdentMetrics metrics,
             ILoggerFactory loggerFactory,
-            IServiceProvider services,
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("CoreIdent.TokenRevocation");
@@ -78,6 +80,9 @@ public static class TokenManagementEndpointsExtensions
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
+            var realmId = realmContext.RealmId;
+            var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+
             var (clientId, clientSecret) = ExtractClientCredentials(request, form);
 
             activity?.SetTag("client_id", clientId);
@@ -91,7 +96,7 @@ public static class TokenManagementEndpointsExtensions
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication is required." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var client = await clientStore.FindByClientIdAsync(clientId, ct);
+            var client = await clientStore.FindByClientIdAsync(realmId, clientId, ct);
             if (client is null || !client.Enabled)
             {
                 logger.LogWarning("Revocation request for unknown or disabled client: {ClientId}", clientId);
@@ -110,7 +115,7 @@ public static class TokenManagementEndpointsExtensions
                     return Results.Json(new { error = "invalid_client", error_description = "Client secret is required for confidential clients." }, statusCode: StatusCodes.Status401Unauthorized);
                 }
 
-                var secretValid = await clientStore.ValidateClientSecretAsync(clientId, clientSecret, ct);
+                var secretValid = await clientStore.ValidateClientSecretAsync(realmId, clientId, clientSecret, ct);
                 if (!secretValid)
                 {
                     logger.LogWarning("Invalid client secret for revocation request from client: {ClientId}", clientId);
@@ -125,7 +130,7 @@ public static class TokenManagementEndpointsExtensions
             {
                 if (string.Equals(tokenTypeHint, "refresh_token", StringComparison.Ordinal))
                 {
-                    await TryRevokeRefreshTokenAsync(token, clientId, services, metrics, logger, ct);
+                    await TryRevokeRefreshTokenAsync(realmId, token, clientId, refreshTokenStore, metrics, logger, ct);
                     return Results.Ok();
                 }
 
@@ -140,14 +145,14 @@ public static class TokenManagementEndpointsExtensions
                             return Results.Ok();
                         }
 
-                        await tokenRevocationStore.RevokeTokenAsync(validated.Jti, tokenType: "access_token", expiry: validated.ExpiresAtUtc, ct);
+                        await tokenRevocationStore.RevokeTokenAsync(realmId, validated.Jti, tokenType: "access_token", expiry: validated.ExpiresAtUtc, ct);
                         metrics.TokenRevoked("access_token");
                     }
 
                     return Results.Ok();
                 }
 
-                await TryRevokeRefreshTokenAsync(token, clientId, services, metrics, logger, ct);
+                await TryRevokeRefreshTokenAsync(realmId, token, clientId, refreshTokenStore, metrics, logger, ct);
                 return Results.Ok();
             }
             catch (Exception ex)
@@ -160,11 +165,12 @@ public static class TokenManagementEndpointsExtensions
         // Introspection endpoint (RFC 7662)
         endpoints.MapPost(introspectPath, async (
             HttpRequest request,
-            ISigningKeyProvider signingKeyProvider,
-            ITokenRevocationStore tokenRevocationStore,
-            IClientStore clientStore,
+            ICoreIdentRealmContext realmContext,
+            IRealmSigningKeyProviderResolver signingKeyProviderResolver,
+            IRealmTokenRevocationStore tokenRevocationStore,
+            IRealmClientStore clientStore,
+            IRealmRefreshTokenStore refreshTokenStore,
             ILoggerFactory loggerFactory,
-            IServiceProvider services,
             TimeProvider timeProvider,
             CancellationToken ct) =>
         {
@@ -192,6 +198,9 @@ public static class TokenManagementEndpointsExtensions
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
+            var realmId = realmContext.RealmId;
+            var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
+
             var (clientId, clientSecret) = ExtractClientCredentials(request, form);
 
             activity?.SetTag("client_id", clientId);
@@ -202,7 +211,7 @@ public static class TokenManagementEndpointsExtensions
                 return Results.Json(new { error = "invalid_client", error_description = "Client authentication is required." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var client = await clientStore.FindByClientIdAsync(clientId, ct);
+            var client = await clientStore.FindByClientIdAsync(realmId, clientId, ct);
             if (client is null || !client.Enabled)
             {
                 logger.LogWarning("Introspection request for unknown or disabled client: {ClientId}", clientId);
@@ -217,7 +226,7 @@ public static class TokenManagementEndpointsExtensions
                     return Results.Json(new { error = "invalid_client", error_description = "Client secret is required for confidential clients." }, statusCode: StatusCodes.Status401Unauthorized);
                 }
 
-                var secretValid = await clientStore.ValidateClientSecretAsync(clientId, clientSecret, ct);
+                var secretValid = await clientStore.ValidateClientSecretAsync(realmId, clientId, clientSecret, ct);
                 if (!secretValid)
                 {
                     logger.LogWarning("Invalid client secret for introspection request from client: {ClientId}", clientId);
@@ -230,7 +239,7 @@ public static class TokenManagementEndpointsExtensions
             // Check refresh token first if hinted
             if (string.Equals(tokenTypeHint, "refresh_token", StringComparison.Ordinal))
             {
-                var refreshResult = await IntrospectRefreshTokenAsync(token, services, now, ct);
+                var refreshResult = await IntrospectRefreshTokenAsync(realmId, token, refreshTokenStore, now, ct);
                 if (refreshResult is not null)
                 {
                     return Results.Json(refreshResult);
@@ -241,12 +250,12 @@ public static class TokenManagementEndpointsExtensions
             // Try as access token (JWT)
             if (string.Equals(tokenTypeHint, "access_token", StringComparison.Ordinal) || LooksLikeJwt(token))
             {
-                var accessResult = await IntrospectAccessTokenAsync(token, signingKeyProvider, tokenRevocationStore, now, ct);
+                var accessResult = await IntrospectAccessTokenAsync(realmId, token, signingKeyProvider, tokenRevocationStore, now, ct);
                 return Results.Json(accessResult);
             }
 
             // No hint and doesn't look like JWT - try refresh token
-            var fallbackResult = await IntrospectRefreshTokenAsync(token, services, now, ct);
+            var fallbackResult = await IntrospectRefreshTokenAsync(realmId, token, refreshTokenStore, now, ct);
             if (fallbackResult is not null)
             {
                 return Results.Json(fallbackResult);
@@ -260,18 +269,13 @@ public static class TokenManagementEndpointsExtensions
     }
 
     private static async Task<TokenIntrospectionResponse?> IntrospectRefreshTokenAsync(
+        string realmId,
         string token,
-        IServiceProvider services,
+        IRealmRefreshTokenStore refreshTokenStore,
         DateTime now,
         CancellationToken ct)
     {
-        var refreshTokenStore = services.GetService<IRefreshTokenStore>();
-        if (refreshTokenStore is null)
-        {
-            return null;
-        }
-
-        var storedToken = await refreshTokenStore.GetAsync(token, ct);
+        var storedToken = await refreshTokenStore.GetAsync(realmId, token, ct);
         if (storedToken is null)
         {
             return null;
@@ -300,9 +304,10 @@ public static class TokenManagementEndpointsExtensions
     }
 
     private static async Task<TokenIntrospectionResponse> IntrospectAccessTokenAsync(
+        string realmId,
         string token,
         ISigningKeyProvider signingKeyProvider,
-        ITokenRevocationStore tokenRevocationStore,
+        IRealmTokenRevocationStore tokenRevocationStore,
         DateTime now,
         CancellationToken ct)
     {
@@ -321,7 +326,7 @@ public static class TokenManagementEndpointsExtensions
         // Check revocation
         if (!string.IsNullOrWhiteSpace(validated.Jti))
         {
-            var isRevoked = await tokenRevocationStore.IsRevokedAsync(validated.Jti, ct);
+            var isRevoked = await tokenRevocationStore.IsRevokedAsync(realmId, validated.Jti, ct);
             if (isRevoked)
             {
                 return new TokenIntrospectionResponse { Active = false };
@@ -426,20 +431,15 @@ public static class TokenManagementEndpointsExtensions
         long? IssuedAtUnixTimeSeconds);
 
     private static async Task TryRevokeRefreshTokenAsync(
+        string realmId,
         string token,
         string clientId,
-        IServiceProvider services,
+        IRealmRefreshTokenStore refreshTokenStore,
         ICoreIdentMetrics metrics,
         ILogger logger,
         CancellationToken ct)
     {
-        var refreshTokenStore = services.GetService<IRefreshTokenStore>();
-        if (refreshTokenStore is null)
-        {
-            return;
-        }
-
-        var storedToken = await refreshTokenStore.GetAsync(token, ct);
+        var storedToken = await refreshTokenStore.GetAsync(realmId, token, ct);
         if (storedToken is null)
         {
             return;
@@ -451,7 +451,7 @@ public static class TokenManagementEndpointsExtensions
             return;
         }
 
-        var revoked = await refreshTokenStore.RevokeAsync(token, ct);
+        var revoked = await refreshTokenStore.RevokeAsync(realmId, token, ct);
         if (revoked)
         {
             metrics.TokenRevoked("refresh_token");

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -38,10 +39,11 @@ public static class AuthorizationEndpointExtensions
 
     private static async Task<IResult> HandleAuthorizeRequest(
         HttpContext httpContext,
-        IClientStore clientStore,
-        IScopeStore scopeStore,
-        IAuthorizationCodeStore authorizationCodeStore,
-        IUserGrantStore userGrantStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmClientStore clientStore,
+        IRealmScopeStore scopeStore,
+        IRealmAuthorizationCodeStore authorizationCodeStore,
+        IRealmUserGrantStore userGrantStore,
         IOptions<CoreIdentAuthorizationCodeOptions> authorizationCodeOptions,
         IOptions<CoreIdentRouteOptions> routeOptions,
         ILoggerFactory loggerFactory,
@@ -62,6 +64,8 @@ public static class AuthorizationEndpointExtensions
         var nonce = query["nonce"].ToString();
         var codeChallenge = query["code_challenge"].ToString();
         var codeChallengeMethod = query["code_challenge_method"].ToString();
+
+        var realmId = realmContext.RealmId;
 
         if (string.IsNullOrWhiteSpace(clientId))
         {
@@ -93,7 +97,7 @@ public static class AuthorizationEndpointExtensions
             return RedirectErrorOrBadRequest(redirectUri, state, "invalid_request", "code_challenge_method must be S256." );
         }
 
-        var client = await clientStore.FindByClientIdAsync(clientId, ct);
+        var client = await clientStore.FindByClientIdAsync(realmId, clientId, ct);
         if (client is null || !client.Enabled)
         {
             logger.LogWarning("Authorize request for unknown or disabled client: {ClientId}", clientId);
@@ -123,7 +127,7 @@ public static class AuthorizationEndpointExtensions
         // Validate scopes exist in store (when present)
         if (grantedScopes.Count > 0)
         {
-            var knownScopes = (await scopeStore.FindByScopesAsync(grantedScopes, ct)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
+            var knownScopes = (await scopeStore.FindByScopesAsync(realmId, grantedScopes, ct)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
             var unknown = grantedScopes.Where(s => !knownScopes.Contains(s)).ToList();
             if (unknown.Count > 0)
             {
@@ -144,7 +148,7 @@ public static class AuthorizationEndpointExtensions
 
         if (client.RequireConsent)
         {
-            var hasConsent = await userGrantStore.HasUserGrantedConsentAsync(subjectId, client.ClientId, grantedScopes, ct);
+            var hasConsent = await userGrantStore.HasUserGrantedConsentAsync(realmId, subjectId, client.ClientId, grantedScopes, ct);
             if (!hasConsent)
             {
                 var consentPath = routeOptions.Value.CombineWithBase(routeOptions.Value.ConsentPath);
@@ -181,7 +185,7 @@ public static class AuthorizationEndpointExtensions
             CodeChallengeMethod = codeChallengeMethod
         };
 
-        await authorizationCodeStore.CreateAsync(code, ct);
+        await authorizationCodeStore.CreateAsync(realmId, code, ct);
 
         var redirect = AppendQueryParams(redirectUri, new Dictionary<string, string>
         {

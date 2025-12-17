@@ -5,6 +5,7 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -47,7 +48,8 @@ public static class PasswordlessEmailEndpointsExtensions
 
     private static async Task<IResult> HandleStartAsync(
         HttpContext httpContext,
-        IPasswordlessTokenStore tokenStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmPasswordlessTokenStore tokenStore,
         IEmailSender emailSender,
         PasswordlessEmailTemplateRenderer templateRenderer,
         IOptions<PasswordlessEmailOptions> options,
@@ -63,6 +65,8 @@ public static class PasswordlessEmailEndpointsExtensions
         var request = httpContext.Request;
         var email = await ReadEmailAsync(request, ct);
 
+        var realmId = realmContext.RealmId;
+
         if (!TryValidateEmail(email, out var normalizedEmail))
         {
             return Results.Ok(new { message = "If the email exists, a sign-in link will be sent." });
@@ -77,7 +81,7 @@ public static class PasswordlessEmailEndpointsExtensions
                 CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
-            var rawToken = await tokenStore.CreateTokenAsync(tokenModel, ct);
+            var rawToken = await tokenStore.CreateTokenAsync(realmId, tokenModel, ct);
 
             var verifyUrl = BuildVerifyUrl(httpContext, options.Value, routeOptions.Value, rawToken);
 
@@ -100,12 +104,14 @@ public static class PasswordlessEmailEndpointsExtensions
 
     private static async Task<IResult> HandleVerifyAsync(
         HttpContext httpContext,
-        IPasswordlessTokenStore tokenStore,
-        IUserStore userStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmPasswordlessTokenStore tokenStore,
+        IRealmUserStore userStore,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
+        IRealmRefreshTokenStore refreshTokenStore,
         ICustomClaimsProvider customClaimsProvider,
         IOptions<CoreIdentOptions> coreOptions,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         IOptions<PasswordlessEmailOptions> emailOptions,
         TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
@@ -117,7 +123,9 @@ public static class PasswordlessEmailEndpointsExtensions
         var request = httpContext.Request;
         var token = request.Query["token"].ToString();
 
-        var validated = await tokenStore.ValidateAndConsumeAsync(token, PasswordlessTokenTypes.EmailMagicLink, recipient: null, ct);
+        var realmId = realmContext.RealmId;
+
+        var validated = await tokenStore.ValidateAndConsumeAsync(realmId, token, PasswordlessTokenTypes.EmailMagicLink, recipient: null, ct);
         if (validated is null)
         {
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid or expired token.");
@@ -129,7 +137,7 @@ public static class PasswordlessEmailEndpointsExtensions
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid token.");
         }
 
-        var user = await userStore.FindByUsernameAsync(normalizedEmail, ct);
+        var user = await userStore.FindByUsernameAsync(realmId, normalizedEmail, ct);
         if (user is null)
         {
             user = new CoreIdentUser
@@ -139,10 +147,11 @@ public static class PasswordlessEmailEndpointsExtensions
                 CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
-            await userStore.CreateAsync(user, ct);
+            await userStore.CreateAsync(realmId, user, ct);
         }
 
         var options = coreOptions.Value;
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
 
         var now = timeProvider.GetUtcNow();
         var accessTokenExpiresAt = now.Add(options.AccessTokenLifetime);
@@ -155,7 +164,7 @@ public static class PasswordlessEmailEndpointsExtensions
             new("client_id", "passwordless_email")
         };
 
-        var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, user.Id, ct);
         claims.AddRange(userClaims);
 
         var claimsContext = new ClaimsContext
@@ -170,8 +179,8 @@ public static class PasswordlessEmailEndpointsExtensions
         claims.AddRange(customClaims);
 
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             claims,
             accessTokenExpiresAt,
             ct);
@@ -188,7 +197,7 @@ public static class PasswordlessEmailEndpointsExtensions
             ExpiresAt = now.Add(options.RefreshTokenLifetime).UtcDateTime
         };
 
-        await refreshTokenStore.StoreAsync(refreshToken, ct);
+        await refreshTokenStore.StoreAsync(realmId, refreshToken, ct);
 
         var successRedirect = emailOptions.Value.SuccessRedirectUrl;
         if (!string.IsNullOrWhiteSpace(successRedirect))

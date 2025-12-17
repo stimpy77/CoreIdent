@@ -4,6 +4,7 @@ using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -38,12 +39,15 @@ public static class ConsentEndpointExtensions
 
     private static async Task<IResult> HandleGetConsent(
         HttpContext httpContext,
-        IClientStore clientStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmClientStore clientStore,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ConsentEndpoint");
         using var logScope = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
+        var realmId = realmContext.RealmId;
 
         if (httpContext.User?.Identity?.IsAuthenticated != true)
         {
@@ -65,7 +69,7 @@ public static class ConsentEndpointExtensions
             return Results.BadRequest(new { error = "invalid_request", error_description = "client_id and redirect_uri are required." });
         }
 
-        var client = await clientStore.FindByClientIdAsync(clientId, ct);
+        var client = await clientStore.FindByClientIdAsync(realmId, clientId, ct);
         if (client is null || !client.Enabled)
         {
             logger.LogWarning("Consent request for unknown or disabled client: {ClientId}", clientId);
@@ -81,7 +85,8 @@ public static class ConsentEndpointExtensions
 
     private static async Task<IResult> HandlePostConsent(
         HttpContext httpContext,
-        IUserGrantStore userGrantStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmUserGrantStore userGrantStore,
         IOptions<CoreIdentRouteOptions> routeOptions,
         TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
@@ -89,6 +94,8 @@ public static class ConsentEndpointExtensions
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.ConsentEndpoint");
         using var logScope = CoreIdentCorrelation.BeginScope(logger, httpContext);
+
+        var realmId = realmContext.RealmId;
 
         if (httpContext.User?.Identity?.IsAuthenticated != true)
         {
@@ -142,7 +149,7 @@ public static class ConsentEndpointExtensions
 
         var scopes = ParseScopes(scope);
 
-        await userGrantStore.SaveAsync(new CoreIdentUserGrant
+        await userGrantStore.SaveAsync(realmId, new CoreIdentUserGrant
         {
             SubjectId = subjectId,
             ClientId = clientId,

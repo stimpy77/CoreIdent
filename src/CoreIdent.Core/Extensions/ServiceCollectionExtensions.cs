@@ -1,7 +1,9 @@
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using CoreIdent.Core.Stores.InMemory;
+using CoreIdent.Core.Stores.Realms;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -57,7 +59,21 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
 
-        services.TryAddSingleton<ITokenService, JwtTokenService>();
+        services.TryAddSingleton<ICoreIdentRealmResolver, DefaultCoreIdentRealmResolver>();
+        services.TryAddScoped<ICoreIdentRealmContext, HttpContextCoreIdentRealmContext>();
+        services.TryAddSingleton<IRealmIssuerAudienceProvider, DefaultRealmIssuerAudienceProvider>();
+        services.TryAddScoped<ICoreIdentIssuerAudienceProvider, DefaultCoreIdentIssuerAudienceProvider>();
+
+        services.TryAddScoped<IRealmClientStore, DefaultRealmClientStoreAdapter>();
+        services.TryAddScoped<IRealmScopeStore, DefaultRealmScopeStoreAdapter>();
+        services.TryAddScoped<IRealmRefreshTokenStore, DefaultRealmRefreshTokenStoreAdapter>();
+        services.TryAddScoped<IRealmAuthorizationCodeStore, DefaultRealmAuthorizationCodeStoreAdapter>();
+        services.TryAddScoped<IRealmUserGrantStore, DefaultRealmUserGrantStoreAdapter>();
+        services.TryAddScoped<IRealmUserStore, DefaultRealmUserStoreAdapter>();
+        services.TryAddScoped<IRealmTokenRevocationStore, DefaultRealmTokenRevocationStoreAdapter>();
+        services.TryAddScoped<IRealmPasswordlessTokenStore, DefaultRealmPasswordlessTokenStoreAdapter>();
+
+        services.TryAddScoped<ITokenService, JwtTokenService>();
 
         services.TryAddSingleton<IClientSecretHasher, DefaultClientSecretHasher>();
 
@@ -112,6 +128,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
+        services.TryAddSingleton<IRealmSigningKeyProviderResolver, DefaultRealmSigningKeyProviderResolver>();
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AuthorizationCodeCleanupHostedService>());
 
         return services;
@@ -159,7 +177,12 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.TryAddSingleton<ITokenService, JwtTokenService>();
+        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.TryAddSingleton<ICoreIdentRealmResolver, DefaultCoreIdentRealmResolver>();
+        services.TryAddScoped<ICoreIdentRealmContext, HttpContextCoreIdentRealmContext>();
+        services.TryAddSingleton<IRealmSigningKeyProviderResolver, DefaultRealmSigningKeyProviderResolver>();
+
+        services.TryAddScoped<ITokenService, JwtTokenService>();
 
         return services;
     }

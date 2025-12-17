@@ -7,6 +7,7 @@ using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Services;
+using CoreIdent.Core.Services.Realms;
 using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -48,7 +49,8 @@ public static class PasswordlessSmsEndpointsExtensions
 
     private static async Task<IResult> HandleStartAsync(
         HttpContext httpContext,
-        IPasswordlessTokenStore tokenStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmPasswordlessTokenStore tokenStore,
         ISmsProvider smsProvider,
         TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
@@ -59,6 +61,8 @@ public static class PasswordlessSmsEndpointsExtensions
 
         var request = httpContext.Request;
         var (phoneNumber, messagePrefix) = await ReadStartRequestAsync(request, ct);
+
+        var realmId = realmContext.RealmId;
 
         phoneNumber = NormalizePhone(phoneNumber);
         if (string.IsNullOrWhiteSpace(phoneNumber) || !IsValidE164(phoneNumber))
@@ -75,7 +79,7 @@ public static class PasswordlessSmsEndpointsExtensions
                 CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
-            var otp = await tokenStore.CreateTokenAsync(tokenModel, ct);
+            var otp = await tokenStore.CreateTokenAsync(realmId, tokenModel, ct);
 
             var message = string.IsNullOrWhiteSpace(messagePrefix)
                 ? $"Your CoreIdent code is: {otp}"
@@ -97,12 +101,14 @@ public static class PasswordlessSmsEndpointsExtensions
 
     private static async Task<IResult> HandleVerifyAsync(
         HttpContext httpContext,
-        IPasswordlessTokenStore tokenStore,
-        IUserStore userStore,
+        ICoreIdentRealmContext realmContext,
+        IRealmPasswordlessTokenStore tokenStore,
+        IRealmUserStore userStore,
         ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
+        IRealmRefreshTokenStore refreshTokenStore,
         ICustomClaimsProvider customClaimsProvider,
         IOptions<CoreIdentOptions> coreOptions,
+        ICoreIdentIssuerAudienceProvider issuerAudienceProvider,
         TimeProvider timeProvider,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
@@ -113,6 +119,8 @@ public static class PasswordlessSmsEndpointsExtensions
         var request = httpContext.Request;
         var (phoneNumber, otp) = await ReadVerifyRequestAsync(request, ct);
 
+        var realmId = realmContext.RealmId;
+
         phoneNumber = NormalizePhone(phoneNumber);
         otp = (otp ?? string.Empty).Trim();
 
@@ -121,14 +129,14 @@ public static class PasswordlessSmsEndpointsExtensions
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid or expired token.");
         }
 
-        var validated = await tokenStore.ValidateAndConsumeAsync(otp, PasswordlessTokenTypes.SmsOtp, phoneNumber, ct);
+        var validated = await tokenStore.ValidateAndConsumeAsync(realmId, otp, PasswordlessTokenTypes.SmsOtp, phoneNumber, ct);
         if (validated is null)
         {
             return CreateErrorResult(request, StatusCodes.Status400BadRequest, "Invalid or expired token.");
         }
 
         // Use phone number as username for now (keeps user store surface minimal).
-        var user = await userStore.FindByUsernameAsync(phoneNumber, ct);
+        var user = await userStore.FindByUsernameAsync(realmId, phoneNumber, ct);
         if (user is null)
         {
             user = new CoreIdentUser
@@ -138,10 +146,11 @@ public static class PasswordlessSmsEndpointsExtensions
                 CreatedAt = timeProvider.GetUtcNow().UtcDateTime
             };
 
-            await userStore.CreateAsync(user, ct);
+            await userStore.CreateAsync(realmId, user, ct);
         }
 
         var options = coreOptions.Value;
+        var (issuer, audience) = await issuerAudienceProvider.GetIssuerAndAudienceAsync(ct);
 
         var now = timeProvider.GetUtcNow();
         var accessTokenExpiresAt = now.Add(options.AccessTokenLifetime);
@@ -154,7 +163,7 @@ public static class PasswordlessSmsEndpointsExtensions
             new("client_id", "passwordless_sms")
         };
 
-        var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
+        var userClaims = await userStore.GetClaimsAsync(realmId, user.Id, ct);
         claims.AddRange(userClaims);
 
         var claimsContext = new ClaimsContext
@@ -169,8 +178,8 @@ public static class PasswordlessSmsEndpointsExtensions
         claims.AddRange(customClaims);
 
         var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
+            issuer,
+            audience,
             claims,
             accessTokenExpiresAt,
             ct);
@@ -187,7 +196,7 @@ public static class PasswordlessSmsEndpointsExtensions
             ExpiresAt = now.Add(options.RefreshTokenLifetime).UtcDateTime
         };
 
-        await refreshTokenStore.StoreAsync(refreshToken, ct);
+        await refreshTokenStore.StoreAsync(realmId, refreshToken, ct);
 
         var tokenResponse = new TokenResponse
         {
