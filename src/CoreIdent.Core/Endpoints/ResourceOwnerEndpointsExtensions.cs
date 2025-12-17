@@ -8,6 +8,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -19,7 +20,15 @@ public static class ResourceOwnerEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentResourceOwnerEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentResourceOwnerEndpoints("/auth/register", "/auth/login", "/auth/profile");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+
+        var registerPath = routeOptions.CombineWithBase(routeOptions.RegisterPath);
+        var loginPath = routeOptions.CombineWithBase(routeOptions.LoginPath);
+        var profilePath = routeOptions.CombineWithBase(routeOptions.ProfilePath);
+
+        return endpoints.MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentResourceOwnerEndpoints(

@@ -8,6 +8,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,9 +20,13 @@ public static class PasswordlessEmailEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessEmailEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentPasswordlessEmailEndpoints(
-            "/auth/passwordless/email/start",
-            "/auth/passwordless/email/verify");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var startPath = routeOptions.CombineWithBase(routeOptions.PasswordlessEmailStartPath);
+        var verifyPath = routeOptions.CombineWithBase(routeOptions.PasswordlessEmailVerifyPath);
+
+        return endpoints.MapCoreIdentPasswordlessEmailEndpoints(startPath, verifyPath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessEmailEndpoints(

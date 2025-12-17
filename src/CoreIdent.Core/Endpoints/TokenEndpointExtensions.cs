@@ -21,7 +21,12 @@ public static class TokenEndpointExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentTokenEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentTokenEndpoint("/auth/token");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var tokenPath = routeOptions.CombineWithBase(routeOptions.TokenPath);
+
+        return endpoints.MapCoreIdentTokenEndpoint(tokenPath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentTokenEndpoint(this IEndpointRouteBuilder endpoints, string tokenPath)

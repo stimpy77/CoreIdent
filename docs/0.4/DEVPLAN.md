@@ -1165,21 +1165,21 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Decision:** Parameterless endpoint overloads should read from `IOptions<CoreIdentRouteOptions>` via DI. Hardcoded defaults are not acceptable for production-quality code.
 
 *   **Component:** Refactor parameterless overloads to use `IOptions<CoreIdentRouteOptions>`
-    - [ ] (L2) `TokenEndpointExtensions.cs` — Refactor to resolve `TokenPath` from `IOptions<CoreIdentRouteOptions>`
-    - [ ] (L2) `TokenManagementEndpointsExtensions.cs` — Refactor to resolve `RevocationPath`, `IntrospectionPath` from options
-    - [ ] (L2) `ResourceOwnerEndpointsExtensions.cs` — Refactor to resolve `RegisterPath`, `LoginPath`, `ProfilePath` from options
-    - [ ] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Refactor to resolve passwordless email paths from options (may need to add paths to `CoreIdentRouteOptions`)
-    - [ ] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Refactor to resolve passwordless SMS paths from options (may need to add paths to `CoreIdentRouteOptions`)
-    - [ ] (L2) `UserInfoEndpointExtensions.cs` — Refactor to resolve `UserInfoPath` from options
-    - [ ] (L2) `ConsentEndpointExtensions.cs` — Refactor to resolve `ConsentPath` from options
-    - [ ] (L2) `AuthorizationEndpointExtensions.cs` — Refactor to resolve `AuthorizePath` from options
-    - [ ] (L2) `PasskeyEndpointsExtensions.cs` — Refactor to resolve passkey paths from options (may need to add paths to `CoreIdentRouteOptions`)
+    - [x] (L2) `TokenEndpointExtensions.cs` — Refactor to resolve `TokenPath` from `IOptions<CoreIdentRouteOptions>`
+    - [x] (L2) `TokenManagementEndpointsExtensions.cs` — Refactor to resolve `RevocationPath`, `IntrospectionPath` from options
+    - [x] (L2) `ResourceOwnerEndpointsExtensions.cs` — Refactor to resolve `RegisterPath`, `LoginPath`, `ProfilePath` from options
+    - [x] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Refactor to resolve passwordless email paths from options (may need to add paths to `CoreIdentRouteOptions`)
+    - [x] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Refactor to resolve passwordless SMS paths from options (may need to add paths to `CoreIdentRouteOptions`)
+    - [x] (L2) `UserInfoEndpointExtensions.cs` — Refactor to resolve `UserInfoPath` from options
+    - [x] (L2) `ConsentEndpointExtensions.cs` — Refactor to resolve `ConsentPath` from options
+    - [x] (L2) `AuthorizationEndpointExtensions.cs` — Refactor to resolve `AuthorizePath` from options
+    - [x] (L2) `PasskeyEndpointsExtensions.cs` — Refactor to resolve passkey paths from options (may need to add paths to `CoreIdentRouteOptions`)
 *   **Component:** Extend `CoreIdentRouteOptions` if needed
-    - [ ] (L2) Add `PasswordlessEmailStartPath`, `PasswordlessEmailVerifyPath` if not present
-    - [ ] (L2) Add `PasswordlessSmsStartPath`, `PasswordlessSmsVerifyPath` if not present
-    - [ ] (L2) Add passkey paths (`PasskeyRegisterOptionsPath`, `PasskeyRegisterCompletePath`, `PasskeyAuthenticateOptionsPath`, `PasskeyAuthenticateCompletePath`) if not present
+    - [x] (L2) Add `PasswordlessEmailStartPath`, `PasswordlessEmailVerifyPath` if not present
+    - [x] (L2) Add `PasswordlessSmsStartPath`, `PasswordlessSmsVerifyPath` if not present
+    - [x] (L2) Add passkey paths (`PasskeyRegisterOptionsPath`, `PasskeyRegisterCompletePath`, `PasskeyAuthenticateOptionsPath`, `PasskeyAuthenticateCompletePath`) if not present
 *   **Documentation:**
-    - [ ] (L1) Document route customization patterns in Developer_Guide.md if not already covered
+    - [x] (L1) Document route customization patterns in Developer_Guide.md if not already covered
 
 ---
 

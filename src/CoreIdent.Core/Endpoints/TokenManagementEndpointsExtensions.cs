@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Models;
 using CoreIdent.Core.Observability;
 using CoreIdent.Core.Stores;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Endpoints;
@@ -18,13 +20,27 @@ public static class TokenManagementEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentTokenManagementEndpoints("/auth/revoke", "/auth/introspect");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+
+        var revokePath = routeOptions.CombineWithBase(routeOptions.RevocationPath);
+        var introspectPath = routeOptions.CombineWithBase(routeOptions.IntrospectionPath);
+
+        return endpoints.MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath);
     }
 
-    public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints, string revokePath, string introspectPath = "/auth/introspect")
+    public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints, string revokePath, string? introspectPath = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentException.ThrowIfNullOrWhiteSpace(revokePath);
+
+        if (string.IsNullOrWhiteSpace(introspectPath))
+        {
+            var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+            introspectPath = routeOptions.CombineWithBase(routeOptions.IntrospectionPath);
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(introspectPath);
 
         endpoints.MapPost(revokePath, async (

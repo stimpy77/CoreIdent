@@ -6,6 +6,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -16,7 +17,12 @@ public static class UserInfoEndpointExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentUserInfoEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentUserInfoEndpoint("/auth/userinfo");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var userInfoPath = routeOptions.CombineWithBase(routeOptions.UserInfoPath);
+
+        return endpoints.MapCoreIdentUserInfoEndpoint(userInfoPath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentUserInfoEndpoint(this IEndpointRouteBuilder endpoints, string userInfoPath)

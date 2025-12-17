@@ -7,6 +7,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,7 +17,12 @@ public static class ConsentEndpointExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentConsentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentConsentEndpoints("/auth/consent");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var consentPath = routeOptions.CombineWithBase(routeOptions.ConsentPath);
+
+        return endpoints.MapCoreIdentConsentEndpoints(consentPath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentConsentEndpoints(this IEndpointRouteBuilder endpoints, string consentPath)

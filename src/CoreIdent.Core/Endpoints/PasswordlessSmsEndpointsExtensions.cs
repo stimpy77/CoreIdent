@@ -10,6 +10,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -20,9 +21,13 @@ public static class PasswordlessSmsEndpointsExtensions
 {
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessSmsEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentPasswordlessSmsEndpoints(
-            "/auth/passwordless/sms/start",
-            "/auth/passwordless/sms/verify");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var startPath = routeOptions.CombineWithBase(routeOptions.PasswordlessSmsStartPath);
+        var verifyPath = routeOptions.CombineWithBase(routeOptions.PasswordlessSmsVerifyPath);
+
+        return endpoints.MapCoreIdentPasswordlessSmsEndpoints(startPath, verifyPath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessSmsEndpoints(

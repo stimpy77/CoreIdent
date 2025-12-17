@@ -30,6 +30,22 @@ public sealed class CoreIdentRouteOptions
 
     public string ProfilePath { get; set; } = "profile";
 
+    public string PasswordlessEmailStartPath { get; set; } = "passwordless/email/start";
+
+    public string PasswordlessEmailVerifyPath { get; set; } = "passwordless/email/verify";
+
+    public string PasswordlessSmsStartPath { get; set; } = "passwordless/sms/start";
+
+    public string PasswordlessSmsVerifyPath { get; set; } = "passwordless/sms/verify";
+
+    public string PasskeyRegisterOptionsPath { get; set; } = "passkey/register/options";
+
+    public string PasskeyRegisterCompletePath { get; set; } = "passkey/register/complete";
+
+    public string PasskeyAuthenticateOptionsPath { get; set; } = "passkey/authenticate/options";
+
+    public string PasskeyAuthenticateCompletePath { get; set; } = "passkey/authenticate/complete";
+
     public string CombineWithBase(string path)
     {
         if (string.IsNullOrWhiteSpace(path))

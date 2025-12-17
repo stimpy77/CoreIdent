@@ -9,6 +9,7 @@ using CoreIdent.Passkeys.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -21,11 +22,18 @@ public static class PasskeyEndpointsExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+
+        var registerOptionsPath = routeOptions.CombineWithBase(routeOptions.PasskeyRegisterOptionsPath);
+        var registerCompletePath = routeOptions.CombineWithBase(routeOptions.PasskeyRegisterCompletePath);
+        var authenticateOptionsPath = routeOptions.CombineWithBase(routeOptions.PasskeyAuthenticateOptionsPath);
+        var authenticateCompletePath = routeOptions.CombineWithBase(routeOptions.PasskeyAuthenticateCompletePath);
+
         return endpoints.MapCoreIdentPasskeyEndpoints(
-            "/auth/passkey/register/options",
-            "/auth/passkey/register/complete",
-            "/auth/passkey/authenticate/options",
-            "/auth/passkey/authenticate/complete");
+            registerOptionsPath,
+            registerCompletePath,
+            authenticateOptionsPath,
+            authenticateCompletePath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentPasskeyEndpoints(

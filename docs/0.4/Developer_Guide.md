@@ -261,6 +261,14 @@ Defaults:
   - `RegisterPath = "register"`
   - `LoginPath = "login"`
   - `ProfilePath = "profile"`
+  - `PasswordlessEmailStartPath = "passwordless/email/start"`
+  - `PasswordlessEmailVerifyPath = "passwordless/email/verify"`
+  - `PasswordlessSmsStartPath = "passwordless/sms/start"`
+  - `PasswordlessSmsVerifyPath = "passwordless/sms/verify"`
+  - `PasskeyRegisterOptionsPath = "passkey/register/options"`
+  - `PasskeyRegisterCompletePath = "passkey/register/complete"`
+  - `PasskeyAuthenticateOptionsPath = "passkey/authenticate/options"`
+  - `PasskeyAuthenticateCompletePath = "passkey/authenticate/complete"`
 - Root-ish helper:
   - `UserProfilePath = "/me"` (host-friendly convenience route; not currently mapped by `MapCoreIdentEndpoints()`)
 

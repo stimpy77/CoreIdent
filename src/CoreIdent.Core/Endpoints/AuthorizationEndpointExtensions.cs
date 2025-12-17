@@ -5,6 +5,7 @@ using CoreIdent.Core.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +18,12 @@ public static class AuthorizationEndpointExtensions
 
     public static IEndpointRouteBuilder MapCoreIdentAuthorizeEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapCoreIdentAuthorizeEndpoint("/auth/authorize");
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        var routeOptions = endpoints.ServiceProvider.GetRequiredService<IOptions<CoreIdentRouteOptions>>().Value;
+        var authorizePath = routeOptions.CombineWithBase(routeOptions.AuthorizePath);
+
+        return endpoints.MapCoreIdentAuthorizeEndpoint(authorizePath);
     }
 
     public static IEndpointRouteBuilder MapCoreIdentAuthorizeEndpoint(this IEndpointRouteBuilder endpoints, string authorizePath)
