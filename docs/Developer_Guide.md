@@ -21,6 +21,7 @@ If you are looking for the high-level roadmap and design intent, start with:
 - `docs/Project_Overview.md`
 - `docs/Technical_Plan.md`
 - `docs/DEVPLAN.md`
+- `docs/Realms.md`
 - `docs/Passkeys.md`
 - `docs/Aspire_Integration.md`
 
