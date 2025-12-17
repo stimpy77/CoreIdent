@@ -6,7 +6,7 @@ namespace CoreIdent.Templates.Tests;
 
 public sealed class TemplateInstantiationTests
 {
-    private const string Version = "0.4.0";
+    private const string Version = "1.0.0";
 
     [Fact]
     public async Task Templates_CanInstantiateAndBuild()

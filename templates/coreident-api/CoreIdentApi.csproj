@@ -6,9 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreIdent.Core" Version="0.4.0" />
+    <PackageReference Include="CoreIdent.Core" Version="1.0.0" />
     <!--#if (useEfCore) -->
-    <PackageReference Include="CoreIdent.Storage.EntityFrameworkCore" Version="0.4.0" />
+    <PackageReference Include="CoreIdent.Storage.EntityFrameworkCore" Version="1.0.0" />
     <!--#endif -->
   </ItemGroup>
 

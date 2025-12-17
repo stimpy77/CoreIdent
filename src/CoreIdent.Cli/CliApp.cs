@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using CoreIdent.Core.Models;
@@ -8,7 +9,10 @@ namespace CoreIdent.Cli;
 
 public static class CliApp
 {
-    private const string PackageVersion = "0.4.0";
+    private static readonly string PackageVersion =
+        typeof(CliApp).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? typeof(CliApp).Assembly.GetName().Version?.ToString(3)
+        ?? "1.0.0";
 
     public static async Task<int> RunAsync(string[] args)
     {

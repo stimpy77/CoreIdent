@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreIdent.Core" Version="0.4.0" />
-    <PackageReference Include="CoreIdent.Storage.EntityFrameworkCore" Version="0.4.0" />
-    <PackageReference Include="CoreIdent.Passwords.AspNetIdentity" Version="0.4.0" />
+    <PackageReference Include="CoreIdent.Core" Version="1.0.0" />
+    <PackageReference Include="CoreIdent.Storage.EntityFrameworkCore" Version="1.0.0" />
+    <PackageReference Include="CoreIdent.Passwords.AspNetIdentity" Version="1.0.0" />
     <!--#if (usePasskeys) -->
-    <PackageReference Include="CoreIdent.Passkeys.AspNetIdentity" Version="0.4.0" />
+    <PackageReference Include="CoreIdent.Passkeys.AspNetIdentity" Version="1.0.0" />
     <!--#endif -->
   </ItemGroup>
 

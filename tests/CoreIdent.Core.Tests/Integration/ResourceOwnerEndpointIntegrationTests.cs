@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Shouldly;
 using Xunit;
 
@@ -108,6 +109,41 @@ public sealed class ResourceOwnerEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task Login_uses_configured_resource_owner_client_id_in_access_token_claim()
+    {
+        using var rsa = RSA.Create(2048);
+        using var host = await CreateHostAsync(rsa, services =>
+        {
+            services.ConfigureResourceOwnerEndpoints(o => o.ClientId = "first_party_app");
+        });
+        using var client = host.GetTestClient();
+
+        var email = "clientid@example.com";
+        var password = "Test123!";
+
+        var register = await client.PostAsJsonAsync("/auth/register", new { email, password });
+        register.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/auth/login")
+        {
+            Content = JsonContent.Create(new { email, password })
+        };
+        loginRequest.Headers.Accept.ParseAdd("application/json");
+
+        var loginResponse = await client.SendAsync(loginRequest);
+        loginResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var tokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+        tokens.ShouldNotBeNull();
+        tokens!.AccessToken.ShouldNotBeNullOrWhiteSpace();
+
+        var handler = new JsonWebTokenHandler();
+        var jwt = handler.ReadJsonWebToken(tokens.AccessToken);
+        var clientId = jwt.Claims.FirstOrDefault(c => c.Type == "client_id")?.Value;
+        clientId.ShouldBe("first_party_app", "Resource-owner access token should contain configured client_id claim.");
+    }
+
+    [Fact]
     public async Task Login_rejects_invalid_credentials()
     {
         using var rsa = RSA.Create(2048);
@@ -176,7 +212,7 @@ public sealed class ResourceOwnerEndpointIntegrationTests
             .ShouldBeTrue("Profile response should contain the user email.");
     }
 
-    private static async Task<IHost> CreateHostAsync(RSA rsa)
+    private static async Task<IHost> CreateHostAsync(RSA rsa, Action<IServiceCollection>? configureServices = null)
     {
         var rsaPem = rsa.ExportRSAPrivateKeyPem();
 
@@ -199,6 +235,8 @@ public sealed class ResourceOwnerEndpointIntegrationTests
                         services.AddSigningKey(o => o.UseRsaPem(rsaPem));
 
                         services.AddAspNetIdentityPasswordHasher();
+
+                        configureServices?.Invoke(services);
                     })
                     .Configure(app =>
                     {

@@ -140,6 +140,8 @@ public static class ResourceOwnerEndpointsExtensions
 
         var request = httpContext.Request;
 
+        var resourceOwnerClientId = resourceOwnerOptions.Value.ClientId;
+
         var (email, password) = await ReadEmailAndPasswordAsync(request, ct);
 
         if (!TryValidateEmail(email, out var normalizedEmail) || !TryValidatePassword(password))
@@ -168,7 +170,7 @@ public static class ResourceOwnerEndpointsExtensions
             new(JwtRegisteredClaimNames.Sub, user.Id),
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.UserName),
-            new("client_id", "resource_owner")
+            new("client_id", resourceOwnerClientId)
         };
 
         var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
@@ -177,7 +179,7 @@ public static class ResourceOwnerEndpointsExtensions
         var claimsContext = new ClaimsContext
         {
             SubjectId = user.Id,
-            ClientId = "resource_owner",
+            ClientId = resourceOwnerClientId,
             Scopes = [],
             GrantType = GrantTypes.Password
         };
@@ -197,7 +199,7 @@ public static class ResourceOwnerEndpointsExtensions
         {
             Handle = refreshTokenHandle,
             SubjectId = user.Id,
-            ClientId = "resource_owner",
+            ClientId = resourceOwnerClientId,
             FamilyId = Guid.NewGuid().ToString("N"),
             Scopes = [],
             CreatedAt = now.UtcDateTime,
