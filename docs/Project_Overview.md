@@ -1,4 +1,4 @@
-# CoreIdent 0.4: Project Overview & Vision
+# CoreIdent: Project Overview & Vision
 
 ## Executive Summary
 
@@ -15,9 +15,9 @@ CoreIdent wraps and extends .NET 10's built-in identity primitives, dramatically
 
 ## How to use this document
 
-- If you want to integrate CoreIdent into an app, start with `docs/0.4/Developer_Guide.md`.
-- If you want implementation details and interface-level specs, see `docs/0.4/Technical_Plan.md`.
-- If you want the authoritative implementation status and remaining work, see `docs/0.4/DEVPLAN.md`.
+- If you want to integrate CoreIdent into an app, start with `docs/Developer_Guide.md`.
+- If you want implementation details and interface-level specs, see `docs/Technical_Plan.md`.
+- If you want the authoritative implementation status and remaining work, see `docs/DEVPLAN.md`.
 
 ---
 
@@ -273,7 +273,7 @@ var accessToken = await authClient.GetAccessTokenAsync();
 
 ## Phased Development Plan
 
-Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describes the intended roadmap without using checkbox-based completion markers.
+Implementation status is tracked in `docs/DEVPLAN.md`. This section describes the intended roadmap without using checkbox-based completion markers.
 
 ### Phase 0A: Foundation Reset — Crypto + Core Token Lifecycle (0.4)
 **Goal:** Establish production-ready cryptographic foundation and essential OAuth/OIDC token lifecycle endpoints on **.NET 10**.
@@ -513,14 +513,14 @@ public class LoginTests : CoreIdentTestFixture
 
 ---
 
-## Migration from 0.3.x
+## Getting started
 
-Existing 0.3.x users will need to:
+If you're bringing CoreIdent into an existing application:
 
-1. **Update target framework** to `net10.0`
-2. **Configure asymmetric keys** — HS256 will be deprecated for production
+1. **Target** `net10.0`
+2. **Configure asymmetric keys** for production (RS256/ES256)
 3. **Update token validation** — Resource servers need public key, not shared secret
-4. **Review breaking changes** in `MIGRATION.md` (to be created)
+4. **Review guidance** in `MIGRATION.md`
 
 ---
 

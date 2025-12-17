@@ -8,10 +8,10 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 
 | Document | Purpose |
 |----------|---------|
-| [`docs/0.4/Project_Overview.md`](docs/0.4/Project_Overview.md) | Vision, architecture, phased roadmap |
-| [`docs/0.4/Technical_Plan.md`](docs/0.4/Technical_Plan.md) | Specifications, interfaces, .NET 10 reference links |
-| [`docs/0.4/DEVPLAN.md`](docs/0.4/DEVPLAN.md) | **Task-level checklist** — drives implementation |
-| [`docs/0.4/Passkeys.md`](docs/0.4/Passkeys.md) | Passkeys (WebAuthn) setup guide |
+| [`docs/Project_Overview.md`](docs/Project_Overview.md) | Vision, architecture, phased roadmap |
+| [`docs/Technical_Plan.md`](docs/Technical_Plan.md) | Specifications, interfaces, .NET 10 reference links |
+| [`docs/DEVPLAN.md`](docs/DEVPLAN.md) | **Task-level checklist** — drives implementation |
+| [`docs/Passkeys.md`](docs/Passkeys.md) | Passkeys (WebAuthn) setup guide |
 
 ## Development Workflow
 
@@ -49,8 +49,8 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - Keep all documentation in sync with code
 - Update with new features and breaking changes
   - README.md for high-level feature descriptions
-  - docs/0.4/Developer_Guide.md for detailed consuming developer guides
-  - docs/0.4/README_Detailed.md for summary guides not covered in the root level README
+  - docs/Developer_Guide.md for detailed consuming developer guides
+  - docs/README_Detailed.md for summary guides not covered in the root level README
 - Document configuration options and environment variables
 - Add code comments for non-obvious logic or complex algorithms
 - Update this CLAUDE.md document as implementation details evolve

@@ -1,4 +1,4 @@
-# CoreIdent 0.4: F# Guide
+# CoreIdent: F# Guide
 
 CoreIdent is designed to be usable from **F#** as a first-class .NET language.
 

@@ -7,4 +7,4 @@ This folder will contain GitHub Actions workflows and other configuration once i
 - **CI Build** — Build and test on push/PR
 - **Release** — Publish NuGet packages on tag
 
-See [DEVPLAN.md](../docs/0.4/DEVPLAN.md) for the implementation roadmap.
+See [DEVPLAN.md](../docs/DEVPLAN.md) for the implementation roadmap.

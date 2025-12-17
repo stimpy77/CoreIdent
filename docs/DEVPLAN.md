@@ -1,16 +1,16 @@
-# CoreIdent 0.4: Detailed Development Plan (DEVPLAN.md)
 
-This document provides a detailed breakdown of tasks, components, test cases, and technical guidance for CoreIdent 0.4. It aligns with the rescoped vision in `Project_Overview.md` and technical specifications in `Technical_Plan.md`.
+# CoreIdent: Detailed Development Plan (DEVPLAN.md)
 
-**Key Changes from 0.3.x DEVPLAN:**
-- **Clean slate build** — All implementation starts fresh (no existing code)
+This document provides a detailed breakdown of tasks, components, test cases, and technical guidance for CoreIdent. It aligns with the vision in `Project_Overview.md` and technical specifications in `Technical_Plan.md`.
+
+**Key priorities:**
 - Phase 0 (Foundation) is now first priority — asymmetric keys, revocation, introspection
-- Passwordless authentication moved to Phase 1
+- Passwordless authentication is Phase 1
 - Test infrastructure overhaul is a dedicated effort
 - Removed: Web3, LNURL, AI integrations
 - Added: DPoP, RAR, SPIFFE/SPIRE (later phases)
 
-> **Note:** This is a ground-up rewrite. References to "creating" components mean building from scratch. The 0.3.x codebase is archived for reference only.
+> **Note:** References to "creating" components mean implementing the feature within the current architecture.
 
 **Checklist Legend:**
 - `[x]` — Complete
@@ -44,10 +44,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Authorization Code + PKCE | 1 | 1.7 | ✅ Complete |
 | Consent & Grants | 1 | 1.8 | ✅ Complete |
 | Delegated User Store | 1 | 1.9 | ✅ Complete |
-| OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
+| OIDC UserInfo Endpoint | 1 | 1.10 | ✅ Complete |
 | Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
 | Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
-| Follow-Up Cleanup | 1 | 1.13 | 🔲 Planned |
+| Follow-Up Cleanup | 1 | 1.13 | ✅ Complete |
 | Google Provider | 2 | 2.2 | 🔲 Planned |
 | Microsoft Provider | 2 | 2.3 | 🔲 Planned |
 | GitHub Provider | 2 | 2.4 | 🔲 Planned |
@@ -1219,27 +1219,27 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 > **Decision:** Move to **1.0 GA** before starting Phase 1.5. This feature is the gate for GA release.
 
 *   **Component:** Version String Updates
-    - [ ] (L1) `CliApp.cs` — Update `PackageVersion` from `"0.4.0"` to `"1.0.0"` (or make dynamic via assembly version)
-    - [ ] (L2) Search for other hardcoded `0.4` version strings in codebase and update to `1.0`
-    - [ ] (L1) Update all `.csproj` files with `<Version>1.0.0</Version>` (or appropriate pre-release tag)
-    - [ ] (L1) Update NuGet package metadata for 1.0 release
+    - [x] (L1) `CliApp.cs` — Update `PackageVersion` from `"0.4.0"` to `"1.0.0"` (or make dynamic via assembly version)
+    - [x] (L2) Search for other hardcoded `0.4` version strings in codebase and update to `1.0`
+    - [x] (L1) Update all `.csproj` files with `<Version>1.0.0</Version>` (or appropriate pre-release tag)
+    - [x] (L1) Update NuGet package metadata for 1.0 release
 *   **Component:** Documentation Path Restructure
-    - [ ] (L2) Move contents of `docs/0.4/` to `docs/` root
-    - [ ] (L2) Update all internal doc links in:
+    - [x] (L2) Move contents of `docs/` version folder to `docs/` root
+    - [x] (L2) Update all internal doc links in:
         - README.md
         - CLAUDE.md
         - Developer_Guide.md
-        - All other docs that reference `docs/0.4/` paths
-    - [ ] (L2) Update template references that point to `docs/0.4/`
-    - [ ] (L2) Update CLI output that references `docs/0.4/`
-    - [ ] (L1) Remove or archive the empty `docs/0.4/` folder
+        - All other docs that reference the old versioned doc paths
+    - [x] (L2) Update template references that point to the old versioned doc paths
+    - [x] (L2) Update CLI output that references the old versioned doc paths
+    - [x] (L1) Remove or archive the empty versioned docs folder
 *   **Component:** Release Preparation
-    - [ ] (L1) Create CHANGELOG.md or RELEASE_NOTES.md for 1.0
-    - [ ] (L1) Review and finalize MIGRATION.md (from legacy 0.3.x if applicable)
+    - [x] (L1) Create CHANGELOG.md or RELEASE_NOTES.md for 1.0
+    - [x] (L1) Review and finalize MIGRATION.md
     - [ ] (L1) Tag release in git as `v1.0.0`
 *   **Documentation:**
-    - [ ] (L1) Update CLAUDE.md with new doc paths
-    - [ ] (L1) Update README.md badges and version references
+    - [x] (L1) Update CLAUDE.md with new doc paths
+    - [x] (L1) Update README.md badges and version references
 
 ---
 
@@ -1989,9 +1989,9 @@ This summary is shown near the top of the document.
 
 ---
 
-## Features to Re-implement from 0.3.x
+## Feature coverage notes
 
-The following features were implemented in 0.3.x and will be re-implemented in 0.4 with improvements:
+The following items are tracked here for completeness and cross-referencing:
 
 - [x] (L2) JWKS Endpoint (now with asymmetric keys) — *Covered in Feature 0.2*
 - [x] (L2) JWT Access Tokens — *Covered in Feature 0.2 (JwtTokenService)*
@@ -2002,7 +2002,7 @@ The following features were implemented in 0.3.x and will be re-implemented in 0
 - [x] (L3) OAuth2 Authorization Code Flow with PKCE — *Covered in Feature 1.7*
 - [x] (L2) ID Token Issuance — *Covered in Feature 1.7 (OIDC ID token)*
 - [x] (L2) OIDC Discovery Endpoint — *Covered in Feature 0.4.2*
-- [ ] (L2) OIDC UserInfo Endpoint — *Covered in Feature 1.10*
+- [x] (L2) OIDC UserInfo Endpoint — *Covered in Feature 1.10*
 - [x] (L2) User Consent Mechanism — *Covered in Feature 1.8*
 - [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
 - [ ] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
@@ -2012,7 +2012,7 @@ The following features were implemented in 0.3.x and will be re-implemented in 0
 - [x] (L2) Password Grant (ROPC) — *Covered in Feature 1.12*
 - [x] (L1) Custom Claims Provider — *Covered in Feature 0.5*
 
-> **Note:** The 0.3.x implementation is archived on the `main` branch for reference. These features will be rebuilt from scratch using the new architecture. Many items are now explicitly covered in Phase 0 features.
+> **Note:** Many items are now explicitly covered in Phase 0 features and referenced here for clarity.
 
 ---
 

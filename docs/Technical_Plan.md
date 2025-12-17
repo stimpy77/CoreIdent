@@ -1,11 +1,11 @@
-# CoreIdent 0.4: Technical Plan
+# CoreIdent: Technical Plan
 
-This document provides detailed technical specifications, architecture decisions, and implementation guidance for CoreIdent 0.4.
+This document provides detailed technical specifications, architecture decisions, and implementation guidance for CoreIdent.
 
 ## How to use this document
 
-- If you are integrating CoreIdent into an app, start with `docs/0.4/Developer_Guide.md`.
-- If you want the authoritative implementation status and remaining work, see `docs/0.4/DEVPLAN.md`.
+- If you are integrating CoreIdent into an app, start with `docs/Developer_Guide.md`.
+- If you want the authoritative implementation status and remaining work, see `docs/DEVPLAN.md`.
 - This document is intended to capture design intent and technical guidance.
 
 ---
@@ -29,9 +29,7 @@ This document provides detailed technical specifications, architecture decisions
 
 ### 0.1 Asymmetric Key Support
 
-**Legacy (0.3.x) State:** HS256 only (symmetric key shared between issuer and validators)
-
-**0.4 State:** Clean-slate rewrite on .NET 10, with RS256/ES256 as the production default.
+**Current State:** RS256/ES256 as the production default, with HS256 supported for development/testing.
 
 **Target State:** RS256/ES256 default with proper key management
 
@@ -733,7 +731,7 @@ app.Run();
 
 ---
 
-## Patterns to Preserve from Existing Implementation
+## Patterns to Preserve
 
 ### Good Patterns (Keep)
 
@@ -754,15 +752,12 @@ app.Run();
 
 ---
 
-## Breaking Changes from 0.3.x
+## Compatibility Notes
 
-| Change | Migration Path |
-|--------|----------------|
-| `SigningKeySecret` deprecated | Use `AddSigningKey()` with RSA/ECDSA |
-| HS256 not default | Explicitly opt-in with `UseSymmetricKey()` for dev |
-| `IRefreshTokenStore` changes | Add `RevokeByFamilyAsync()` method |
-| Test infrastructure | Use new `CoreIdentTestFixture` base class |
-| Namespace changes | Update `using` statements |
+- Prefer RS256/ES256 for production via `AddSigningKey()`.
+- HS256 is supported for development/testing only.
+- Refresh token stores support revocation by token family.
+- Test infrastructure uses the shared fixture base classes under `tests/`.
 
 ---
 
@@ -809,7 +804,7 @@ src/
 
 ## Sequencing (non-authoritative)
 
-Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describes the intended sequencing without using checkbox-based completion markers.
+Implementation status is tracked in `docs/DEVPLAN.md`. This section describes the intended roadmap without using checkbox-based completion markers.
 
 ### Week 1-2: Phase 0 Foundation
 - Asymmetric key infrastructure
@@ -837,7 +832,7 @@ Implementation status is tracked in `docs/0.4/DEVPLAN.md`. This section describe
 - `dotnet new` templates
 - ClaimsPrincipal extensions
 - Documentation site setup
-- Migration guide from 0.3.x
+- Migration/upgrade guide
 
 ---
 

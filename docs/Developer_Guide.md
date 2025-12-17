@@ -1,6 +1,6 @@
-# CoreIdent 0.4 Developer Guide
+# CoreIdent Developer Guide
 
-This guide documents the **CoreIdent 0.4** codebase (a ground-up rewrite from 0.3). It is intended to be the “one stop” developer reference for:
+This guide documents the CoreIdent codebase. It is intended to be the “one stop” developer reference for:
 
 - Getting a host app running quickly
 - Understanding how CoreIdent is structured
@@ -18,17 +18,17 @@ This guide documents the **CoreIdent 0.4** codebase (a ground-up rewrite from 0.
 
 If you are looking for the high-level roadmap and design intent, start with:
 
-- `docs/0.4/Project_Overview.md`
-- `docs/0.4/Technical_Plan.md`
-- `docs/0.4/DEVPLAN.md`
-- `docs/0.4/Passkeys.md`
-- `docs/0.4/Aspire_Integration.md`
+- `docs/Project_Overview.md`
+- `docs/Technical_Plan.md`
+- `docs/DEVPLAN.md`
+- `docs/Passkeys.md`
+- `docs/Aspire_Integration.md`
 
 ---
 
-## What CoreIdent 0.4 is today
+## What CoreIdent is today
 
-CoreIdent 0.4 currently provides a **minimal, modular OAuth/OIDC foundation** on .NET 10:
+CoreIdent currently provides a **minimal, modular OAuth/OIDC foundation** on .NET 10:
 
 - **JWT token issuance** (`/auth/token`)
   - `client_credentials`
@@ -44,9 +44,23 @@ CoreIdent 0.4 currently provides a **minimal, modular OAuth/OIDC foundation** on
 - **Pluggable stores** with in-memory defaults + EF Core implementations in `CoreIdent.Storage.EntityFrameworkCore`
 - A **testing package** (`tests/CoreIdent.Testing`) with fixtures and builders for integration tests
 
-CoreIdent is not trying to be “everything at once” yet. The focus of 0.4 is **secure defaults** (asymmetric signing by default) and **testable primitives**.
+CoreIdent is not trying to be “everything at once” yet. The focus is **secure defaults** (asymmetric signing by default) and **testable primitives**.
 
 ---
+
+## Embedded Auth vs Membership (Guidance Placeholder)
+
+This section is a placeholder for DEVPLAN 1.13.6.
+
+- **Embedded auth ("I just need auth in my app")**: Use the resource-owner convenience endpoints (`/auth/register`, `/auth/login`, `/auth/profile`) for first-party app workflows.
+- **Membership/admin**: For richer membership (profile fields, roles/groups, admin UI), prefer building on CoreIdent by plugging in your own stores and adding claims/profile behavior at the host layer.
+
+Key extension points to expand on:
+
+- `IUserStore` (replace user persistence)
+- `ICustomClaimsProvider` (add claims to tokens)
+- `CoreIdentResourceOwnerOptions` handlers (`RegisterHandler`, `LoginHandler`, `ProfileHandler`)
+- Custom endpoints in the host app (e.g., `GET /me`) keyed by `sub`
 
 ## Repository structure
 
@@ -63,7 +77,7 @@ At a high level:
 - `tests/CoreIdent.Testing/`
   - Shared test infrastructure: `WebApplicationFactory`, fixture base class, builders, assertion extensions
 - `tests/CoreIdent.TestHost/`
-  - A minimal runnable host used by some tests and manual validation
+  - A runnable host used by some tests and manual validation
 - `src/CoreIdent.Cli/`
   - CLI tool package (`dotnet coreident`) for project scaffolding, key generation, and database migrations
 
@@ -84,7 +98,7 @@ Commands:
 - `dotnet coreident client add` — Interactive client registration helper
 - `dotnet coreident migrate` — Apply database schema (SQLite, SQL Server, PostgreSQL)
 
-See [`docs/0.4/CLI_Reference.md`](CLI_Reference.md) for full documentation.
+See [`docs/CLI_Reference.md`](CLI_Reference.md) for full documentation.
 
 ---
 
@@ -159,7 +173,7 @@ With defaults, CoreIdent maps:
 - Passwordless SMS OTP:
   - `POST /auth/passwordless/sms/start`
   - `POST /auth/passwordless/sms/verify`
-- Passkeys (WebAuthn): see `docs/0.4/Passkeys.md` (mapped via `app.MapCoreIdentPasskeyEndpoints()`)
+- Passkeys (WebAuthn): see `docs/Passkeys.md` (mapped via `app.MapCoreIdentPasskeyEndpoints()`)
 
 > Note: discovery and JWKS are computed based on the `Issuer` URL’s **path** (see “Routing” below). They are not hardcoded to root.
 

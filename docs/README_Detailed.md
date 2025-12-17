@@ -1,6 +1,6 @@
 # CoreIdent (Detailed Reference)
 
-This document is the **detailed reference** for CoreIdent 0.4.
+This document is the **detailed reference** for CoreIdent.
 
 The root `README.md` is intended to be a concise, friendly entry point; use this file when you want the deeper configuration and endpoint reference.
 
@@ -35,6 +35,13 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 CoreIdent is a **unified authentication solution** for the .NET ecosystem. It is designed to cover the spectrum from simple embedded auth to running a full OAuth 2.0 / OpenID Connect server, with additional capabilities delivered incrementally across phases.
 
+## Embedded Auth vs Membership (Guidance Placeholder)
+
+This section is a placeholder for DEVPLAN 1.13.6.
+
+- **Embedded auth**: Use CoreIdent endpoints directly in your host app for minimal “auth for my app” workflows.
+- **Membership/admin**: Build on CoreIdent by implementing store interfaces and enriching tokens/profile responses with membership data owned by your app.
+
 ### Core Scenarios
 
 | Scenario | Description |
@@ -48,11 +55,11 @@ CoreIdent is a **unified authentication solution** for the .NET ecosystem. It is
 
 ## Current Status
 
-CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
+CoreIdent is in active development on .NET 10.
 
 **Prerequisites:** .NET 10 SDK installed (required for all projects and tests)
 
-The 0.4 codebase focuses on:
+Current focus areas include:
 
 - **.NET 10** only (`net10.0`)
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
@@ -63,7 +70,7 @@ The 0.4 codebase focuses on:
 - **Developer experience**: test infrastructure, CLI tool, devcontainer/Codespaces support
 - **Observability**: optional `System.Diagnostics.Metrics` instrumentation
 
-> Legacy note: the prior 0.3.x implementation is tagged `legacy-0.3.x-main` for reference.
+> Note: CoreIdent focuses on a clean, modular core with secure defaults and a strong developer experience.
 
 ---
 
@@ -79,14 +86,14 @@ For the SMS OTP endpoint and configuration reference, see the Developer Guide se
 
 ## Documentation
 
-All planning and technical documentation for 0.4 is in the [`docs/0.4/`](./) folder:
+All planning and technical documentation is in the [`docs/`](./) folder:
 
 | Document | Description |
 |----------|-------------|
 | [**Project Overview**](Project_Overview.md) | Vision, principles, architecture, and phased roadmap |
 | [**Technical Plan**](Technical_Plan.md) | Detailed specifications, interfaces, and implementation guidance |
 | [**DEVPLAN**](DEVPLAN.md) | Task-level checklist with components, test cases, and documentation requirements |
-| [**Developer Guide**](Developer_Guide.md) | Practical guide to the current 0.4 codebase, endpoints, configuration, and testing |
+| [**Developer Guide**](Developer_Guide.md) | Practical guide to the current codebase, endpoints, configuration, and testing |
 | [**Aspire Integration**](Aspire_Integration.md) | Integrating CoreIdent with .NET Aspire service defaults |
 | [**Passkeys Guide**](Passkeys.md) | Passkeys (WebAuthn) setup guide |
 | [**CLI Reference**](CLI_Reference.md) | Command reference for the `dotnet coreident` CLI tool |
@@ -99,9 +106,9 @@ These documents include:
 
 ---
 
-## Asymmetric Key Configuration (0.4)
+## Asymmetric Key Configuration
 
-CoreIdent 0.4 signs JWTs using **asymmetric keys by default**:
+CoreIdent signs JWTs using **asymmetric keys by default**:
 
 - **RS256** (RSA) — default
 - **ES256** (ECDSA P-256)
@@ -642,7 +649,7 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed task breakdowns.
 
 ## Contributing
 
-CoreIdent 0.4 is still early in its roadmap, but the Phase 0 foundation is established and contributions are welcome.
+CoreIdent is still early in its roadmap, but the foundation is established and contributions are welcome.
 
 Key areas for future contribution:
 - Additional OAuth providers

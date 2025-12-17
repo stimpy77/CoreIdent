@@ -20,7 +20,7 @@ CoreIdent aims to grow into a single solution for:
 - **Identity server capabilities** (OAuth 2.0 / OIDC)
 - **Client libraries** for common .NET app types
 
-CoreIdent 0.4 currently provides a clean, testable core for:
+CoreIdent 1.0 currently provides a clean, testable core for:
 
 - **Issuing tokens** (JWT access tokens, refresh tokens)
 - **Standards endpoints** (discovery + JWKS)
@@ -32,10 +32,9 @@ CoreIdent 0.4 currently provides a clean, testable core for:
 
 ## Status
 
-CoreIdent **0.4 is a ground-up rewrite** on .NET 10.
+CoreIdent is in active development as a **holistic authentication and identity toolkit for .NET 10+**.
 
 - **Prerequisite**: .NET 10 SDK
-- **Legacy**: the prior 0.3.x implementation is tagged [`legacy-0.3.x-main`](../../tree/legacy-0.3.x-main)
 
 ## Quickstart (2 minutes)
 
@@ -75,19 +74,19 @@ Then visit:
 ## Choose your path
 
 - **Integrate CoreIdent into an app**
-  - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+  - [docs/Developer_Guide.md](docs/Developer_Guide.md)
 - **Aspire integration (service defaults)**
-  - [docs/0.4/Aspire_Integration.md](docs/0.4/Aspire_Integration.md)
+  - [docs/Aspire_Integration.md](docs/Aspire_Integration.md)
 - **Add passkeys (WebAuthn)**
-  - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
+  - [docs/Passkeys.md](docs/Passkeys.md)
 - **Use the CLI**
-  - [docs/0.4/CLI_Reference.md](docs/0.4/CLI_Reference.md)
+  - [docs/CLI_Reference.md](docs/CLI_Reference.md)
 - **Understand the roadmap / implementation status**
-  - [docs/0.4/DEVPLAN.md](docs/0.4/DEVPLAN.md)
+  - [docs/DEVPLAN.md](docs/DEVPLAN.md)
 - **Contribute / development environment**
   - [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## What CoreIdent 0.4 provides today
+## What CoreIdent 1.0 provides today
 
 - **Token endpoint** (`/auth/token`)
   - `client_credentials`
@@ -157,23 +156,23 @@ builder.Services.AddEntityFrameworkCoreStores();
 ## Documentation
 
 - **Developer Guide (recommended starting point)**
-  - [docs/0.4/Developer_Guide.md](docs/0.4/Developer_Guide.md)
+  - [docs/Developer_Guide.md](docs/Developer_Guide.md)
 - **Aspire integration**
-  - [docs/0.4/Aspire_Integration.md](docs/0.4/Aspire_Integration.md)
+  - [docs/Aspire_Integration.md](docs/Aspire_Integration.md)
 - **Passkeys (WebAuthn) guide**
-  - [docs/0.4/Passkeys.md](docs/0.4/Passkeys.md)
+  - [docs/Passkeys.md](docs/Passkeys.md)
 - **Project docs**
-  - [docs/0.4/Project_Overview.md](docs/0.4/Project_Overview.md)
-  - [docs/0.4/Technical_Plan.md](docs/0.4/Technical_Plan.md)
-  - [docs/0.4/DEVPLAN.md](docs/0.4/DEVPLAN.md)
+  - [docs/Project_Overview.md](docs/Project_Overview.md)
+  - [docs/Technical_Plan.md](docs/Technical_Plan.md)
+  - [docs/DEVPLAN.md](docs/DEVPLAN.md)
 - **CLI reference**
-  - [docs/0.4/CLI_Reference.md](docs/0.4/CLI_Reference.md)
+  - [docs/CLI_Reference.md](docs/CLI_Reference.md)
 - **Detailed reference**
-  - [docs/0.4/README_Detailed.md](docs/0.4/README_Detailed.md)
+  - [docs/README_Detailed.md](docs/README_Detailed.md)
 
 ## Contributing
 
-If you want to contribute, start with [docs/0.4/DEVPLAN.md](docs/0.4/DEVPLAN.md) and the integration tests in [tests/](tests/).
+If you want to contribute, start with [docs/DEVPLAN.md](docs/DEVPLAN.md) and the integration tests in [tests/](tests/).
 
 ## License
 
