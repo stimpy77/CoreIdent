@@ -47,6 +47,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | OIDC UserInfo Endpoint | 1 | 1.10 | 🔲 Planned |
 | Resource Owner Endpoints (Register/Login/Profile) | 1 | 1.11 | ✅ Complete |
 | Password Grant (ROPC) | 1 | 1.12 | ✅ Complete |
+| Follow-Up Cleanup | 1 | 1.13 | 🔲 Planned |
 | Google Provider | 2 | 2.2 | 🔲 Planned |
 | Microsoft Provider | 2 | 2.3 | 🔲 Planned |
 | GitHub Provider | 2 | 2.4 | 🔲 Planned |
@@ -1138,19 +1139,213 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 1.13: Follow-Up Cleanup
 
-**Goal:** Clean up inconsistencies and loose ends.
+**Goal:** Clean up inconsistencies, address technical debt, and ensure codebase quality before Phase 1.5.
 
-*   - [ ] (L2) Scan solution for UtcNow instances and consider replacing with TimeProvider (only where appropriate)
-*   - [ ] (??) Scan for explicit use of prefixes like "/auth" etc and determine if there was a missing use of `CoreIdentRouteOptions`
-*   - [ ] (??) Check for undelivered promises in Technical_Plan.md for features already implemented
-*   - [ ] (??) address this from Feature 1.2: "- [ ] (Note: Full WebAuthn testing requires browser automation or mocks)"
-      * (we may need a rich/heavy browser automation test client which will unpack a slew of additional integration test scenarios for many user flows including WebAuthn and other authentication flows)
-*   - [ ] (??) Engage with development lead to determine whether to move docs/0.4 contents out of 0.4 folder and strip out "0.4" mention everywhere in all docs and libs/apps (saw it in CliApp.cs could be in more places)
-*   - [ ] (??) Review and update any incomplete or outdated documentation
-      * CLAUDE.md
-      * README.md
-      * docs/* (all nested files here)
-*   - [ ] (TBD) TBD ~ Engage with development lead to determine additional cleanup items
+**Estimated Duration:** 1-2 weeks
+
+---
+
+#### 1.13.1: TimeProvider Consistency
+
+*   **Component:** Replace `DateTime.UtcNow` with `TimeProvider`
+    - [ ] (L2) `InMemoryUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
+    - [ ] (L2) `EfUserStore.cs` — Replace `DateTime.UtcNow` with injected `TimeProvider.GetUtcNow()`
+    - [ ] (L2) `CliApp.cs` — Replace `DateTime.UtcNow` in client creation (or accept as CLI-only exception)
+    - [ ] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
+    - [ ] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Replace 2 instances with `TimeProvider`
+    - [ ] (L2) `ResourceOwnerEndpointsExtensions.cs` — Replace instance with `TimeProvider`
+    - [ ] (L1) Ensure `TimeProvider` is registered in DI (already done in `ServiceCollectionExtensions.cs`)
+*   **Test Case:**
+    - [ ] (L2) Unit tests can control time via `FakeTimeProvider` for user creation timestamps
+
+---
+
+#### 1.13.2: Route Options Consistency
+
+> **Decision:** Parameterless endpoint overloads should read from `IOptions<CoreIdentRouteOptions>` via DI. Hardcoded defaults are not acceptable for production-quality code.
+
+*   **Component:** Refactor parameterless overloads to use `IOptions<CoreIdentRouteOptions>`
+    - [ ] (L2) `TokenEndpointExtensions.cs` — Refactor to resolve `TokenPath` from `IOptions<CoreIdentRouteOptions>`
+    - [ ] (L2) `TokenManagementEndpointsExtensions.cs` — Refactor to resolve `RevocationPath`, `IntrospectionPath` from options
+    - [ ] (L2) `ResourceOwnerEndpointsExtensions.cs` — Refactor to resolve `RegisterPath`, `LoginPath`, `ProfilePath` from options
+    - [ ] (L2) `PasswordlessEmailEndpointsExtensions.cs` — Refactor to resolve passwordless email paths from options (may need to add paths to `CoreIdentRouteOptions`)
+    - [ ] (L2) `PasswordlessSmsEndpointsExtensions.cs` — Refactor to resolve passwordless SMS paths from options (may need to add paths to `CoreIdentRouteOptions`)
+    - [ ] (L2) `UserInfoEndpointExtensions.cs` — Refactor to resolve `UserInfoPath` from options
+    - [ ] (L2) `ConsentEndpointExtensions.cs` — Refactor to resolve `ConsentPath` from options
+    - [ ] (L2) `AuthorizationEndpointExtensions.cs` — Refactor to resolve `AuthorizePath` from options
+    - [ ] (L2) `PasskeyEndpointsExtensions.cs` — Refactor to resolve passkey paths from options (may need to add paths to `CoreIdentRouteOptions`)
+*   **Component:** Extend `CoreIdentRouteOptions` if needed
+    - [ ] (L2) Add `PasswordlessEmailStartPath`, `PasswordlessEmailVerifyPath` if not present
+    - [ ] (L2) Add `PasswordlessSmsStartPath`, `PasswordlessSmsVerifyPath` if not present
+    - [ ] (L2) Add passkey paths (`PasskeyRegisterOptionsPath`, `PasskeyRegisterCompletePath`, `PasskeyAuthenticateOptionsPath`, `PasskeyAuthenticateCompletePath`) if not present
+*   **Documentation:**
+    - [ ] (L1) Document route customization patterns in Developer_Guide.md if not already covered
+
+---
+
+#### 1.13.3: Technical Debt from Technical_Plan.md
+
+*   **Component:** RFC 7807 Problem Details
+    - [ ] (L3) Audit error responses across all endpoints for consistency
+    - [ ] (L3) Consider adopting `Results.Problem()` / `ProblemDetails` for error responses
+    - [ ] (L2) Create `CoreIdentProblemDetails` helper or extension for standardized error formatting
+    - [ ] (L2) Document error response format in Developer_Guide.md
+*   **Component:** Structured Logging
+    - [ ] (L2) Audit logging statements for structured logging best practices
+    - [ ] (L2) Add correlation ID support (e.g., `Activity.Current?.Id` or custom header)
+    - [ ] (L2) Ensure sensitive data (tokens, passwords, PII) is never logged
+    - [ ] (L1) Document logging configuration in Developer_Guide.md
+*   **Test Case:**
+    - [ ] (L2) Error responses include consistent structure (error code, message, optional details)
+
+---
+
+#### 1.13.4: Browser Automation Testing Infrastructure
+
+> **Decision:** Deferred to Phase 1.5. This is a significant infrastructure investment that is not blocking for 1.0 GA.
+
+*   **Status:** 🔜 **Deferred to Phase 1.5**
+*   **Rationale:** Browser automation testing (Playwright/Puppeteer) requires substantial setup and is better suited for the client library phase where E2E testing becomes critical.
+*   **Placeholder items (to be expanded in Phase 1.5):**
+    - [ ] (L3) Evaluate Playwright vs Puppeteer for .NET integration testing
+    - [ ] (L3) Create `CoreIdent.Testing.Browser` package with browser automation utilities
+    - [ ] (L3) Implement WebAuthn/Passkey E2E tests with virtual authenticator
+    - [ ] (L3) Implement OAuth flow E2E tests (authorization code, passwordless)
+
+---
+
+#### 1.13.5: Version String and Documentation Path Cleanup (1.0 GA Preparation)
+
+> **Decision:** Move to **1.0 GA** before starting Phase 1.5. This feature is the gate for GA release.
+
+*   **Component:** Version String Updates
+    - [ ] (L1) `CliApp.cs` — Update `PackageVersion` from `"0.4.0"` to `"1.0.0"` (or make dynamic via assembly version)
+    - [ ] (L2) Search for other hardcoded `0.4` version strings in codebase and update to `1.0`
+    - [ ] (L1) Update all `.csproj` files with `<Version>1.0.0</Version>` (or appropriate pre-release tag)
+    - [ ] (L1) Update NuGet package metadata for 1.0 release
+*   **Component:** Documentation Path Restructure
+    - [ ] (L2) Move contents of `docs/0.4/` to `docs/` root
+    - [ ] (L2) Update all internal doc links in:
+        - README.md
+        - CLAUDE.md
+        - Developer_Guide.md
+        - All other docs that reference `docs/0.4/` paths
+    - [ ] (L2) Update template references that point to `docs/0.4/`
+    - [ ] (L2) Update CLI output that references `docs/0.4/`
+    - [ ] (L1) Remove or archive the empty `docs/0.4/` folder
+*   **Component:** Release Preparation
+    - [ ] (L1) Create CHANGELOG.md or RELEASE_NOTES.md for 1.0
+    - [ ] (L1) Review and finalize MIGRATION.md (from legacy 0.3.x if applicable)
+    - [ ] (L1) Tag release in git as `v1.0.0`
+*   **Documentation:**
+    - [ ] (L1) Update CLAUDE.md with new doc paths
+    - [ ] (L1) Update README.md badges and version references
+
+---
+
+#### 1.13.6: Documentation Audit and Refresh
+
+*   **Component:** CLAUDE.md Review
+    - [ ] (L1) Verify project structure section matches current layout
+    - [ ] (L1) Verify code style guidance matches C# 14 / .NET 10 patterns in use
+    - [ ] (L1) Add any missing guidance discovered during Phase 1 implementation
+*   **Component:** README.md Review
+    - [ ] (L1) Verify quickstart examples work with current codebase
+    - [ ] (L1) Verify feature list matches implemented features
+    - [ ] (L1) Update status badges if needed
+*   **Component:** Developer_Guide.md Review
+    - [ ] (L2) Verify all endpoint documentation matches implementation
+    - [ ] (L2) Verify configuration examples are accurate
+    - [ ] (L2) Add any missing sections for Phase 1 features
+*   **Component:** README_Detailed.md Review
+    - [ ] (L1) Verify roadmap status table is accurate
+    - [ ] (L1) Verify metrics documentation matches implementation
+*   **Component:** Technical_Plan.md Review
+    - [ ] (L2) Mark completed items or remove outdated sections
+    - [ ] (L2) Update "Open Questions" section with decisions made
+*   **Component:** Project_Overview.md Review
+    - [ ] (L1) Verify architecture diagrams match current structure
+    - [ ] (L1) Verify phase descriptions match DEVPLAN.md
+*   **Component:** Other Docs
+    - [ ] (L1) Passkeys.md — Verify setup guide is accurate
+    - [ ] (L1) CLI_Reference.md — Verify command documentation is complete
+    - [ ] (L1) Aspire_Integration.md — Verify integration guide is accurate
+
+---
+
+#### 1.13.7: Code Quality and Consistency
+
+*   **Component:** Nullable Reference Type Audit
+    - [ ] (L2) Ensure all projects have `<Nullable>enable</Nullable>`
+    - [ ] (L2) Address any nullable warnings in CI build output
+*   **Component:** XML Documentation
+    - [ ] (L2) Ensure all public APIs have XML doc comments
+    - [ ] (L2) Consider enabling `<GenerateDocumentationFile>true</GenerateDocumentationFile>` for NuGet packages
+*   **Component:** Code Style Consistency
+    - [ ] (L1) Run `dotnet format` across solution
+    - [ ] (L1) Address any formatting inconsistencies
+*   **Component:** Unused Code Removal
+    - [ ] (L2) Audit for unused `using` statements
+    - [ ] (L2) Audit for dead code paths or commented-out code
+*   **Test Case:**
+    - [ ] (L1) CI build passes with zero warnings (or document accepted warnings)
+
+---
+
+#### 1.13.8: Test Coverage Review
+
+*   **Component:** Coverage Analysis
+    - [ ] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
+    - [ ] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
+    - [ ] (L2) Add tests for any uncovered critical paths
+*   **Component:** Test Quality
+    - [ ] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
+    - [ ] (L2) Review flaky tests and stabilize
+*   **Documentation:**
+    - [ ] (L1) Document test coverage expectations in CONTRIBUTING.md
+
+---
+
+#### 1.13.9: Additional Codebase Scan Follow-Ups
+
+*   **Component:** OIDC Discovery Metadata Completeness
+    - [ ] (L2) `DiscoveryEndpointsExtensions.cs` — Populate `grant_types_supported` instead of returning an empty list
+        - *Guidance:* Include currently supported grants (`client_credentials`, `refresh_token`, `authorization_code`, `password` (deprecated))
+        - *Guidance:* Ensure the discovery document remains accurate if features are disabled via endpoint mapping
+        - *Note:* This addresses an incomplete implementation from Feature 0.4.2 which specified including `grant_types_supported`
+    - [ ] (L2) Consider adding other commonly expected discovery fields (only if compatible with current scope):
+        - `response_types_supported` (e.g., `code`)
+        - `token_endpoint_auth_methods_supported` (e.g., `client_secret_basic`, `client_secret_post`)
+*   **Test Case (Integration):**
+    - [ ] (L2) `/.well-known/openid-configuration` returns a non-empty `grant_types_supported` list matching implemented features
+
+*   **Component:** Sync-over-Async Hotspots
+    - [ ] (L2) `DelegatedPasswordHasher.cs` — Remove sync-over-async (`GetAwaiter().GetResult()`) when validating delegated credentials
+        - *Guidance:* If `IPasswordHasher` must remain synchronous, introduce a dedicated synchronous delegate in `DelegatedUserStoreOptions` for password verification
+        - *Guidance:* Alternatively, introduce an `IAsyncPasswordVerifier` abstraction and adapt the token endpoint to use it
+    - [ ] (L2) Remove `CancellationToken.None` usage in the delegated password verification path where feasible
+*   **Test Case (Unit):**
+    - [ ] (L2) Delegated credential validation can be tested without blocking threads or requiring sync-over-async
+
+*   **Component:** PII / Sensitive Data Logging Audit
+    - [ ] (L2) Audit logs for PII disclosure in passwordless flows (email, phone)
+        - `PasswordlessEmailEndpointsExtensions.cs` (logs email)
+        - `PasswordlessSmsEndpointsExtensions.cs` (logs phone)
+        - `ConsoleSmsProvider.cs` (writes full SMS message including OTP)
+    - [ ] (L2) Define a standard redaction strategy:
+        - Mask email/phone values in logs (e.g., `j***@example.com`, `+1******4567`)
+        - Never log OTP values or magic link tokens
+    - [ ] (L2) Replace `Console.WriteLine` in default providers with `ILogger` (or ensure these providers are *explicitly* dev-only and opt-in)
+*   **Test Case:**
+    - [ ] (L2) Tests assert logs do not contain OTP/token material for passwordless flows
+
+*   **Component:** Remove Silent Exception Swallowing
+    - [ ] (L2) Remove `catch { }` blocks in Basic auth parsing helpers:
+        - `TokenEndpointExtensions.cs` (`ExtractClientCredentials`)
+        - `TokenManagementEndpointsExtensions.cs` (`ExtractClientCredentials`)
+        - *Guidance:* Prefer `Try*` parsing patterns and consider logging at Debug/Trace level for malformed Authorization headers
+*   **Test Case:**
+    - [ ] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
 
 ---
 
