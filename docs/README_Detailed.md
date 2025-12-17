@@ -8,6 +8,8 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 - **Integrate CoreIdent into an app**
   - [Developer Guide](Developer_Guide.md)
+- **Future feature work: realms**
+  - [Realms (future work)](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) — Draft design for a realm-ready foundation (multi-tenant / multi-issuer / per-realm keys and stores).
 - **Aspire integration (service defaults)**
   - [Aspire Integration](Aspire_Integration.md)
 - **Scaffold a host with templates**
@@ -94,6 +96,7 @@ All planning and technical documentation is in the [`docs/`](./) folder:
 | [**Technical Plan**](Technical_Plan.md) | Detailed specifications, interfaces, and implementation guidance |
 | [**DEVPLAN**](DEVPLAN.md) | Task-level checklist with components, test cases, and documentation requirements |
 | [**Developer Guide**](Developer_Guide.md) | Practical guide to the current codebase, endpoints, configuration, and testing |
+| [**Realms (future work)**](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) | Draft realm-ready foundation for future multi-tenant / multi-issuer / per-realm keys+stores scenarios |
 | [**Aspire Integration**](Aspire_Integration.md) | Integrating CoreIdent with .NET Aspire service defaults |
 | [**Passkeys Guide**](Passkeys.md) | Passkeys (WebAuthn) setup guide |
 | [**CLI Reference**](CLI_Reference.md) | Command reference for the `dotnet coreident` CLI tool |

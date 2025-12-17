@@ -21,6 +21,7 @@ If you are looking for the high-level roadmap and design intent, start with:
 - `docs/Project_Overview.md`
 - `docs/Technical_Plan.md`
 - `docs/DEVPLAN.md`
+- Realms (future work): [Realms](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) — Draft realm-ready foundation for future multi-tenant / multi-issuer / per-realm keys+stores scenarios.
 - `docs/Passkeys.md`
 - `docs/Aspire_Integration.md`
 
