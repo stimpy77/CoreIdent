@@ -6,6 +6,10 @@
     <FileVersion>1.0.0.0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
 
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile Condition="('$(IsTestProject)' != 'true' AND '$(IsTestProject)' != 'True') AND ('$(OutputType)' != 'Exe' AND '$(OutputType)' != 'WinExe') AND ('$(IsPackable)' != 'false' AND '$(IsPackable)' != 'False')">true</GenerateDocumentationFile>
+    <WarningsAsErrors Condition="('$(IsTestProject)' != 'true' AND '$(IsTestProject)' != 'True') AND ('$(OutputType)' != 'Exe' AND '$(OutputType)' != 'WinExe') AND ('$(IsPackable)' != 'false' AND '$(IsPackable)' != 'False')">$(WarningsAsErrors);CS1591</WarningsAsErrors>
+
     <Authors>CoreIdent Contributors</Authors>
     <RepositoryUrl>https://github.com/stimpy77/CoreIdent</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

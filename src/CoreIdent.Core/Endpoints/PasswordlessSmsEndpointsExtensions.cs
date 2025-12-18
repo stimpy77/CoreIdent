@@ -18,8 +18,16 @@ using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for passwordless SMS authentication.
+/// </summary>
 public static class PasswordlessSmsEndpointsExtensions
 {
+    /// <summary>
+    /// Maps passwordless SMS endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessSmsEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -31,6 +39,13 @@ public static class PasswordlessSmsEndpointsExtensions
         return endpoints.MapCoreIdentPasswordlessSmsEndpoints(startPath, verifyPath);
     }
 
+    /// <summary>
+    /// Maps passwordless SMS endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="startPath">Start endpoint path.</param>
+    /// <param name="verifyPath">Verify endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessSmsEndpoints(
         this IEndpointRouteBuilder endpoints,
         string startPath,

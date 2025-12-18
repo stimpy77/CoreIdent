@@ -5,18 +5,27 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Issues signed JWT access tokens.
+/// </summary>
 public class JwtTokenService : ITokenService
 {
     private readonly ISigningKeyProvider _signingKeyProvider;
     private readonly ILogger<JwtTokenService> _logger;
     private readonly JsonWebTokenHandler _handler = new();
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="signingKeyProvider">Signing key provider.</param>
+    /// <param name="logger">Logger.</param>
     public JwtTokenService(ISigningKeyProvider signingKeyProvider, ILogger<JwtTokenService> logger)
     {
         _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <inheritdoc />
     public async Task<string> CreateJwtAsync(
         string issuer,
         string audience,

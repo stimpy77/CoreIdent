@@ -2,50 +2,121 @@ using System;
 
 namespace CoreIdent.Core.Configuration;
 
+/// <summary>
+/// Route configuration options for CoreIdent endpoints.
+/// </summary>
 public sealed class CoreIdentRouteOptions
 {
+    /// <summary>
+    /// Base path prepended to relative endpoint paths.
+    /// </summary>
     public string BasePath { get; set; } = "/auth";
 
+    /// <summary>
+    /// Authorization endpoint path.
+    /// </summary>
     public string AuthorizePath { get; set; } = "authorize";
 
+    /// <summary>
+    /// Token endpoint path.
+    /// </summary>
     public string TokenPath { get; set; } = "token";
 
+    /// <summary>
+    /// Revocation endpoint path.
+    /// </summary>
     public string RevocationPath { get; set; } = "revoke";
 
+    /// <summary>
+    /// Introspection endpoint path.
+    /// </summary>
     public string IntrospectionPath { get; set; } = "introspect";
 
+    /// <summary>
+    /// Optional discovery document path override.
+    /// </summary>
     public string? DiscoveryPath { get; set; }
 
+    /// <summary>
+    /// Optional JWKS path override.
+    /// </summary>
     public string? JwksPath { get; set; }
 
+    /// <summary>
+    /// Consent endpoint path.
+    /// </summary>
     public string ConsentPath { get; set; } = "consent";
 
+    /// <summary>
+    /// User info endpoint path.
+    /// </summary>
     public string UserInfoPath { get; set; } = "userinfo";
 
+    /// <summary>
+    /// User profile endpoint path.
+    /// </summary>
     public string UserProfilePath { get; set; } = "/me";
 
+    /// <summary>
+    /// Registration endpoint path.
+    /// </summary>
     public string RegisterPath { get; set; } = "register";
 
+    /// <summary>
+    /// Login endpoint path.
+    /// </summary>
     public string LoginPath { get; set; } = "login";
 
+    /// <summary>
+    /// Profile endpoint path.
+    /// </summary>
     public string ProfilePath { get; set; } = "profile";
 
+    /// <summary>
+    /// Passwordless email start endpoint path.
+    /// </summary>
     public string PasswordlessEmailStartPath { get; set; } = "passwordless/email/start";
 
+    /// <summary>
+    /// Passwordless email verify endpoint path.
+    /// </summary>
     public string PasswordlessEmailVerifyPath { get; set; } = "passwordless/email/verify";
 
+    /// <summary>
+    /// Passwordless SMS start endpoint path.
+    /// </summary>
     public string PasswordlessSmsStartPath { get; set; } = "passwordless/sms/start";
 
+    /// <summary>
+    /// Passwordless SMS verify endpoint path.
+    /// </summary>
     public string PasswordlessSmsVerifyPath { get; set; } = "passwordless/sms/verify";
 
+    /// <summary>
+    /// Passkey registration options endpoint path.
+    /// </summary>
     public string PasskeyRegisterOptionsPath { get; set; } = "passkey/register/options";
 
+    /// <summary>
+    /// Passkey registration completion endpoint path.
+    /// </summary>
     public string PasskeyRegisterCompletePath { get; set; } = "passkey/register/complete";
 
+    /// <summary>
+    /// Passkey authentication options endpoint path.
+    /// </summary>
     public string PasskeyAuthenticateOptionsPath { get; set; } = "passkey/authenticate/options";
 
+    /// <summary>
+    /// Passkey authentication completion endpoint path.
+    /// </summary>
     public string PasskeyAuthenticateCompletePath { get; set; } = "passkey/authenticate/complete";
 
+    /// <summary>
+    /// Combines a relative path with <see cref="BasePath"/>.
+    /// </summary>
+    /// <param name="path">Path to combine.</param>
+    /// <returns>A normalized absolute route template.</returns>
     public string CombineWithBase(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -62,6 +133,11 @@ public sealed class CoreIdentRouteOptions
         return NormalizeRouteTemplate($"{basePath}/{path}");
     }
 
+    /// <summary>
+    /// Gets the discovery document path.
+    /// </summary>
+    /// <param name="options">CoreIdent options.</param>
+    /// <returns>The discovery document path.</returns>
     public string GetDiscoveryPath(CoreIdentOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -75,6 +151,11 @@ public sealed class CoreIdentRouteOptions
         return NormalizeRouteTemplate($"{issuer}/.well-known/openid-configuration");
     }
 
+    /// <summary>
+    /// Gets the JWKS path.
+    /// </summary>
+    /// <param name="options">CoreIdent options.</param>
+    /// <returns>The JWKS path.</returns>
     public string GetJwksPath(CoreIdentOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

@@ -61,9 +61,28 @@ public record TokenRequest
 /// </summary>
 public static class GrantTypes
 {
+    /// <summary>
+    /// The <c>client_credentials</c> grant type.
+    /// </summary>
     public const string ClientCredentials = "client_credentials";
+
+    /// <summary>
+    /// The <c>refresh_token</c> grant type.
+    /// </summary>
     public const string RefreshToken = "refresh_token";
+
+    /// <summary>
+    /// The <c>authorization_code</c> grant type.
+    /// </summary>
     public const string AuthorizationCode = "authorization_code";
+
+    /// <summary>
+    /// The <c>password</c> grant type (deprecated).
+    /// </summary>
     public const string Password = "password";
+
+    /// <summary>
+    /// The device authorization grant type.
+    /// </summary>
     public const string DeviceCode = "urn:ietf:params:oauth:grant-type:device_code";
 }

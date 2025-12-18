@@ -1,7 +1,15 @@
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Helpers for redacting sensitive values for logging.
+/// </summary>
 public static class CoreIdentRedaction
 {
+    /// <summary>
+    /// Masks an email address.
+    /// </summary>
+    /// <param name="email">Email address.</param>
+    /// <returns>Masked email address.</returns>
     public static string MaskEmail(string? email)
     {
         var value = (email ?? string.Empty).Trim();
@@ -45,6 +53,11 @@ public static class CoreIdentRedaction
         return maskedLocal + "@" + maskedDomain + tld;
     }
 
+    /// <summary>
+    /// Masks a phone number.
+    /// </summary>
+    /// <param name="phone">Phone number.</param>
+    /// <returns>Masked phone number.</returns>
     public static string MaskPhone(string? phone)
     {
         var value = (phone ?? string.Empty).Trim();

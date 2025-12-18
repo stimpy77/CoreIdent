@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <IsTestProject>false</IsTestProject>
     <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
     <LangVersion>14</LangVersion>
   </PropertyGroup>
 

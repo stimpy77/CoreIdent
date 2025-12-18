@@ -1276,19 +1276,19 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.7: Code Quality and Consistency
 
 *   **Component:** Nullable Reference Type Audit
-    - [ ] (L2) Ensure all projects have `<Nullable>enable</Nullable>`
-    - [ ] (L2) Address any nullable warnings in CI build output
+    - [x] (L2) Ensure all projects have `<Nullable>enable</Nullable>`
+    - [x] (L2) Address any nullable warnings in CI build output
 *   **Component:** XML Documentation
-    - [ ] (L2) Ensure all public APIs have XML doc comments
-    - [ ] (L2) Consider enabling `<GenerateDocumentationFile>true</GenerateDocumentationFile>` for NuGet packages
+    - [x] (L2) Ensure all public APIs have XML doc comments
+    - [x] (L2) Consider enabling `<GenerateDocumentationFile>true</GenerateDocumentationFile>` for NuGet packages
 *   **Component:** Code Style Consistency
-    - [ ] (L1) Run `dotnet format` across solution
-    - [ ] (L1) Address any formatting inconsistencies
+    - [x] (L1) Run `dotnet format` across solution
+    - [x] (L1) Address any formatting inconsistencies
 *   **Component:** Unused Code Removal
-    - [ ] (L2) Audit for unused `using` statements
-    - [ ] (L2) Audit for dead code paths or commented-out code
+    - [x] (L2) Audit for unused `using` statements
+    - [x] (L2) Audit for dead code paths or commented-out code
 *   **Test Case:**
-    - [ ] (L1) CI build passes with zero warnings (or document accepted warnings)
+    - [x] (L1) CI build passes with zero warnings (or document accepted warnings)
 
 ---
 
@@ -1346,6 +1346,74 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         - *Guidance:* Prefer `Try*` parsing patterns and consider logging at Debug/Trace level for malformed Authorization headers
 *   **Test Case:**
     - [ ] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
+
+---
+
+### Feature 1.13.10: OpenAPI Documentation
+
+**Goal:** Provide automatic API documentation and discoverability for all CoreIdent HTTP endpoints.
+
+**Estimated Duration:** 1-2 weeks
+
+**Prerequisites:** XML documentation complete (1.13.7)
+
+---
+
+*   **Component:** OpenAPI Integration Package
+    - [ ] (L1) Create new project `CoreIdent.OpenApi` targeting `net10.0`
+    - [ ] (L1) Add dependency on `Microsoft.AspNetCore.OpenApi` for .NET 10 OpenAPI support
+    - [ ] (L1) Add dependency on `CoreIdent.Core` for access to endpoint models
+    - [ ] (L2) Design OpenAPI configuration options:
+        ```csharp
+        public class CoreIdentOpenApiOptions
+        {
+            public string DocumentTitle { get; set; } = "CoreIdent API";
+            public string DocumentVersion { get; set; } = "v1";
+            public string OpenApiRoute { get; set; } = "/openapi/v1.json";
+            public bool IncludeXmlComments { get; set; } = true;
+            public bool IncludeSecurityDefinitions { get; set; } = true;
+        }
+        ```
+    - [ ] (L2) Create extension method `AddCoreIdentOpenApi()` for `IServiceCollection`
+    - [ ] (L2) Create extension method `MapCoreIdentOpenApi()` for `IEndpointRouteBuilder`
+    - [ ] (L2) Configure OpenAPI document to include:
+        - All OAuth 2.0 and OIDC endpoints (token, authorize, userinfo, etc.)
+        - Passwordless endpoints (magic links, OTPs, WebAuthn)
+        - Token management endpoints
+        - Discovery endpoints (.well-known)
+        - JWKS endpoint
+        - Passkey endpoints (if enabled)
+    - [ ] (L2) Add proper security schemes:
+        - `client_secret_basic` for client authentication
+        - `client_secret_post` for client authentication
+        - `authorization_code` flow with PKCE
+        - `refresh_token` flow
+        - `Bearer` token authentication
+    - [ ] (L2) Add request/response examples for key endpoints
+    - [ ] (L2) Add descriptions from XML documentation to OpenAPI schemas
+
+*   **Component:** Optional API Reference UI (Scalar)
+    - [ ] (L2) Do not ship a UI in CoreIdent packages (no Swashbuckle / no Swagger UI)
+    - [ ] (L2) Ensure the generated OpenAPI document is compatible with Scalar
+    - [ ] (L2) Document how a host app can add Scalar to serve the OpenAPI JSON (host-managed)
+
+*   **Documentation Updates:**
+    - [ ] (L2) Update `Developer_Guide.md` with OpenAPI setup instructions
+    - [ ] (L2) Add OpenAPI configuration examples to README_Detailed.md
+    - [ ] (L2) Document security scheme usage in API documentation
+    - [ ] (L2) Document optional Scalar integration (no UI implementation in CoreIdent)
+
+*   **Test Cases:**
+    - [ ] (L2) OpenAPI document builds without warnings
+    - [ ] (L2) All public endpoints are included in OpenAPI document
+    - [ ] (L2) Security schemes are properly defined and usable
+    - [ ] (L2) Smoke test: `GET /openapi/v1.json` returns 200 with valid OpenAPI document
+
+*   **Quality Gates:**
+    - [ ] (L2) OpenAPI document passes validation (no schema errors)
+    - [ ] (L2) All examples in documentation are valid
+    - [ ] (L2) Security definitions match actual endpoint requirements
+    - [ ] (L2) CI build includes OpenAPI validation step
 
 ---
 

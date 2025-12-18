@@ -121,7 +121,6 @@ templates/
   coreident-api-fsharp/                  # F# template
 website/
   index.html, features.html, style.css   # Project website
-```
 
 ## Before You Start Coding
 
@@ -132,6 +131,26 @@ website/
 5. Implement the feature
 6. Run all tests
 7. Commit with a clear message referencing the feature
+
+## Coding Standards / Quality Gates (Do Not Skip)
+
+- **Build cleanliness**
+  - Ensure packable library projects build with **no warnings** (or explicitly documented accepted warnings)
+  - Keep nullable enabled (`<Nullable>enable</Nullable>`) and fix nullable warnings as they appear
+- **XML documentation**
+  - All public APIs must have XML docs (CS1591 treated as error)
+  - If a public API is user-facing (DI/extension methods/endpoints), prefer adding practical guidance in `<remarks>`
+- **Public endpoint documentation**
+  - Whenever adding/modifying endpoints, update `docs/Developer_Guide.md`
+  - Maintain an OpenAPI/Swagger plan (and implementation when scheduled) so endpoints are discoverable
+- **Formatting and hygiene**
+  - Run `dotnet format` when touching many files / style-heavy changes
+  - Avoid unused usings and dead code paths
+- **Security / logging**
+  - Do not log secrets, tokens, OTPs, magic links, or raw PII
+  - Prefer redaction helpers for email/phone values in logs
+- **Docs stay in sync**
+  - If code changes affect configuration, routes, DI, or behaviors, update docs in the same PR
 
 ## When Stuck
 

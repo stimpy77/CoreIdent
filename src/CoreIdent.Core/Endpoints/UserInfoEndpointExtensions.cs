@@ -15,8 +15,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for the OpenID Connect user info endpoint.
+/// </summary>
 public static class UserInfoEndpointExtensions
 {
+    /// <summary>
+    /// Maps the user info endpoint using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentUserInfoEndpoint(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -27,6 +35,12 @@ public static class UserInfoEndpointExtensions
         return endpoints.MapCoreIdentUserInfoEndpoint(userInfoPath);
     }
 
+    /// <summary>
+    /// Maps the user info endpoint at the specified path.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="userInfoPath">User info endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentUserInfoEndpoint(this IEndpointRouteBuilder endpoints, string userInfoPath)
     {
         ArgumentNullException.ThrowIfNull(endpoints);

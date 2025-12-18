@@ -5,15 +5,23 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Sends email using SMTP.
+/// </summary>
 public sealed class SmtpEmailSender : IEmailSender
 {
     private readonly IOptions<SmtpOptions> _options;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="options">SMTP options.</param>
     public SmtpEmailSender(IOptions<SmtpOptions> options)
     {
         _options = options;
     }
 
+    /// <inheritdoc />
     public async Task SendAsync(EmailMessage message, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(message);

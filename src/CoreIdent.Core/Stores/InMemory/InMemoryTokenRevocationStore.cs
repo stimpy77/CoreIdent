@@ -5,22 +5,33 @@ using System.Threading.Tasks;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
+/// <summary>
+/// In-memory implementation of <see cref="ITokenRevocationStore"/>.
+/// </summary>
 public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
 {
     private readonly TimeProvider _timeProvider;
     private readonly ConcurrentDictionary<string, RevokedTokenEntry> _revoked = new(StringComparer.Ordinal);
     private int _operationCount;
 
+    /// <summary>
+    /// Creates a new instance using <see cref="TimeProvider.System"/>.
+    /// </summary>
     public InMemoryTokenRevocationStore()
         : this(timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
     public InMemoryTokenRevocationStore(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public Task RevokeTokenAsync(string jti, string tokenType, DateTime expiry, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(jti))
@@ -47,6 +58,7 @@ public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<bool> IsRevokedAsync(string jti, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(jti))
@@ -70,6 +82,7 @@ public sealed class InMemoryTokenRevocationStore : ITokenRevocationStore
         return Task.FromResult(false);
     }
 
+    /// <inheritdoc />
     public Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

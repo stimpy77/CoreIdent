@@ -6,22 +6,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="IUserGrantStore"/>.
+/// </summary>
 public sealed class EfUserGrantStore : IUserGrantStore
 {
     private readonly CoreIdentDbContext _context;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfUserGrantStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
     public EfUserGrantStore(CoreIdentDbContext context)
         : this(context, timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfUserGrantStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="timeProvider">An optional time provider.</param>
     public EfUserGrantStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public async Task<CoreIdentUserGrant?> FindAsync(string subjectId, string clientId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId) || string.IsNullOrWhiteSpace(clientId))
@@ -46,6 +59,7 @@ public sealed class EfUserGrantStore : IUserGrantStore
         return ToModel(entity);
     }
 
+    /// <inheritdoc />
     public async Task SaveAsync(CoreIdentUserGrant grant, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(grant);
@@ -74,6 +88,7 @@ public sealed class EfUserGrantStore : IUserGrantStore
         await _context.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task RevokeAsync(string subjectId, string clientId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId) || string.IsNullOrWhiteSpace(clientId))
@@ -86,6 +101,7 @@ public sealed class EfUserGrantStore : IUserGrantStore
             .ExecuteDeleteAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task<bool> HasUserGrantedConsentAsync(string subjectId, string clientId, IEnumerable<string> scopes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(scopes);

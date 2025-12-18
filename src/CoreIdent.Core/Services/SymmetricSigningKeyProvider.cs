@@ -6,13 +6,22 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Symmetric (HS256) signing key provider intended for development/testing only.
+/// </summary>
 public class SymmetricSigningKeyProvider : ISigningKeyProvider
 {
     private readonly CoreIdentKeyOptions _options;
     private readonly ILogger<SymmetricSigningKeyProvider> _logger;
 
+    /// <inheritdoc />
     public string Algorithm => SecurityAlgorithms.HmacSha256;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="options">Key options.</param>
+    /// <param name="logger">Logger.</param>
     public SymmetricSigningKeyProvider(IOptions<CoreIdentKeyOptions> options, ILogger<SymmetricSigningKeyProvider> logger)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
@@ -23,6 +32,7 @@ public class SymmetricSigningKeyProvider : ISigningKeyProvider
             "Use RSA (RS256) or ECDSA (ES256) for production.");
     }
 
+    /// <inheritdoc />
     public Task<SigningCredentials> GetSigningCredentialsAsync(CancellationToken ct = default)
     {
         var key = GetKey();
@@ -30,10 +40,11 @@ public class SymmetricSigningKeyProvider : ISigningKeyProvider
         return Task.FromResult(credentials);
     }
 
+    /// <inheritdoc />
     public Task<IEnumerable<SecurityKeyInfo>> GetValidationKeysAsync(CancellationToken ct = default)
     {
         var key = GetKey();
-        var keyInfo = new SecurityKeyInfo(key.KeyId ?? string.Empty, key, ExpiresAt: null);
+        var keyInfo = new SecurityKeyInfo(key.KeyId ?? string.Empty, key, expiresAt: null);
         return Task.FromResult<IEnumerable<SecurityKeyInfo>>([keyInfo]);
     }
 

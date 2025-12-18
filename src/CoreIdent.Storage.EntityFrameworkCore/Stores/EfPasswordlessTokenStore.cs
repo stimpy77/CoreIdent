@@ -10,6 +10,9 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="IPasswordlessTokenStore"/>.
+/// </summary>
 public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
 {
     private readonly CoreIdentDbContext _context;
@@ -17,6 +20,12 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
     private readonly IOptions<PasswordlessEmailOptions> _emailOptions;
     private readonly IOptions<PasswordlessSmsOptions> _smsOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfPasswordlessTokenStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="emailOptions">Passwordless email options.</param>
+    /// <param name="smsOptions">Passwordless SMS options.</param>
     public EfPasswordlessTokenStore(
         CoreIdentDbContext context,
         IOptions<PasswordlessEmailOptions> emailOptions,
@@ -25,6 +34,13 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfPasswordlessTokenStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="emailOptions">Passwordless email options.</param>
+    /// <param name="smsOptions">Passwordless SMS options.</param>
+    /// <param name="timeProvider">An optional time provider.</param>
     public EfPasswordlessTokenStore(
         CoreIdentDbContext context,
         IOptions<PasswordlessEmailOptions> emailOptions,
@@ -37,6 +53,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public async Task<string> CreateTokenAsync(PasswordlessToken token, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(token);
@@ -82,11 +99,13 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         return rawToken;
     }
 
+    /// <inheritdoc />
     public async Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, CancellationToken ct = default)
     {
         return await ValidateAndConsumeAsync(token, tokenType: null, recipient: null, ct);
     }
 
+    /// <inheritdoc />
     public async Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, string? tokenType, string? recipient, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -143,6 +162,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         };
     }
 
+    /// <inheritdoc />
     public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

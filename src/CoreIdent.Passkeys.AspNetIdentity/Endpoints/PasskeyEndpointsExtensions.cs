@@ -18,8 +18,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Passkeys.AspNetIdentity.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for passkey/WebAuthn operations.
+/// </summary>
 public static class PasskeyEndpointsExtensions
 {
+    /// <summary>
+    /// Maps passkey endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasskeyEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -38,6 +46,15 @@ public static class PasskeyEndpointsExtensions
             authenticateCompletePath);
     }
 
+    /// <summary>
+    /// Maps passkey endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="registerOptionsPath">Path for WebAuthn registration options.</param>
+    /// <param name="registerCompletePath">Path for WebAuthn registration completion.</param>
+    /// <param name="authenticateOptionsPath">Path for WebAuthn authentication options.</param>
+    /// <param name="authenticateCompletePath">Path for WebAuthn authentication completion.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasskeyEndpoints(
         this IEndpointRouteBuilder endpoints,
         string registerOptionsPath,

@@ -3,16 +3,24 @@ using CoreIdent.Core.Models;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
+/// <summary>
+/// In-memory implementation of <see cref="IUserGrantStore"/>.
+/// </summary>
 public sealed class InMemoryUserGrantStore : IUserGrantStore
 {
     private readonly ConcurrentDictionary<string, CoreIdentUserGrant> _grants = new(StringComparer.Ordinal);
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
     public InMemoryUserGrantStore(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public Task<CoreIdentUserGrant?> FindAsync(string subjectId, string clientId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId) || string.IsNullOrWhiteSpace(clientId))
@@ -43,6 +51,7 @@ public sealed class InMemoryUserGrantStore : IUserGrantStore
         });
     }
 
+    /// <inheritdoc />
     public Task SaveAsync(CoreIdentUserGrant grant, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(grant);
@@ -66,6 +75,7 @@ public sealed class InMemoryUserGrantStore : IUserGrantStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task RevokeAsync(string subjectId, string clientId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId) || string.IsNullOrWhiteSpace(clientId))
@@ -77,6 +87,7 @@ public sealed class InMemoryUserGrantStore : IUserGrantStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public async Task<bool> HasUserGrantedConsentAsync(string subjectId, string clientId, IEnumerable<string> scopes, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(scopes);

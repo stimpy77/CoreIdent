@@ -6,8 +6,17 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Service registration helpers for scope stores.
+/// </summary>
 public static class ScopeStoreServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers a custom <see cref="IScopeStore"/> implementation.
+    /// </summary>
+    /// <typeparam name="TScopeStore">The scope store implementation.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddScopeStore<TScopeStore>(this IServiceCollection services)
         where TScopeStore : class, IScopeStore
     {

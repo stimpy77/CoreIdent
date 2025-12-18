@@ -17,8 +17,16 @@ using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for passwordless email authentication.
+/// </summary>
 public static class PasswordlessEmailEndpointsExtensions
 {
+    /// <summary>
+    /// Maps passwordless email endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessEmailEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -30,6 +38,13 @@ public static class PasswordlessEmailEndpointsExtensions
         return endpoints.MapCoreIdentPasswordlessEmailEndpoints(startPath, verifyPath);
     }
 
+    /// <summary>
+    /// Maps passwordless email endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="startPath">Start endpoint path.</param>
+    /// <param name="verifyPath">Verify endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentPasswordlessEmailEndpoints(
         this IEndpointRouteBuilder endpoints,
         string startPath,

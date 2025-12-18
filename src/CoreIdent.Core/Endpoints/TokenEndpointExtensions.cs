@@ -18,8 +18,16 @@ using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for the OAuth 2.0 token endpoint.
+/// </summary>
 public static class TokenEndpointExtensions
 {
+    /// <summary>
+    /// Maps the token endpoint using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenEndpoint(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -30,6 +38,12 @@ public static class TokenEndpointExtensions
         return endpoints.MapCoreIdentTokenEndpoint(tokenPath);
     }
 
+    /// <summary>
+    /// Maps the token endpoint at the specified path.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="tokenPath">Token endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenEndpoint(this IEndpointRouteBuilder endpoints, string tokenPath)
     {
         ArgumentNullException.ThrowIfNull(endpoints);

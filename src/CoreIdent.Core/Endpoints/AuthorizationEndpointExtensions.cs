@@ -12,11 +12,19 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for the OAuth 2.0 / OpenID Connect authorization endpoint.
+/// </summary>
 public static class AuthorizationEndpointExtensions
 {
     private const string ResponseTypeCode = "code";
     private const string PkceMethodS256 = "S256";
 
+    /// <summary>
+    /// Maps the authorization endpoint using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentAuthorizeEndpoint(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -27,6 +35,12 @@ public static class AuthorizationEndpointExtensions
         return endpoints.MapCoreIdentAuthorizeEndpoint(authorizePath);
     }
 
+    /// <summary>
+    /// Maps the authorization endpoint at the specified path.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="authorizePath">Authorization endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentAuthorizeEndpoint(this IEndpointRouteBuilder endpoints, string authorizePath)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -85,12 +99,12 @@ public static class AuthorizationEndpointExtensions
 
         if (string.IsNullOrWhiteSpace(codeChallenge) || string.IsNullOrWhiteSpace(codeChallengeMethod))
         {
-            return RedirectErrorOrBadRequest(redirectUri, state, "invalid_request", "PKCE is required (code_challenge and code_challenge_method)." );
+            return RedirectErrorOrBadRequest(redirectUri, state, "invalid_request", "PKCE is required (code_challenge and code_challenge_method).");
         }
 
         if (!string.Equals(codeChallengeMethod, PkceMethodS256, StringComparison.Ordinal))
         {
-            return RedirectErrorOrBadRequest(redirectUri, state, "invalid_request", "code_challenge_method must be S256." );
+            return RedirectErrorOrBadRequest(redirectUri, state, "invalid_request", "code_challenge_method must be S256.");
         }
 
         var client = await clientStore.FindByClientIdAsync(clientId, ct);

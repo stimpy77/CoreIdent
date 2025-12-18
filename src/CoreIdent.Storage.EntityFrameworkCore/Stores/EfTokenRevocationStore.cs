@@ -4,22 +4,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="ITokenRevocationStore"/>.
+/// </summary>
 public sealed class EfTokenRevocationStore : ITokenRevocationStore
 {
     private readonly CoreIdentDbContext _db;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfTokenRevocationStore"/> class.
+    /// </summary>
+    /// <param name="db">The EF Core database context.</param>
     public EfTokenRevocationStore(CoreIdentDbContext db)
         : this(db, timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfTokenRevocationStore"/> class.
+    /// </summary>
+    /// <param name="db">The EF Core database context.</param>
+    /// <param name="timeProvider">An optional time provider.</param>
     public EfTokenRevocationStore(CoreIdentDbContext db, TimeProvider? timeProvider)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public async Task RevokeTokenAsync(string jti, string tokenType, DateTime expiry, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(jti))
@@ -61,6 +74,7 @@ public sealed class EfTokenRevocationStore : ITokenRevocationStore
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task<bool> IsRevokedAsync(string jti, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(jti))
@@ -82,6 +96,7 @@ public sealed class EfTokenRevocationStore : ITokenRevocationStore
         return true;
     }
 
+    /// <inheritdoc />
     public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

@@ -7,22 +7,35 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="IAuthorizationCodeStore"/>.
+/// </summary>
 public sealed class EfAuthorizationCodeStore : IAuthorizationCodeStore
 {
     private readonly CoreIdentDbContext _context;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfAuthorizationCodeStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
     public EfAuthorizationCodeStore(CoreIdentDbContext context)
         : this(context, timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfAuthorizationCodeStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="timeProvider">An optional time provider.</param>
     public EfAuthorizationCodeStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public async Task CreateAsync(CoreIdentAuthorizationCode code, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -42,6 +55,7 @@ public sealed class EfAuthorizationCodeStore : IAuthorizationCodeStore
         await _context.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task<CoreIdentAuthorizationCode?> GetAsync(string handle, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(handle))
@@ -56,6 +70,7 @@ public sealed class EfAuthorizationCodeStore : IAuthorizationCodeStore
         return entity is null ? null : ToModel(entity);
     }
 
+    /// <inheritdoc />
     public async Task<bool> ConsumeAsync(string handle, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(handle))
@@ -72,6 +87,7 @@ public sealed class EfAuthorizationCodeStore : IAuthorizationCodeStore
         return affected > 0;
     }
 
+    /// <inheritdoc />
     public async Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

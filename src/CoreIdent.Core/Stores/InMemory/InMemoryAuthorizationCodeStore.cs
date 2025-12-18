@@ -4,16 +4,24 @@ using CoreIdent.Core.Models;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
+/// <summary>
+/// In-memory implementation of <see cref="IAuthorizationCodeStore"/>.
+/// </summary>
 public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
 {
     private readonly ConcurrentDictionary<string, CoreIdentAuthorizationCode> _codes = new(StringComparer.Ordinal);
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
     public InMemoryAuthorizationCodeStore(TimeProvider? timeProvider = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public Task CreateAsync(CoreIdentAuthorizationCode code, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -36,6 +44,7 @@ public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<CoreIdentAuthorizationCode?> GetAsync(string handle, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(handle))
@@ -47,6 +56,7 @@ public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
         return Task.FromResult(code);
     }
 
+    /// <inheritdoc />
     public Task<bool> ConsumeAsync(string handle, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(handle))
@@ -74,6 +84,7 @@ public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
         return Task.FromResult(true);
     }
 
+    /// <inheritdoc />
     public Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

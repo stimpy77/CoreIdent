@@ -13,11 +13,18 @@ public sealed class InMemoryRefreshTokenStore : IRefreshTokenStore
     private readonly TimeProvider _timeProvider;
     private int _operationCount;
 
+    /// <summary>
+    /// Creates a new instance using <see cref="TimeProvider.System"/>.
+    /// </summary>
     public InMemoryRefreshTokenStore()
         : this(timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
     public InMemoryRefreshTokenStore(TimeProvider? timeProvider)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;

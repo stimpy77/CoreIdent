@@ -17,8 +17,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for token management endpoints such as revocation and introspection.
+/// </summary>
 public static class TokenManagementEndpointsExtensions
 {
+    /// <summary>
+    /// Maps token management endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -31,6 +39,13 @@ public static class TokenManagementEndpointsExtensions
         return endpoints.MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath);
     }
 
+    /// <summary>
+    /// Maps token management endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="revokePath">Revocation endpoint path.</param>
+    /// <param name="introspectPath">Introspection endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints, string revokePath, string? introspectPath = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);

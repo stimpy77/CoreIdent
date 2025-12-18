@@ -12,6 +12,10 @@ public sealed class InMemoryClientStore : IClientStore
     private readonly ConcurrentDictionary<string, CoreIdentClient> _clients = new(StringComparer.Ordinal);
     private readonly IClientSecretHasher _secretHasher;
 
+    /// <summary>
+    /// Creates a new in-memory client store.
+    /// </summary>
+    /// <param name="secretHasher">Hasher used to hash and verify client secrets.</param>
     public InMemoryClientStore(IClientSecretHasher secretHasher)
     {
         _secretHasher = secretHasher ?? throw new ArgumentNullException(nameof(secretHasher));

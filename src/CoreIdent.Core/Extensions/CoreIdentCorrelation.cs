@@ -4,12 +4,23 @@ using Microsoft.Extensions.Logging;
 
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Provides correlation ID utilities for requests.
+/// </summary>
 public static class CoreIdentCorrelation
 {
+    /// <summary>
+    /// Correlation header name.
+    /// </summary>
     public const string HeaderName = "X-Correlation-Id";
 
     private const string ItemKey = "CoreIdent.CorrelationId";
 
+    /// <summary>
+    /// Gets an existing correlation identifier or creates a new one for the request.
+    /// </summary>
+    /// <param name="httpContext">HTTP context.</param>
+    /// <returns>The correlation identifier.</returns>
     public static string GetOrCreate(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
@@ -39,6 +50,12 @@ public static class CoreIdentCorrelation
         return correlationId;
     }
 
+    /// <summary>
+    /// Begins a logging scope containing correlation and trace identifiers.
+    /// </summary>
+    /// <param name="logger">Logger.</param>
+    /// <param name="httpContext">HTTP context.</param>
+    /// <returns>The scope disposable.</returns>
     public static IDisposable BeginScope(ILogger logger, HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(logger);

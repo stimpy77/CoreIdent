@@ -4,6 +4,9 @@ using CoreIdent.Core.Models;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
+/// <summary>
+/// In-memory implementation of <see cref="IUserStore"/>.
+/// </summary>
 public sealed class InMemoryUserStore : IUserStore
 {
     private readonly ConcurrentDictionary<string, CoreIdentUser> _usersById = new(StringComparer.Ordinal);
@@ -12,16 +15,24 @@ public sealed class InMemoryUserStore : IUserStore
 
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Creates a new instance using <see cref="TimeProvider.System"/>.
+    /// </summary>
     public InMemoryUserStore()
         : this(timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
     public InMemoryUserStore(TimeProvider? timeProvider)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
     public Task<CoreIdentUser?> FindByIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -33,6 +44,7 @@ public sealed class InMemoryUserStore : IUserStore
         return Task.FromResult(user);
     }
 
+    /// <inheritdoc />
     public Task<CoreIdentUser?> FindByUsernameAsync(string username, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(username))
@@ -49,6 +61,7 @@ public sealed class InMemoryUserStore : IUserStore
         return FindByIdAsync(id, ct);
     }
 
+    /// <inheritdoc />
     public Task CreateAsync(CoreIdentUser user, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -88,6 +101,7 @@ public sealed class InMemoryUserStore : IUserStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UpdateAsync(CoreIdentUser user, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -138,6 +152,7 @@ public sealed class InMemoryUserStore : IUserStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task DeleteAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -161,6 +176,7 @@ public sealed class InMemoryUserStore : IUserStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<Claim>> GetClaimsAsync(string subjectId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId))
@@ -176,6 +192,7 @@ public sealed class InMemoryUserStore : IUserStore
         return Task.FromResult<IReadOnlyList<Claim>>([]);
     }
 
+    /// <inheritdoc />
     public Task SetClaimsAsync(string subjectId, IEnumerable<Claim> claims, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
