@@ -28,7 +28,7 @@ public static class ClaimsPrincipalExtensions
             principal.FindFirstValue(ClaimTypes.Name) ?? principal.FindFirstValue("name");
 
         /// <summary>
-        /// Parses <see cref="UserId"/> as a <see cref="Guid"/>.
+        /// Parses <c>UserId</c> as a <see cref="Guid"/>.
         /// </summary>
         /// <returns>The parsed GUID.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the claim is missing or not a valid GUID.</exception>

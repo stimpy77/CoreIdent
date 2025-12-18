@@ -10,14 +10,14 @@ public sealed record OpenIdConfigurationDocument
     /// <summary>
     /// Creates a new <see cref="OpenIdConfigurationDocument"/>.
     /// </summary>
-    /// <param name="issuer">Issuer identifier.</param>
-    /// <param name="jwksUri">JWKS endpoint URI.</param>
-    /// <param name="tokenEndpoint">Token endpoint URI.</param>
-    /// <param name="revocationEndpoint">Token revocation endpoint URI.</param>
-    /// <param name="introspectionEndpoint">Token introspection endpoint URI.</param>
-    /// <param name="grantTypesSupported">Supported grant types.</param>
-    /// <param name="scopesSupported">Supported scopes.</param>
-    /// <param name="idTokenSigningAlgValuesSupported">Supported ID token signing algorithms.</param>
+    /// <param name="Issuer">Issuer identifier.</param>
+    /// <param name="JwksUri">JWKS endpoint URI.</param>
+    /// <param name="TokenEndpoint">Token endpoint URI.</param>
+    /// <param name="RevocationEndpoint">Token revocation endpoint URI.</param>
+    /// <param name="IntrospectionEndpoint">Token introspection endpoint URI.</param>
+    /// <param name="GrantTypesSupported">Supported grant types.</param>
+    /// <param name="ScopesSupported">Supported scopes.</param>
+    /// <param name="IdTokenSigningAlgValuesSupported">Supported ID token signing algorithms.</param>
     public OpenIdConfigurationDocument(
         string Issuer,
         string JwksUri,
