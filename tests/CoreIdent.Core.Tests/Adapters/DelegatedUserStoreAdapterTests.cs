@@ -53,6 +53,7 @@ public sealed class DelegatedUserStoreAdapterTests
         string? requestedUsername = null;
         CoreIdentUser? validatedUser = null;
         string? validatedPassword = null;
+        var asyncDelegateCalled = false;
 
         var user = new CoreIdentUser
         {
@@ -74,11 +75,17 @@ public sealed class DelegatedUserStoreAdapterTests
                 return Task.FromResult<CoreIdentUser?>(user);
             };
 
-            o.ValidateCredentialsAsync = (u, password, ct) =>
+            o.ValidateCredentials = (u, password) =>
             {
                 validatedUser = u;
                 validatedPassword = password;
-                return Task.FromResult(string.Equals(password, "pw", StringComparison.Ordinal));
+                return string.Equals(password, "pw", StringComparison.Ordinal);
+            };
+
+            o.ValidateCredentialsAsync = (u, password, ct) =>
+            {
+                asyncDelegateCalled = true;
+                return Task.FromResult(false);
             };
 
             o.GetClaimsAsync = (subjectId, ct) =>
@@ -106,7 +113,9 @@ public sealed class DelegatedUserStoreAdapterTests
         var valid = passwordHasher.VerifyHashedPassword(byUsername, byUsername.PasswordHash!, "pw");
         valid.ShouldBeTrue("password hasher should delegate credential validation");
 
-        validatedUser.ShouldNotBeNull("ValidateCredentialsAsync should be invoked");
-        validatedPassword.ShouldBe("pw", "ValidateCredentialsAsync should receive the provided password");
+        validatedUser.ShouldNotBeNull("ValidateCredentials should be invoked");
+        validatedPassword.ShouldBe("pw", "ValidateCredentials should receive the provided password");
+
+        asyncDelegateCalled.ShouldBeFalse("DelegatedPasswordHasher should not use the async credential delegate (avoid sync-over-async).");
     }
 }

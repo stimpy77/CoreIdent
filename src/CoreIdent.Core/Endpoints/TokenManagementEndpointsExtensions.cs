@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
@@ -93,7 +94,7 @@ public static class TokenManagementEndpointsExtensions
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
-            var (clientId, clientSecret) = ExtractClientCredentials(request, form);
+            var (clientId, clientSecret) = ExtractClientCredentials(request, form, logger);
 
             activity?.SetTag("client_id", clientId);
 
@@ -207,7 +208,7 @@ public static class TokenManagementEndpointsExtensions
                 return Results.BadRequest(new { error = "invalid_request", error_description = "The token parameter is required." });
             }
 
-            var (clientId, clientSecret) = ExtractClientCredentials(request, form);
+            var (clientId, clientSecret) = ExtractClientCredentials(request, form, logger);
 
             activity?.SetTag("client_id", clientId);
 
@@ -473,27 +474,37 @@ public static class TokenManagementEndpointsExtensions
         }
     }
 
-    private static (string? ClientId, string? ClientSecret) ExtractClientCredentials(HttpRequest request, IFormCollection form)
+    private static (string? ClientId, string? ClientSecret) ExtractClientCredentials(HttpRequest request, IFormCollection form, ILogger logger)
     {
         var authorization = request.Headers.Authorization.ToString();
 
         if (!string.IsNullOrWhiteSpace(authorization) && authorization.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
         {
-            try
+            var encoded = authorization["Basic ".Length..].Trim();
+            if (!string.IsNullOrWhiteSpace(encoded))
             {
-                var encoded = authorization["Basic ".Length..].Trim();
-                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
-                var colonIndex = decoded.IndexOf(':');
+                Span<byte> buffer = encoded.Length <= 256
+                    ? stackalloc byte[encoded.Length]
+                    : new byte[encoded.Length];
 
-                if (colonIndex > 0)
+                if (Convert.TryFromBase64String(encoded, buffer, out var bytesWritten))
                 {
-                    var clientId = Uri.UnescapeDataString(decoded[..colonIndex]);
-                    var clientSecret = Uri.UnescapeDataString(decoded[(colonIndex + 1)..]);
-                    return (clientId, clientSecret);
+                    var decoded = Encoding.UTF8.GetString(buffer[..bytesWritten]);
+                    var colonIndex = decoded.IndexOf(':');
+
+                    if (colonIndex > 0)
+                    {
+                        var clientId = WebUtility.UrlDecode(decoded[..colonIndex]);
+                        var clientSecret = WebUtility.UrlDecode(decoded[(colonIndex + 1)..]);
+                        return (clientId, clientSecret);
+                    }
+
+                    logger.LogDebug("Malformed Basic authorization header (missing ':'); falling back to form credentials.");
                 }
-            }
-            catch
-            {
+                else
+                {
+                    logger.LogDebug("Malformed Basic authorization header (invalid base64); falling back to form credentials.");
+                }
             }
         }
 

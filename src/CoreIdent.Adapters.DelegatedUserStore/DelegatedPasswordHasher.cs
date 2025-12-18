@@ -35,12 +35,9 @@ public sealed class DelegatedPasswordHasher : IPasswordHasher
         ArgumentNullException.ThrowIfNull(user);
         ArgumentException.ThrowIfNullOrWhiteSpace(providedPassword);
 
-        var validate = _options.Value.ValidateCredentialsAsync
-            ?? throw new InvalidOperationException($"{nameof(DelegatedUserStoreOptions.ValidateCredentialsAsync)} has not been configured.");
+        var validate = _options.Value.ValidateCredentials
+            ?? throw new InvalidOperationException($"{nameof(DelegatedUserStoreOptions.ValidateCredentials)} has not been configured.");
 
-        return validate(user, providedPassword, CancellationToken.None)
-            .ConfigureAwait(false)
-            .GetAwaiter()
-            .GetResult();
+        return validate(user, providedPassword);
     }
 }

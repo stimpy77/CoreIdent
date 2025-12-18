@@ -21,6 +21,11 @@ public sealed class DelegatedUserStoreOptions
     /// <summary>
     /// Gets or sets the delegate used to validate user credentials.
     /// </summary>
+    public Func<CoreIdentUser, string, bool>? ValidateCredentials { get; set; }
+
+    /// <summary>
+    /// Gets or sets the delegate used to validate user credentials asynchronously.
+    /// </summary>
     public Func<CoreIdentUser, string, CancellationToken, Task<bool>>? ValidateCredentialsAsync { get; set; }
 
     /// <summary>

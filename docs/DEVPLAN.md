@@ -1311,43 +1311,43 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.9: Additional Codebase Scan Follow-Ups
 
 *   **Component:** OIDC Discovery Metadata Completeness
-    - [ ] (L2) `DiscoveryEndpointsExtensions.cs` — Populate `grant_types_supported` instead of returning an empty list
+    - [x] (L2) `DiscoveryEndpointsExtensions.cs` — Populate `grant_types_supported` instead of returning an empty list
         - *Guidance:* Include currently supported grants (`client_credentials`, `refresh_token`, `authorization_code`, `password` (deprecated))
         - *Guidance:* Ensure the discovery document remains accurate if features are disabled via endpoint mapping
         - *Note:* This addresses an incomplete implementation from Feature 0.4.2 which specified including `grant_types_supported`
-    - [ ] (L2) Consider adding other commonly expected discovery fields (only if compatible with current scope):
+    - [x] (L2) Consider adding other commonly expected discovery fields (only if compatible with current scope):
         - `response_types_supported` (e.g., `code`)
         - `token_endpoint_auth_methods_supported` (e.g., `client_secret_basic`, `client_secret_post`)
 *   **Test Case (Integration):**
-    - [ ] (L2) `/.well-known/openid-configuration` returns a non-empty `grant_types_supported` list matching implemented features
+    - [x] (L2) `/.well-known/openid-configuration` returns a non-empty `grant_types_supported` list matching implemented features
 
 *   **Component:** Sync-over-Async Hotspots
-    - [ ] (L2) `DelegatedPasswordHasher.cs` — Remove sync-over-async (`GetAwaiter().GetResult()`) when validating delegated credentials
+    - [x] (L2) `DelegatedPasswordHasher.cs` — Remove sync-over-async (`GetAwaiter().GetResult()`) when validating delegated credentials
         - *Guidance:* If `IPasswordHasher` must remain synchronous, introduce a dedicated synchronous delegate in `DelegatedUserStoreOptions` for password verification
         - *Guidance:* Alternatively, introduce an `IAsyncPasswordVerifier` abstraction and adapt the token endpoint to use it
-    - [ ] (L2) Remove `CancellationToken.None` usage in the delegated password verification path where feasible
+    - [x] (L2) Remove `CancellationToken.None` usage in the delegated password verification path where feasible
 *   **Test Case (Unit):**
-    - [ ] (L2) Delegated credential validation can be tested without blocking threads or requiring sync-over-async
+    - [x] (L2) Delegated credential validation can be tested without blocking threads or requiring sync-over-async
 
 *   **Component:** PII / Sensitive Data Logging Audit
-    - [ ] (L2) Audit logs for PII disclosure in passwordless flows (email, phone)
+    - [x] (L2) Audit logs for PII disclosure in passwordless flows (email, phone)
         - `PasswordlessEmailEndpointsExtensions.cs` (logs email)
         - `PasswordlessSmsEndpointsExtensions.cs` (logs phone)
         - `ConsoleSmsProvider.cs` (writes full SMS message including OTP)
-    - [ ] (L2) Define a standard redaction strategy:
+    - [x] (L2) Define a standard redaction strategy:
         - Mask email/phone values in logs (e.g., `j***@example.com`, `+1******4567`)
         - Never log OTP values or magic link tokens
-    - [ ] (L2) Replace `Console.WriteLine` in default providers with `ILogger` (or ensure these providers are *explicitly* dev-only and opt-in)
+    - [x] (L2) Replace `Console.WriteLine` in default providers with `ILogger` (or ensure these providers are *explicitly* dev-only and opt-in)
 *   **Test Case:**
-    - [ ] (L2) Tests assert logs do not contain OTP/token material for passwordless flows
+    - [x] (L2) Tests assert logs do not contain OTP/token material for passwordless flows
 
 *   **Component:** Remove Silent Exception Swallowing
-    - [ ] (L2) Remove `catch { }` blocks in Basic auth parsing helpers:
+    - [x] (L2) Remove `catch { }` blocks in Basic auth parsing helpers:
         - `TokenEndpointExtensions.cs` (`ExtractClientCredentials`)
         - `TokenManagementEndpointsExtensions.cs` (`ExtractClientCredentials`)
         - *Guidance:* Prefer `Try*` parsing patterns and consider logging at Debug/Trace level for malformed Authorization headers
 *   **Test Case:**
-    - [ ] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
+    - [x] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
 
 ---
 

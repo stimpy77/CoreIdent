@@ -36,6 +36,46 @@ public sealed record OpenIdConfigurationDocument
         this.GrantTypesSupported = GrantTypesSupported;
         this.ScopesSupported = ScopesSupported;
         this.IdTokenSigningAlgValuesSupported = IdTokenSigningAlgValuesSupported;
+        this.ResponseTypesSupported = null;
+        this.TokenEndpointAuthMethodsSupported = null;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="OpenIdConfigurationDocument"/>.
+    /// </summary>
+    /// <param name="Issuer">Issuer identifier.</param>
+    /// <param name="JwksUri">JWKS endpoint URI.</param>
+    /// <param name="TokenEndpoint">Token endpoint URI.</param>
+    /// <param name="RevocationEndpoint">Token revocation endpoint URI.</param>
+    /// <param name="IntrospectionEndpoint">Token introspection endpoint URI.</param>
+    /// <param name="GrantTypesSupported">Supported grant types.</param>
+    /// <param name="ScopesSupported">Supported scopes.</param>
+    /// <param name="IdTokenSigningAlgValuesSupported">Supported ID token signing algorithms.</param>
+    /// <param name="ResponseTypesSupported">Supported response types.</param>
+    /// <param name="TokenEndpointAuthMethodsSupported">Supported token endpoint authentication methods.</param>
+    public OpenIdConfigurationDocument(
+        string Issuer,
+        string JwksUri,
+        string TokenEndpoint,
+        string RevocationEndpoint,
+        string IntrospectionEndpoint,
+        IReadOnlyList<string> GrantTypesSupported,
+        IReadOnlyList<string> ScopesSupported,
+        IReadOnlyList<string> IdTokenSigningAlgValuesSupported,
+        IReadOnlyList<string>? ResponseTypesSupported,
+        IReadOnlyList<string>? TokenEndpointAuthMethodsSupported)
+        : this(
+            Issuer,
+            JwksUri,
+            TokenEndpoint,
+            RevocationEndpoint,
+            IntrospectionEndpoint,
+            GrantTypesSupported,
+            ScopesSupported,
+            IdTokenSigningAlgValuesSupported)
+    {
+        this.ResponseTypesSupported = ResponseTypesSupported;
+        this.TokenEndpointAuthMethodsSupported = TokenEndpointAuthMethodsSupported;
     }
 
     /// <summary>
@@ -85,4 +125,18 @@ public sealed record OpenIdConfigurationDocument
     /// </summary>
     [JsonPropertyName("id_token_signing_alg_values_supported")]
     public IReadOnlyList<string> IdTokenSigningAlgValuesSupported { get; init; }
+
+    /// <summary>
+    /// Supported response types.
+    /// </summary>
+    [JsonPropertyName("response_types_supported")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? ResponseTypesSupported { get; init; }
+
+    /// <summary>
+    /// Supported client authentication methods for the token endpoint.
+    /// </summary>
+    [JsonPropertyName("token_endpoint_auth_methods_supported")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? TokenEndpointAuthMethodsSupported { get; init; }
 }

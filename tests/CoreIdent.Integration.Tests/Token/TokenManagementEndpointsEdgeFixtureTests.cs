@@ -55,6 +55,54 @@ public sealed class TokenManagementEndpointsEdgeFixtureTests : CoreIdentTestFixt
     }
 
     [Fact]
+    public async Task Revoke_returns_invalid_client_when_basic_header_is_malformed_and_no_form_credentials_are_provided()
+    {
+        var badHeader = "not-base64";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/revoke")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["token"] = "abc",
+                ["token_type_hint"] = "access_token"
+            })
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", badHeader);
+
+        var response = await Client.SendAsync(request);
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Malformed Basic auth with no form credentials should return 401 invalid_client.");
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.ShouldContain("invalid_client", Shouldly.Case.Sensitive, "Malformed Basic auth should return invalid_client.");
+        body.ShouldNotContain(badHeader, Shouldly.Case.Sensitive, "Response body must not echo malformed Authorization header contents.");
+    }
+
+    [Fact]
+    public async Task Introspect_returns_invalid_client_when_basic_header_is_malformed_and_no_form_credentials_are_provided()
+    {
+        var badHeader = "not-base64";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/introspect")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["token"] = "not-a-jwt",
+                ["token_type_hint"] = "access_token"
+            })
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", badHeader);
+
+        var response = await Client.SendAsync(request);
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Malformed Basic auth with no form credentials should return 401 invalid_client.");
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.ShouldContain("invalid_client", Shouldly.Case.Sensitive, "Malformed Basic auth should return invalid_client.");
+        body.ShouldNotContain(badHeader, Shouldly.Case.Sensitive, "Response body must not echo malformed Authorization header contents.");
+    }
+
+    [Fact]
     public async Task Revoke_refresh_token_attempt_by_different_client_does_not_revoke()
     {
         var user = await CreateUserAsync(u => u.WithEmail("rt-owner@example.com").WithPassword("Test123!"));

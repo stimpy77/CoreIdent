@@ -37,6 +37,7 @@ public static class DiscoveryEndpointsExtensions
 
         endpoints.MapGet(discoveryPath, async (
             HttpRequest request,
+            IEnumerable<EndpointDataSource> endpointDataSources,
             ISigningKeyProvider signingKeyProvider,
             IScopeStore scopeStore,
             ILoggerFactory loggerFactory,
@@ -62,6 +63,41 @@ public static class DiscoveryEndpointsExtensions
             var revocationEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.RevocationPath)).ToString();
             var introspectionEndpoint = new Uri(issuerUri, routeOptions.CombineWithBase(routeOptions.IntrospectionPath)).ToString();
 
+            var mappedRoutes = endpointDataSources
+                .SelectMany(x => x.Endpoints)
+                .OfType<RouteEndpoint>()
+                .Select(x => x.RoutePattern.RawText)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.Ordinal);
+
+            var tokenPath = routeOptions.CombineWithBase(routeOptions.TokenPath);
+            var authorizePath = routeOptions.CombineWithBase(routeOptions.AuthorizePath);
+
+            var tokenEndpointMapped = mappedRoutes.Contains(tokenPath);
+            var authorizeEndpointMapped = mappedRoutes.Contains(authorizePath);
+
+            var grantTypesSupported = new List<string>(capacity: 4);
+            if (tokenEndpointMapped)
+            {
+                grantTypesSupported.Add(GrantTypes.ClientCredentials);
+                grantTypesSupported.Add(GrantTypes.RefreshToken);
+
+                if (authorizeEndpointMapped)
+                {
+                    grantTypesSupported.Add(GrantTypes.AuthorizationCode);
+                }
+
+                grantTypesSupported.Add(GrantTypes.Password);
+            }
+
+            IReadOnlyList<string>? responseTypesSupported = authorizeEndpointMapped
+                ? ["code"]
+                : null;
+
+            IReadOnlyList<string>? tokenEndpointAuthMethodsSupported = tokenEndpointMapped
+                ? ["client_secret_basic", "client_secret_post"]
+                : null;
+
             var scopes = (await scopeStore.GetAllAsync(ct))
                 .Where(s => s.ShowInDiscoveryDocument)
                 .Select(s => s.Name)
@@ -75,9 +111,11 @@ public static class DiscoveryEndpointsExtensions
                 TokenEndpoint: tokenEndpoint,
                 RevocationEndpoint: revocationEndpoint,
                 IntrospectionEndpoint: introspectionEndpoint,
-                GrantTypesSupported: [],
+                GrantTypesSupported: grantTypesSupported,
                 ScopesSupported: scopes,
-                IdTokenSigningAlgValuesSupported: [signingKeyProvider.Algorithm]);
+                IdTokenSigningAlgValuesSupported: [signingKeyProvider.Algorithm],
+                ResponseTypesSupported: responseTypesSupported,
+                TokenEndpointAuthMethodsSupported: tokenEndpointAuthMethodsSupported);
 
             return Results.Json(document);
         });

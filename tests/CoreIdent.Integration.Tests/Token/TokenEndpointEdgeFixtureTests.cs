@@ -94,6 +94,33 @@ public sealed class TokenEndpointEdgeFixtureTests : CoreIdentTestFixture
     }
 
     [Fact]
+    public async Task Token_endpoint_returns_invalid_client_when_basic_header_is_malformed_and_no_form_credentials_are_provided()
+    {
+        var badHeader = "not-base64";
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/token")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = GrantTypes.ClientCredentials,
+                ["scope"] = "api"
+            })
+        };
+
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", badHeader);
+
+        var response = await Client.SendAsync(request);
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized, "Malformed Basic auth with no form credentials should return 401 invalid_client.");
+
+        var error = await response.Content.ReadFromJsonAsync<TokenErrorResponse>();
+        error.ShouldNotBeNull("Response should deserialize to TokenErrorResponse.");
+        error!.Error.ShouldBe(TokenErrors.InvalidClient, "Malformed Basic auth should result in invalid_client.");
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.ShouldNotContain(badHeader, Shouldly.Case.Sensitive, "Response body must not echo malformed Authorization header contents.");
+    }
+
+    [Fact]
     public async Task Token_endpoint_returns_unsupported_grant_type_when_client_allows_unknown_grant()
     {
         await CreateClientAsync(c => c

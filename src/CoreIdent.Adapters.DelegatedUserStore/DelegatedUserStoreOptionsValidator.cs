@@ -27,9 +27,9 @@ public sealed class DelegatedUserStoreOptionsValidator : IValidateOptions<Delega
             errors.Add($"{nameof(DelegatedUserStoreOptions.FindUserByUsernameAsync)} is required.");
         }
 
-        if (options.ValidateCredentialsAsync is null)
+        if (options.ValidateCredentials is null)
         {
-            errors.Add($"{nameof(DelegatedUserStoreOptions.ValidateCredentialsAsync)} is required.");
+            errors.Add($"{nameof(DelegatedUserStoreOptions.ValidateCredentials)} is required.");
         }
 
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
