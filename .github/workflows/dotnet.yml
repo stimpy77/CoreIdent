@@ -37,5 +37,74 @@ jobs:
       - name: Build
         run: dotnet build CoreIdent.sln -c Release --no-restore
 
-      - name: Test
-        run: dotnet test CoreIdent.sln -c Release --no-build --verbosity normal
+      - name: Test (with coverage)
+        run: dotnet test CoreIdent.sln -c Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
+
+      - name: Coverage Gate (CoreIdent.Core >= 90%)
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          import glob
+          from collections import defaultdict
+
+          THRESHOLD = 90.0
+
+          def norm(p: str) -> str:
+              return p.replace('\\\\', '/')
+
+          def canonical(p: str) -> str:
+              p = norm(p)
+              if p.startswith('src/'):
+                  p = p[4:]
+              return p
+
+          candidates = [Path(p) for p in glob.glob('tests/*/TestResults/*/coverage.cobertura.xml')]
+          if not candidates:
+              raise SystemExit('No coverage.cobertura.xml files found under tests/*/TestResults/*/')
+
+          by_project = defaultdict(list)
+          for p in candidates:
+              parts = p.parts
+              idx = parts.index('tests')
+              project = parts[idx + 1]
+              by_project[project].append(p)
+
+          selected = {project: max(files, key=lambda x: x.stat().st_mtime) for project, files in by_project.items()}
+
+          canon_files = defaultdict(dict)  # canonical filename -> {line:int -> covered:bool}
+          for p in selected.values():
+              root = ET.parse(p).getroot()
+              for cls in root.findall('.//class'):
+                  fn = cls.attrib.get('filename')
+                  if not fn:
+                      continue
+                  fn = canonical(fn)
+                  lines_node = cls.find('lines')
+                  if lines_node is None:
+                      continue
+                  m = canon_files[fn]
+                  for ln in lines_node.findall('line'):
+                      num = ln.attrib.get('number')
+                      hits = ln.attrib.get('hits')
+                      if num is None or hits is None:
+                          continue
+                      try:
+                          n = int(num)
+                          h = int(hits)
+                      except ValueError:
+                          continue
+                      cov = h > 0
+                      prev = m.get(n)
+                      m[n] = cov if prev is None else (prev or cov)
+
+          core = {fn: m for fn, m in canon_files.items() if fn.startswith('CoreIdent.Core/')}
+          valid = sum(len(m) for m in core.values())
+          covered = sum(1 for m in core.values() for v in m.values() if v)
+          rate = (covered / valid * 100.0) if valid else 0.0
+
+          print(f'Normalized merged CoreIdent.Core line coverage: {covered}/{valid} = {rate:.2f}%')
+
+          if rate + 1e-9 < THRESHOLD:
+              raise SystemExit(f'Coverage gate failed: CoreIdent.Core line coverage {rate:.2f}% is below {THRESHOLD:.2f}%')
+          PY

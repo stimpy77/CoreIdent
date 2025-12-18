@@ -37,6 +37,7 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - If a feature cannot be tested automatically, document why and what manual verification was done
 - Never commit code that breaks existing tests
 - **Use Shouldly assertions with explicit messages** — every assertion should include a descriptive message clarifying expected vs. actual
+- **Coverage gate for CoreIdent.Core** — Any change touching `src/CoreIdent.Core` must maintain **>= 90% normalized merged line coverage** for `CoreIdent.Core` (CI enforces this).
 
 ### Package Management
 
