@@ -1432,8 +1432,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.1: Core Client Library
 
 *   **Component:** `CoreIdent.Client` Package
-    - [ ] (L1) Create new project targeting `net10.0`
-    - [ ] (L1) Define `ICoreIdentClient` interface
+    - [x] (L1) Create new project targeting `net10.0`
+    - [x] (L1) Define `ICoreIdentClient` interface
         ```csharp
         public interface ICoreIdentClient
         {
@@ -1446,7 +1446,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             event EventHandler<AuthStateChangedEventArgs>? AuthStateChanged;
         }
         ```
-    - [ ] (L1) Define `CoreIdentClientOptions`
+    - [x] (L1) Define `CoreIdentClientOptions`
         ```csharp
         public class CoreIdentClientOptions
         {
@@ -1462,7 +1462,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Token Storage Abstraction
-    - [ ] (L1) Define `ISecureTokenStorage` interface
+    - [x] (L1) Define `ISecureTokenStorage` interface
         ```csharp
         public interface ISecureTokenStorage
         {
@@ -1471,30 +1471,30 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             Task ClearTokensAsync(CancellationToken ct = default);
         }
         ```
-    - [ ] (L1) Implement `InMemoryTokenStorage` (default, non-persistent)
-    - [ ] (L2) Implement `FileTokenStorage` (encrypted file, for console apps)
+    - [x] (L1) Implement `InMemoryTokenStorage` (default, non-persistent)
+    - [x] (L2) Implement `FileTokenStorage` (encrypted file, for console apps)
 *   **Component:** Browser Abstraction
-    - [ ] (L1) Define `IBrowserLauncher` interface
+    - [x] (L1) Define `IBrowserLauncher` interface
         ```csharp
         public interface IBrowserLauncher
         {
             Task<BrowserResult> LaunchAsync(string url, string redirectUri, CancellationToken ct = default);
         }
         ```
-    - [ ] (L3) Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
+    - [x] (L3) Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
 *   **Component:** OAuth/OIDC Flow Implementation
-    - [ ] (L3) Implement Authorization Code + PKCE flow
-    - [ ] (L2) Implement token refresh logic
-    - [ ] (L2) Implement logout (end session)
-    - [ ] (L2) Handle discovery document fetching and caching
+    - [x] (L3) Implement Authorization Code + PKCE flow
+    - [x] (L2) Implement token refresh logic
+    - [x] (L2) Implement logout (revocation + optional end session when available)
+    - [x] (L2) Handle discovery document fetching and caching
 *   **Test Case (Unit):**
-    - [ ] (L2) PKCE code verifier/challenge generation is correct
-    - [ ] (L2) Token refresh triggers before expiry
-    - [ ] (L2) State parameter prevents CSRF
+    - [x] (L2) PKCE code verifier/challenge generation is correct
+    - [x] (L2) Token refresh triggers before expiry
+    - [x] (L2) State parameter prevents CSRF
 *   **Test Case (Integration):**
-    - [ ] (L3) Full login flow against CoreIdent test server
-    - [ ] (L2) Token refresh works correctly
-    - [ ] (L1) Logout clears tokens
+    - [x] (L3) Full login flow against CoreIdent test server
+    - [x] (L2) Token refresh works correctly
+    - [x] (L1) Logout clears tokens
 
 ---
 
@@ -1709,9 +1709,16 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L3) Bind tokens to DPoP key
 *   **Component:** Token Validation DPoP Support
     - [ ] (L3) Add DPoP proof validation to protected endpoints
+*   **Component:** Client Library DPoP Support
+    - [ ] (L2) Implement DPoP proof JWT creation (ES256) with `typ=dpop+jwt` and public JWK header
+    - [ ] (L2) Send `DPoP` header on token endpoint requests when enabled
+    - [ ] (L2) Send `Authorization: DPoP <token>` + `DPoP` proof (with `ath`) for UserInfo when enabled
+    - [ ] (L2) Handle `DPoP-Nonce` replay/nonce requirements (header + `use_dpop_nonce` errors)
+    - [ ] (L2) Ensure DPoP key material lifecycle is handled safely (no leaks)
 *   **Test Case:**
     - [ ] (L3) DPoP-bound token requires valid proof
     - [ ] (L3) Token without DPoP is rejected if DPoP was used at issuance
+    - [ ] (L2) Client sends DPoP headers when `UseDPoP=true`
 
 ---
 

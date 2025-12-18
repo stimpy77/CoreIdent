@@ -27,17 +27,20 @@ public sealed record OpenIdConfigurationDocument
         IReadOnlyList<string> GrantTypesSupported,
         IReadOnlyList<string> ScopesSupported,
         IReadOnlyList<string> IdTokenSigningAlgValuesSupported)
+        : this(
+            Issuer,
+            JwksUri,
+            TokenEndpoint,
+            RevocationEndpoint,
+            IntrospectionEndpoint,
+            GrantTypesSupported,
+            ScopesSupported,
+            IdTokenSigningAlgValuesSupported,
+            ResponseTypesSupported: null,
+            TokenEndpointAuthMethodsSupported: null,
+            AuthorizationEndpoint: null,
+            UserInfoEndpoint: null)
     {
-        this.Issuer = Issuer;
-        this.JwksUri = JwksUri;
-        this.TokenEndpoint = TokenEndpoint;
-        this.RevocationEndpoint = RevocationEndpoint;
-        this.IntrospectionEndpoint = IntrospectionEndpoint;
-        this.GrantTypesSupported = GrantTypesSupported;
-        this.ScopesSupported = ScopesSupported;
-        this.IdTokenSigningAlgValuesSupported = IdTokenSigningAlgValuesSupported;
-        this.ResponseTypesSupported = null;
-        this.TokenEndpointAuthMethodsSupported = null;
     }
 
     /// <summary>
@@ -72,10 +75,55 @@ public sealed record OpenIdConfigurationDocument
             IntrospectionEndpoint,
             GrantTypesSupported,
             ScopesSupported,
-            IdTokenSigningAlgValuesSupported)
+            IdTokenSigningAlgValuesSupported,
+            ResponseTypesSupported,
+            TokenEndpointAuthMethodsSupported,
+            AuthorizationEndpoint: null,
+            UserInfoEndpoint: null)
     {
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="OpenIdConfigurationDocument"/>.
+    /// </summary>
+    /// <param name="Issuer">Issuer identifier.</param>
+    /// <param name="JwksUri">JWKS endpoint URI.</param>
+    /// <param name="TokenEndpoint">Token endpoint URI.</param>
+    /// <param name="RevocationEndpoint">Token revocation endpoint URI.</param>
+    /// <param name="IntrospectionEndpoint">Token introspection endpoint URI.</param>
+    /// <param name="GrantTypesSupported">Supported grant types.</param>
+    /// <param name="ScopesSupported">Supported scopes.</param>
+    /// <param name="IdTokenSigningAlgValuesSupported">Supported ID token signing algorithms.</param>
+    /// <param name="ResponseTypesSupported">Supported response types.</param>
+    /// <param name="TokenEndpointAuthMethodsSupported">Supported token endpoint authentication methods.</param>
+    /// <param name="AuthorizationEndpoint">Authorization endpoint URI.</param>
+    /// <param name="UserInfoEndpoint">User info endpoint URI.</param>
+    public OpenIdConfigurationDocument(
+        string Issuer,
+        string JwksUri,
+        string TokenEndpoint,
+        string RevocationEndpoint,
+        string IntrospectionEndpoint,
+        IReadOnlyList<string> GrantTypesSupported,
+        IReadOnlyList<string> ScopesSupported,
+        IReadOnlyList<string> IdTokenSigningAlgValuesSupported,
+        IReadOnlyList<string>? ResponseTypesSupported,
+        IReadOnlyList<string>? TokenEndpointAuthMethodsSupported,
+        string? AuthorizationEndpoint,
+        string? UserInfoEndpoint)
+    {
+        this.Issuer = Issuer;
+        this.JwksUri = JwksUri;
+        this.TokenEndpoint = TokenEndpoint;
+        this.RevocationEndpoint = RevocationEndpoint;
+        this.IntrospectionEndpoint = IntrospectionEndpoint;
+        this.GrantTypesSupported = GrantTypesSupported;
+        this.ScopesSupported = ScopesSupported;
+        this.IdTokenSigningAlgValuesSupported = IdTokenSigningAlgValuesSupported;
         this.ResponseTypesSupported = ResponseTypesSupported;
         this.TokenEndpointAuthMethodsSupported = TokenEndpointAuthMethodsSupported;
+        this.AuthorizationEndpoint = AuthorizationEndpoint;
+        this.UserInfoEndpoint = UserInfoEndpoint;
     }
 
     /// <summary>
@@ -97,6 +145,13 @@ public sealed record OpenIdConfigurationDocument
     public string TokenEndpoint { get; init; }
 
     /// <summary>
+    /// Authorization endpoint URI.
+    /// </summary>
+    [JsonPropertyName("authorization_endpoint")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AuthorizationEndpoint { get; init; }
+
+    /// <summary>
     /// Token revocation endpoint URI.
     /// </summary>
     [JsonPropertyName("revocation_endpoint")]
@@ -107,6 +162,13 @@ public sealed record OpenIdConfigurationDocument
     /// </summary>
     [JsonPropertyName("introspection_endpoint")]
     public string IntrospectionEndpoint { get; init; }
+
+    /// <summary>
+    /// User info endpoint URI.
+    /// </summary>
+    [JsonPropertyName("userinfo_endpoint")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UserInfoEndpoint { get; init; }
 
     /// <summary>
     /// Supported grant types.

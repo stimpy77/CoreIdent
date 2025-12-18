@@ -72,9 +72,19 @@ public static class DiscoveryEndpointsExtensions
 
             var tokenPath = routeOptions.CombineWithBase(routeOptions.TokenPath);
             var authorizePath = routeOptions.CombineWithBase(routeOptions.AuthorizePath);
+            var userInfoPath = routeOptions.CombineWithBase(routeOptions.UserInfoPath);
 
             var tokenEndpointMapped = mappedRoutes.Contains(tokenPath);
             var authorizeEndpointMapped = mappedRoutes.Contains(authorizePath);
+            var userInfoEndpointMapped = mappedRoutes.Contains(userInfoPath);
+
+            var authorizationEndpoint = authorizeEndpointMapped
+                ? new Uri(issuerUri, authorizePath).ToString()
+                : null;
+
+            var userInfoEndpoint = userInfoEndpointMapped
+                ? new Uri(issuerUri, userInfoPath).ToString()
+                : null;
 
             var grantTypesSupported = new List<string>(capacity: 4);
             if (tokenEndpointMapped)
@@ -115,7 +125,9 @@ public static class DiscoveryEndpointsExtensions
                 ScopesSupported: scopes,
                 IdTokenSigningAlgValuesSupported: [signingKeyProvider.Algorithm],
                 ResponseTypesSupported: responseTypesSupported,
-                TokenEndpointAuthMethodsSupported: tokenEndpointAuthMethodsSupported);
+                TokenEndpointAuthMethodsSupported: tokenEndpointAuthMethodsSupported,
+                AuthorizationEndpoint: authorizationEndpoint,
+                UserInfoEndpoint: userInfoEndpoint);
 
             return Results.Json(document);
         });

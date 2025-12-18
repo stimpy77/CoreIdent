@@ -33,8 +33,10 @@ public class OpenIdDiscoveryEndpointTests
 
         root.GetProperty("jwks_uri").GetString().ShouldBe("https://issuer.example/.well-known/jwks.json", "jwks_uri should be issuer-relative and match the configured JWKS path.");
         root.GetProperty("token_endpoint").GetString().ShouldBe("https://issuer.example/auth/token", "token_endpoint should be advertised using CoreIdentRouteOptions.");
+        root.GetProperty("authorization_endpoint").GetString().ShouldBe("https://issuer.example/auth/authorize", "authorization_endpoint should be advertised when authorization endpoint is mapped.");
         root.GetProperty("revocation_endpoint").GetString().ShouldBe("https://issuer.example/auth/revoke", "revocation_endpoint should be advertised using CoreIdentRouteOptions.");
         root.GetProperty("introspection_endpoint").GetString().ShouldBe("https://issuer.example/auth/introspect", "introspection_endpoint should be advertised using CoreIdentRouteOptions.");
+        root.GetProperty("userinfo_endpoint").GetString().ShouldBe("https://issuer.example/auth/userinfo", "userinfo_endpoint should be advertised when userinfo endpoint is mapped.");
 
         root.TryGetProperty("scopes_supported", out var scopes).ShouldBeTrue("Discovery document should include scopes_supported.");
         scopes.ValueKind.ShouldBe(JsonValueKind.Array, "scopes_supported should be an array.");

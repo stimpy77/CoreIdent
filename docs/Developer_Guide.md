@@ -129,6 +129,87 @@ Key extension points to expand on:
 - `CoreIdentResourceOwnerOptions` handlers (`RegisterHandler`, `LoginHandler`, `ProfileHandler`)
 - Custom endpoints in the host app (e.g., `GET /me`) keyed by `sub`
 
+---
+
+## CoreIdent.Client (Client Library)
+
+`CoreIdent.Client` is a lightweight OAuth 2.0 / OpenID Connect client library intended to work against:
+
+- CoreIdent hosts
+- Third-party OIDC providers (e.g. Keycloak)
+
+It implements the **Authorization Code + PKCE** flow, refresh token handling, discovery document fetching, and (when available) UserInfo.
+
+### Quick start
+
+Create a client instance:
+
+- Set `Authority` to the provider base URL
+- Set `ClientId`
+- Use a loopback redirect URI for interactive flows (recommended)
+
+`CoreIdent.Client` persists tokens via `ISecureTokenStorage` (in-memory by default).
+
+### Options
+
+Key `CoreIdentClientOptions` fields:
+
+- `Authority`
+- `ClientId`
+- `ClientSecret` (optional; if set, client auth uses HTTP Basic)
+- `RedirectUri`
+- `PostLogoutRedirectUri`
+- `Scopes`
+- `TokenRefreshThreshold`
+
+### Token storage
+
+Implementations included:
+
+- `InMemoryTokenStorage` (default)
+- `FileTokenStorage` (encrypted using ASP.NET Core Data Protection)
+
+If you want tokens to persist across process restarts, provide a configured `IDataProtectionProvider` to `FileTokenStorage`.
+
+### Browser integration
+
+For interactive login, `CoreIdent.Client` uses an `IBrowserLauncher` abstraction.
+
+The default implementation (`SystemBrowserLauncher`) requires:
+
+- `RedirectUri` uses `http` or `https`
+- `RedirectUri` host is loopback (`localhost`, `127.0.0.1`, `::1`)
+
+If your app uses a non-loopback redirect URI (mobile deep link, custom scheme, embedded web view, etc.), provide a custom `IBrowserLauncher`.
+
+### Discovery and third-party providers (Keycloak readiness)
+
+`CoreIdent.Client` uses OIDC discovery (`.well-known/openid-configuration`) and follows the discovered endpoints.
+
+Authorities with **path bases** are supported. Example:
+
+- Keycloak realm authority: `https://kc.example/realms/myrealm`
+
+In this case discovery is fetched relative to that authority:
+
+- `https://kc.example/realms/myrealm/.well-known/openid-configuration`
+
+### ID token validation
+
+When the discovery document includes `jwks_uri`, the client validates ID tokens using:
+
+- Signature verification via JWKS
+- Issuer validation (`iss`)
+- Audience validation (`aud` contains `ClientId`)
+- Lifetime validation (`exp`)
+
+For interactive login, the client additionally validates the ID token `nonce`.
+
+### Known limitations
+
+- `UseDPoP` enables client-side DPoP proof generation and sends DPoP headers on supported requests. Server-side DPoP validation/binding depends on the authorization server (CoreIdent server support is planned under Feature 3.6).
+- Front-channel logout is attempted only if the provider advertises `end_session_endpoint`.
+
 ## Repository structure
 
 At a high level:

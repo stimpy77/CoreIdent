@@ -8,6 +8,7 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 
 | Document | Purpose |
 |----------|---------|
+| [`index.md`](index.md) | **Project structure index** - Component and folder overview |
 | [`docs/Project_Overview.md`](docs/Project_Overview.md) | Vision, architecture, phased roadmap |
 | [`docs/Technical_Plan.md`](docs/Technical_Plan.md) | Specifications, interfaces, .NET 10 reference links |
 | [`docs/DEVPLAN.md`](docs/DEVPLAN.md) | **Task-level checklist** — drives implementation |
