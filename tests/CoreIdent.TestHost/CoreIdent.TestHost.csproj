@@ -6,10 +6,13 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <LangVersion>14</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CoreIdent.Core\CoreIdent.Core.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.OpenApi\CoreIdent.OpenApi.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Aspire\CoreIdent.Aspire.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Passkeys.AspNetIdentity\CoreIdent.Passkeys.AspNetIdentity.csproj" />
     <ProjectReference Include="..\..\src\CoreIdent.Passwords.AspNetIdentity\CoreIdent.Passwords.AspNetIdentity.csproj" />

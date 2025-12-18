@@ -4,8 +4,20 @@ using Microsoft.AspNetCore.Http;
 
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Helpers for producing RFC 7807 Problem Details responses.
+/// </summary>
 public static class CoreIdentProblemDetails
 {
+    /// <summary>
+    /// Creates a Problem Details JSON response payload.
+    /// </summary>
+    /// <param name="request">The current request.</param>
+    /// <param name="statusCode">HTTP status code.</param>
+    /// <param name="errorCode">Application-specific error code.</param>
+    /// <param name="title">Short, human-readable summary of the problem.</param>
+    /// <param name="detail">Human-readable explanation specific to this occurrence.</param>
+    /// <returns>An <see cref="IResult"/> representing the response.</returns>
     public static IResult Create(
         HttpRequest request,
         int statusCode,

@@ -25,7 +25,29 @@ dotnet restore CoreIdent.sln
 dotnet test CoreIdent.sln
 ```
 
-Notes:
+## Test coverage
+
+CoreIdent uses Coverlet's cross-platform data collector for coverage.
+
+Run coverage for the full solution:
+
+```bash
+dotnet test CoreIdent.sln --collect:"XPlat Code Coverage"
+```
+
+Run coverage for a single test project:
+
+```bash
+dotnet test tests/CoreIdent.Integration.Tests/CoreIdent.Integration.Tests.csproj --collect:"XPlat Code Coverage"
+```
+
+Coverage artifacts are emitted under each test project's `TestResults/` directory as `coverage.cobertura.xml`.
+
+Coverage notes:
+
+- All tests should include descriptive assertion messages (see `CLAUDE.md` for the expected Shouldly style).
+
+Dev container notes:
 
 - The container image includes the .NET 10 SDK.
 - SQLite tooling is installed in the container for convenience.

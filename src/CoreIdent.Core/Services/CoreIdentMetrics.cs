@@ -6,8 +6,14 @@ using TagList = System.Diagnostics.TagList;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Default <see cref="ICoreIdentMetrics"/> implementation backed by <see cref="System.Diagnostics.Metrics"/>.
+/// </summary>
 public sealed class CoreIdentMetrics(IOptions<CoreIdentMetricsOptions> options) : ICoreIdentMetrics
 {
+    /// <summary>
+    /// The meter name used by CoreIdent.
+    /// </summary>
     public const string MeterName = "CoreIdent";
 
     // Static Meter is intentional: System.Diagnostics.Metrics expects a single Meter per logical
@@ -42,6 +48,7 @@ public sealed class CoreIdentMetrics(IOptions<CoreIdentMetricsOptions> options) 
         unit: "ms",
         description: "Duration of client authentication in milliseconds");
 
+    /// <inheritdoc />
     public void ClientAuthenticated(string clientType, bool success, double elapsedMilliseconds)
     {
         if (!ShouldRecord(new CoreIdentMetricContext("coreident.client.authenticated", ClientType: clientType, Success: success)))
@@ -59,6 +66,7 @@ public sealed class CoreIdentMetrics(IOptions<CoreIdentMetricsOptions> options) 
         ClientAuthenticationDuration.Record(elapsedMilliseconds, tags);
     }
 
+    /// <inheritdoc />
     public void TokenIssued(string tokenType, string grantType, double elapsedMilliseconds)
     {
         if (!ShouldRecord(new CoreIdentMetricContext("coreident.token.issued", TokenType: tokenType, GrantType: grantType)))
@@ -76,6 +84,7 @@ public sealed class CoreIdentMetrics(IOptions<CoreIdentMetricsOptions> options) 
         TokenIssuanceDuration.Record(elapsedMilliseconds, tags);
     }
 
+    /// <inheritdoc />
     public void TokenRevoked(string tokenType)
     {
         if (!ShouldRecord(new CoreIdentMetricContext("coreident.token.revoked", TokenType: tokenType)))

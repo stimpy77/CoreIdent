@@ -7,18 +7,27 @@ using System.Security.Claims;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="IUserStore"/>.
+/// </summary>
 public sealed class EfUserStore : IUserStore
 {
     private readonly CoreIdentDbContext _context;
 
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfUserStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="timeProvider">The time provider used for timestamps.</param>
     public EfUserStore(CoreIdentDbContext context, TimeProvider timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
+    /// <inheritdoc />
     public async Task<CoreIdentUser?> FindByIdAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -33,6 +42,7 @@ public sealed class EfUserStore : IUserStore
         return entity is null ? null : ToModel(entity);
     }
 
+    /// <inheritdoc />
     public async Task<CoreIdentUser?> FindByUsernameAsync(string username, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(username))
@@ -48,6 +58,7 @@ public sealed class EfUserStore : IUserStore
         return entity is null ? null : ToModel(entity);
     }
 
+    /// <inheritdoc />
     public async Task CreateAsync(CoreIdentUser user, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -74,6 +85,7 @@ public sealed class EfUserStore : IUserStore
         await _context.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(CoreIdentUser user, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -93,6 +105,7 @@ public sealed class EfUserStore : IUserStore
         await _context.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -108,6 +121,7 @@ public sealed class EfUserStore : IUserStore
         }
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Claim>> GetClaimsAsync(string subjectId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(subjectId))
@@ -128,6 +142,7 @@ public sealed class EfUserStore : IUserStore
         return dtos.Select(c => new Claim(c.Type, c.Value)).ToList();
     }
 
+    /// <inheritdoc />
     public async Task SetClaimsAsync(string subjectId, IEnumerable<Claim> claims, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);

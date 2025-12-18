@@ -15,6 +15,11 @@ public sealed class EfClientStore : IClientStore
     private readonly CoreIdentDbContext _context;
     private readonly IClientSecretHasher _secretHasher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfClientStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="secretHasher">The client secret hasher.</param>
     public EfClientStore(CoreIdentDbContext context, IClientSecretHasher secretHasher)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

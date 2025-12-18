@@ -7,11 +7,16 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Extensions;
 
+/// <summary>
+/// Service registration helpers for EF Core store implementations.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Adds EF Core token revocation store.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreTokenRevocation(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -22,6 +27,8 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds EF Core client store.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreClientStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -33,6 +40,8 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds EF Core scope store.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreScopeStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -43,6 +52,8 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds EF Core refresh token store.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreRefreshTokenStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -50,6 +61,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds EF Core user store.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreUserStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -57,6 +73,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds EF Core authorization code store.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreAuthorizationCodeStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -64,6 +85,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds EF Core passwordless token store.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCorePasswordlessTokenStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -71,6 +97,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds EF Core user grant store.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCoreUserGrantStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -78,6 +109,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds EF Core passkey credential store.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddEntityFrameworkCorePasskeyCredentialStore(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -88,6 +124,12 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds all EF Core stores (token revocation, client, scope, refresh token).
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// Call this after registering your <c>DbContext</c>. A typical order is:
+    /// <c>AddCoreIdent(...)</c> -> <c>AddDbContext&lt;CoreIdentDbContext&gt;(...)</c> -> <c>AddEntityFrameworkCoreStores()</c>.
+    /// </remarks>
     public static IServiceCollection AddEntityFrameworkCoreStores(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);

@@ -6,12 +6,21 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Background service that periodically cleans up expired authorization codes.
+/// </summary>
 public sealed class AuthorizationCodeCleanupHostedService : BackgroundService
 {
     private readonly IAuthorizationCodeStore _store;
     private readonly IOptions<CoreIdentAuthorizationCodeOptions> _options;
     private readonly ILogger<AuthorizationCodeCleanupHostedService> _logger;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="store">Authorization code store.</param>
+    /// <param name="options">Authorization code options.</param>
+    /// <param name="logger">Logger.</param>
     public AuthorizationCodeCleanupHostedService(
         IAuthorizationCodeStore store,
         IOptions<CoreIdentAuthorizationCodeOptions> options,
@@ -22,6 +31,7 @@ public sealed class AuthorizationCodeCleanupHostedService : BackgroundService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)

@@ -8,6 +8,9 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Stores.InMemory;
 
+/// <summary>
+/// In-memory implementation of <see cref="IPasswordlessTokenStore"/>.
+/// </summary>
 public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 {
     private readonly ConcurrentDictionary<string, PasswordlessToken> _tokensByHash = new(StringComparer.Ordinal);
@@ -17,6 +20,12 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
     private readonly IOptions<PasswordlessEmailOptions> _emailOptions;
     private readonly IOptions<PasswordlessSmsOptions> _smsOptions;
 
+    /// <summary>
+    /// Creates a new in-memory passwordless token store.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider; defaults to <see cref="TimeProvider.System"/>.</param>
+    /// <param name="emailOptions">Email passwordless configuration.</param>
+    /// <param name="smsOptions">SMS passwordless configuration.</param>
     public InMemoryPasswordlessTokenStore(
         TimeProvider? timeProvider,
         IOptions<PasswordlessEmailOptions> emailOptions,
@@ -27,6 +36,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
         _smsOptions = smsOptions;
     }
 
+    /// <inheritdoc />
     public Task<string> CreateTokenAsync(PasswordlessToken token, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(token);
@@ -70,11 +80,13 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
         return Task.FromResult(rawToken);
     }
 
+    /// <inheritdoc />
     public Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, CancellationToken ct = default)
     {
         return ValidateAndConsumeAsync(token, tokenType: null, recipient: null, ct);
     }
 
+    /// <inheritdoc />
     public Task<PasswordlessToken?> ValidateAndConsumeAsync(string token, string? tokenType, string? recipient, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -115,6 +127,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
         return Task.FromResult<PasswordlessToken?>(stored);
     }
 
+    /// <inheritdoc />
     public Task CleanupExpiredAsync(CancellationToken ct = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;

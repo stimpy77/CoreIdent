@@ -26,8 +26,8 @@ public class JwksEndpointRotationTests
         var provider = new StaticSigningKeyProvider(
             signingCredentials: new SigningCredentials(key1, SecurityAlgorithms.RsaSha256),
             validationKeys: [
-                new SecurityKeyInfo("kid-1", key1, ExpiresAt: null),
-                new SecurityKeyInfo("kid-2", key2, ExpiresAt: null)
+                new SecurityKeyInfo("kid-1", key1, expiresAt: null),
+                new SecurityKeyInfo("kid-2", key2, expiresAt: null)
             ],
             algorithm: SecurityAlgorithms.RsaSha256);
 

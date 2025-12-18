@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoreIdent 1.0 Roadmap</title>
+    <title>CoreIdent Roadmap - Feature Status</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,15 +11,15 @@
         <div class="container">
             <div class="logo">
                 <a href="index.html">
-                    <img src="assets/logo.png" alt="CoreIdent Logo">
+                    <span class="wordmark">CoreIdent</span>
                 </a>
             </div>
             <nav>
                 <ul>
                     <li><a href="index.html">Home</a></li>
                     <li><a href="features.html" class="active">Roadmap</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank">Developer Guide</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer">Developer Guide</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer">GitHub</a></li>
                 </ul>
             </nav>
         </div>
@@ -27,14 +27,14 @@
 
     <section class="hero gradient-bg">
         <div class="container">
-            <h1>CoreIdent 1.0 Roadmap</h1>
-            <p class="subtitle">Holistic, open-source authentication and identity for .NET 10+</p>
+            <h1>CoreIdent Roadmap</h1>
+            <p class="subtitle">Open-source OAuth 2.0 / OIDC toolkit for .NET 10+</p>
         </div>
     </section>
 
     <section class="container">
         <div class="content-section">
-            <p class="intro-text">CoreIdent 1.0 provides a practical OAuth/OIDC foundation for .NET 10+ with secure defaults (asymmetric signing) and a passwordless-first roadmap. For current behavior, start with the <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank">Developer Guide</a>, and for full details see the <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/DEVPLAN.md" target="_blank">Development Plan</a>.</p>
+            <p class="intro-text">CoreIdent 1.0 is a complete OAuth 2.0 / OIDC foundation for .NET 10+ with passwordless authentication, secure defaults, and developer-friendly tooling. Start with the <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer">Developer Guide</a>.</p>
             
             <div class="feature-table-wrapper">
                 <table class="feature-table">
@@ -76,45 +76,60 @@
                         </tr>
                         <tr>
                             <td>OpenTelemetry Metrics</td>
-                            <td>Integration with .NET 10's built-in auth metrics</td>
-                            <td><span class="status-badge planned">Phase 0B</span></td>
+                            <td>System.Diagnostics.Metrics integration for token issuance, auth durations</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>CLI Tool</td>
-                            <td><code>dotnet coreident</code> - init, keys generate, client add</td>
-                            <td><span class="status-badge planned">Phase 0B</span></td>
+                            <td><code>dotnet coreident</code> - init, keys generate, client add, migrations</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Dev Container</td>
                             <td>One-click development environment for contributors</td>
-                            <td><span class="status-badge planned">Phase 0B</span></td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         
-                        <tr class="phase-header"><td colspan="3"><strong>Phase 1: Passwordless</strong></td></tr>
+                        <tr class="phase-header"><td colspan="3"><strong>Phase 1: Passwordless &amp; Developer Experience</strong></td></tr>
                         <tr>
                             <td>Email Magic Links</td>
-                            <td>Passwordless login via email token</td>
-                            <td><span class="status-badge planned">Phase 1</span></td>
+                            <td>Passwordless login via secure email tokens with pluggable provider</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Passkeys (WebAuthn)</td>
-                            <td>Wrapper around .NET 10's built-in passkey support</td>
-                            <td><span class="status-badge planned">Phase 1</span></td>
+                            <td>FIDO2/WebAuthn authentication with biometrics and hardware keys</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>SMS OTP</td>
-                            <td>Pluggable SMS provider interface</td>
-                            <td><span class="status-badge planned">Phase 1</span></td>
+                            <td>One-time passwords via SMS with pluggable provider interface</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>dotnet new Templates</td>
-                            <td>coreident-api and coreident-server templates</td>
-                            <td><span class="status-badge planned">Phase 1</span></td>
+                            <td>coreident-api, coreident-server, coreident-api-fsharp templates</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         <tr>
                             <td>Aspire Integration</td>
-                            <td>Dashboard, health checks, distributed tracing</td>
-                            <td><span class="status-badge planned">Phase 1</span></td>
+                            <td>Health checks, distributed tracing, service defaults</td>
+                            <td><span class="status-badge complete">Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td>Authorization Code + PKCE</td>
+                            <td>Full OAuth flow with consent UI</td>
+                            <td><span class="status-badge complete">Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td>Resource Owner Endpoints</td>
+                            <td>/auth/register, /auth/login, /auth/profile convenience endpoints</td>
+                            <td><span class="status-badge complete">Complete</span></td>
+                        </tr>
+                        <tr>
+                            <td>OIDC UserInfo</td>
+                            <td>Standard /auth/userinfo endpoint</td>
+                            <td><span class="status-badge complete">Complete</span></td>
                         </tr>
                         
                         <tr class="phase-header"><td colspan="3"><strong>Phase 1.5: Client Libraries</strong></td></tr>
@@ -263,10 +278,10 @@
             <div class="document-links">
                 <p>For implementation details, see these documents:</p>
                 <ul>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank">Developer Guide</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Project_Overview.md" target="_blank">Project Overview</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Technical_Plan.md" target="_blank">Technical Plan</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/DEVPLAN.md" target="_blank">Development Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer">Developer Guide</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Project_Overview.md" target="_blank" rel="noopener noreferrer">Project Overview</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Technical_Plan.md" target="_blank" rel="noopener noreferrer">Technical Plan</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/DEVPLAN.md" target="_blank" rel="noopener noreferrer">Development Plan</a></li>
                 </ul>
             </div>
         </div>
@@ -276,12 +291,12 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">
-                    <img src="assets/logo.png" alt="CoreIdent Logo">
+                    <span class="wordmark">CoreIdent</span>
                 </div>
                 <div class="footer-links">
-                    <a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a> |
+                    <a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer">GitHub</a> |
                     <a href="features.html">Roadmap</a> |
-                    <a href="https://jondavis.net" target="_blank">Consulting</a>
+                    <a href="https://jondavis.net" target="_blank" rel="noopener noreferrer">Consulting</a>
                 </div>
                 <div class="footer-text">
                     <p>CoreIdent is an open-source project released under the MIT License.</p>

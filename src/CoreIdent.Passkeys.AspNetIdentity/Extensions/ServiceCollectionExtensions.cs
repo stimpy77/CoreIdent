@@ -15,8 +15,21 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Passkeys.AspNetIdentity.Extensions;
 
+/// <summary>
+/// Service registration helpers for CoreIdent passkey/WebAuthn support backed by ASP.NET Core Identity.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds passkey services and required ASP.NET Core Identity infrastructure.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Optional passkey options configuration.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// This registers default in-memory passkey credential storage and wires up a minimal IdentityCore setup used by
+    /// the passkey implementation.
+    /// </remarks>
     public static IServiceCollection AddPasskeys(this IServiceCollection services, Action<CoreIdentPasskeyOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);

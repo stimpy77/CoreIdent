@@ -10,6 +10,8 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
   - [Developer Guide](Developer_Guide.md)
 - **Realms (realm-ready foundation)**
   - [Realms](Realms.md)
+- **Future feature work: realms**
+  - [Realms (future work)](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) — Draft design for a realm-ready foundation (multi-tenant / multi-issuer / per-realm keys and stores).
 - **Aspire integration (service defaults)**
   - [Aspire Integration](Aspire_Integration.md)
 - **Scaffold a host with templates**
@@ -26,7 +28,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 # CoreIdent
 
-**Holistic, open-source authentication and identity for .NET 10+**
+**Open-source OAuth 2.0 / OIDC toolkit for .NET 10+**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
@@ -35,7 +37,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 ## What is CoreIdent?
 
-CoreIdent is a **unified authentication solution** for the .NET ecosystem. It is designed to cover the spectrum from simple embedded auth to running a full OAuth 2.0 / OpenID Connect server, with additional capabilities delivered incrementally across phases.
+CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.0 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
 
 ## Embedded Auth vs Membership (Guidance Placeholder)
 
@@ -57,22 +59,28 @@ This section is a placeholder for DEVPLAN 1.13.6.
 
 ## Current Status
 
-CoreIdent is in active development on .NET 10.
+**CoreIdent 1.0** — Production-ready OAuth/OIDC foundation for .NET 10+
 
-**Prerequisites:** .NET 10 SDK installed (required for all projects and tests)
+**Prerequisites:** .NET 10 SDK
 
-Current focus areas include:
+### Implemented Features
 
-- **.NET 10** only (`net10.0`)
+- **OAuth 2.0 / OIDC** — Token endpoint, authorization code + PKCE, discovery, JWKS, revocation (RFC 7009), introspection (RFC 7662)
+- **Passwordless authentication** — Email magic links, passkeys/WebAuthn, SMS OTP
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
-- **OAuth/OIDC foundation** (discovery, JWKS, token endpoint, revocation, introspection)
-- **Authorization Code + PKCE** with a minimal consent UI
-- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
-- **Pluggable persistence** (in-memory defaults, EF Core implementations)
-- **Developer experience**: test infrastructure, CLI tool, devcontainer/Codespaces support
-- **Observability**: optional `System.Diagnostics.Metrics` instrumentation
+- **Authorization Code + PKCE** with consent UI
+- **Resource-owner endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`, `/auth/userinfo`)
+- **Pluggable persistence** — In-memory defaults, EF Core implementations
+- **CLI tool** — `dotnet coreident` for init, key generation, client management
+- **Aspire integration** — Health checks, distributed tracing, service defaults
+- **OpenTelemetry metrics** — `System.Diagnostics.Metrics` instrumentation
+- **Templates** — `coreident-api`, `coreident-server`, `coreident-api-fsharp`
+- **OpenAPI** — OpenAPI JSON document generation via `CoreIdent.OpenApi` (no built-in UI)
 
-> Note: CoreIdent focuses on a clean, modular core with secure defaults and a strong developer experience.
+### Coming Next
+
+- **External providers** — Google, Microsoft, GitHub OAuth integration
+- **Client libraries** — MAUI, WPF, Blazor authentication clients
 
 ---
 
@@ -86,6 +94,51 @@ CoreIdent includes passwordless flows:
 
 For the SMS OTP endpoint and configuration reference, see the Developer Guide section [4.8 Passwordless SMS OTP](Developer_Guide.md#48-passwordless-sms-otp-feature-13).
 
+---
+
+## OpenAPI documentation (Feature 1.13.10)
+
+CoreIdent can generate an OpenAPI JSON document for all mapped endpoints.
+
+- **Document generation**: `CoreIdent.OpenApi` (built on .NET 10 `Microsoft.AspNetCore.OpenApi`)
+- **UI**: host-managed (CoreIdent does not ship Swashbuckle / Swagger UI)
+
+### Minimal setup
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+builder.Services.AddCoreIdentOpenApi(options =>
+{
+    options.DocumentTitle = "CoreIdent API";
+    options.DocumentVersion = "v1";
+    options.OpenApiRoute = "/openapi/v1.json";
+});
+
+var app = builder.Build();
+
+app.MapCoreIdentEndpoints();
+app.MapCoreIdentOpenApi();
+```
+
+### Optional UI (Scalar)
+
+In the host app:
+
+```bash
+dotnet add package Scalar.AspNetCore
+```
+
+Then:
+
+```csharp
+using Scalar.AspNetCore;
+
+app.MapCoreIdentOpenApi();
+app.MapScalarApiReference();
+```
+
+
 ## Documentation
 
 All planning and technical documentation is in the [`docs/`](./) folder:
@@ -97,6 +150,7 @@ All planning and technical documentation is in the [`docs/`](./) folder:
 | [**DEVPLAN**](DEVPLAN.md) | Task-level checklist with components, test cases, and documentation requirements |
 | [**Developer Guide**](Developer_Guide.md) | Practical guide to the current codebase, endpoints, configuration, and testing |
 | [**Realms**](Realms.md) | Realms foundation: background, design, and extension guidance |
+| [**Realms (future work)**](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) | Draft realm-ready foundation for future multi-tenant / multi-issuer / per-realm keys+stores scenarios |
 | [**Aspire Integration**](Aspire_Integration.md) | Integrating CoreIdent with .NET Aspire service defaults |
 | [**Passkeys Guide**](Passkeys.md) | Passkeys (WebAuthn) setup guide |
 | [**CLI Reference**](CLI_Reference.md) | Command reference for the `dotnet coreident` CLI tool |

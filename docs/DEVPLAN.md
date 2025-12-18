@@ -1246,106 +1246,176 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.6: Documentation Audit and Refresh
 
 *   **Component:** CLAUDE.md Review
-    - [ ] (L1) Verify project structure section matches current layout
-    - [ ] (L1) Verify code style guidance matches C# 14 / .NET 10 patterns in use
-    - [ ] (L1) Add any missing guidance discovered during Phase 1 implementation
+    - [x] (L1) Verify project structure section matches current layout
+    - [x] (L1) Verify code style guidance matches C# 14 / .NET 10 patterns in use
+    - [x] (L1) Add any missing guidance discovered during Phase 1 implementation
 *   **Component:** README.md Review
-    - [ ] (L1) Verify quickstart examples work with current codebase
-    - [ ] (L1) Verify feature list matches implemented features
-    - [ ] (L1) Update status badges if needed
+    - [x] (L1) Verify quickstart examples work with current codebase
+    - [x] (L1) Verify feature list matches implemented features
+    - [x] (L1) Update status badges if needed
 *   **Component:** Developer_Guide.md Review
-    - [ ] (L2) Verify all endpoint documentation matches implementation
-    - [ ] (L2) Verify configuration examples are accurate
-    - [ ] (L2) Add any missing sections for Phase 1 features
+    - [x] (L2) Verify all endpoint documentation matches implementation
+    - [x] (L2) Verify configuration examples are accurate
+    - [x] (L2) Add any missing sections for Phase 1 features
 *   **Component:** README_Detailed.md Review
-    - [ ] (L1) Verify roadmap status table is accurate
-    - [ ] (L1) Verify metrics documentation matches implementation
+    - [x] (L1) Verify roadmap status table is accurate
+    - [x] (L1) Verify metrics documentation matches implementation
 *   **Component:** Technical_Plan.md Review
-    - [ ] (L2) Mark completed items or remove outdated sections
-    - [ ] (L2) Update "Open Questions" section with decisions made
+    - [x] (L2) Mark completed items or remove outdated sections
+    - [x] (L2) Update "Open Questions" section with decisions made
 *   **Component:** Project_Overview.md Review
-    - [ ] (L1) Verify architecture diagrams match current structure
-    - [ ] (L1) Verify phase descriptions match DEVPLAN.md
+    - [x] (L1) Verify architecture diagrams match current structure
+    - [x] (L1) Verify phase descriptions match DEVPLAN.md
 *   **Component:** Other Docs
-    - [ ] (L1) Passkeys.md — Verify setup guide is accurate
-    - [ ] (L1) CLI_Reference.md — Verify command documentation is complete
-    - [ ] (L1) Aspire_Integration.md — Verify integration guide is accurate
+    - [x] (L1) Passkeys.md — Verify setup guide is accurate
+    - [x] (L1) CLI_Reference.md — Verify command documentation is complete
+    - [x] (L1) Aspire_Integration.md — Verify integration guide is accurate
 
 ---
 
 #### 1.13.7: Code Quality and Consistency
 
 *   **Component:** Nullable Reference Type Audit
-    - [ ] (L2) Ensure all projects have `<Nullable>enable</Nullable>`
-    - [ ] (L2) Address any nullable warnings in CI build output
+    - [x] (L2) Ensure all projects have `<Nullable>enable</Nullable>`
+    - [x] (L2) Address any nullable warnings in CI build output
 *   **Component:** XML Documentation
-    - [ ] (L2) Ensure all public APIs have XML doc comments
-    - [ ] (L2) Consider enabling `<GenerateDocumentationFile>true</GenerateDocumentationFile>` for NuGet packages
+    - [x] (L2) Ensure all public APIs have XML doc comments
+    - [x] (L2) Consider enabling `<GenerateDocumentationFile>true</GenerateDocumentationFile>` for NuGet packages
 *   **Component:** Code Style Consistency
-    - [ ] (L1) Run `dotnet format` across solution
-    - [ ] (L1) Address any formatting inconsistencies
+    - [x] (L1) Run `dotnet format` across solution
+    - [x] (L1) Address any formatting inconsistencies
 *   **Component:** Unused Code Removal
-    - [ ] (L2) Audit for unused `using` statements
-    - [ ] (L2) Audit for dead code paths or commented-out code
+    - [x] (L2) Audit for unused `using` statements
+    - [x] (L2) Audit for dead code paths or commented-out code
 *   **Test Case:**
-    - [ ] (L1) CI build passes with zero warnings (or document accepted warnings)
+    - [x] (L1) CI build passes with zero warnings (or document accepted warnings)
 
 ---
 
 #### 1.13.8: Test Coverage Review
 
 *   **Component:** Coverage Analysis
-    - [ ] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
-    - [ ] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
-    - [ ] (L2) Add tests for any uncovered critical paths
+    - [x] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
+    - [x] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
+    - [x] (L2) Add tests for any uncovered critical paths
+    - [x] (L2) Achieve 90% line coverage for all of `src/CoreIdent.Core` (merged, de-duplicated across all test projects)
+    - [x] (L2) Add GitHub Actions coverage gate to fail CI if normalized `CoreIdent.Core` line coverage is below 90%
 *   **Component:** Test Quality
-    - [ ] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
-    - [ ] (L2) Review flaky tests and stabilize
+    - [x] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
+    - [x] (L2) Review flaky tests and stabilize (repeat-runs performed; no flakes reproduced)
 *   **Documentation:**
-    - [ ] (L1) Document test coverage expectations in CONTRIBUTING.md
+    - [x] (L1) Document test coverage expectations in CONTRIBUTING.md
 
 ---
 
 #### 1.13.9: Additional Codebase Scan Follow-Ups
 
 *   **Component:** OIDC Discovery Metadata Completeness
-    - [ ] (L2) `DiscoveryEndpointsExtensions.cs` — Populate `grant_types_supported` instead of returning an empty list
+    - [x] (L2) `DiscoveryEndpointsExtensions.cs` — Populate `grant_types_supported` instead of returning an empty list
         - *Guidance:* Include currently supported grants (`client_credentials`, `refresh_token`, `authorization_code`, `password` (deprecated))
         - *Guidance:* Ensure the discovery document remains accurate if features are disabled via endpoint mapping
         - *Note:* This addresses an incomplete implementation from Feature 0.4.2 which specified including `grant_types_supported`
-    - [ ] (L2) Consider adding other commonly expected discovery fields (only if compatible with current scope):
+    - [x] (L2) Consider adding other commonly expected discovery fields (only if compatible with current scope):
         - `response_types_supported` (e.g., `code`)
         - `token_endpoint_auth_methods_supported` (e.g., `client_secret_basic`, `client_secret_post`)
 *   **Test Case (Integration):**
-    - [ ] (L2) `/.well-known/openid-configuration` returns a non-empty `grant_types_supported` list matching implemented features
+    - [x] (L2) `/.well-known/openid-configuration` returns a non-empty `grant_types_supported` list matching implemented features
 
 *   **Component:** Sync-over-Async Hotspots
-    - [ ] (L2) `DelegatedPasswordHasher.cs` — Remove sync-over-async (`GetAwaiter().GetResult()`) when validating delegated credentials
+    - [x] (L2) `DelegatedPasswordHasher.cs` — Remove sync-over-async (`GetAwaiter().GetResult()`) when validating delegated credentials
         - *Guidance:* If `IPasswordHasher` must remain synchronous, introduce a dedicated synchronous delegate in `DelegatedUserStoreOptions` for password verification
         - *Guidance:* Alternatively, introduce an `IAsyncPasswordVerifier` abstraction and adapt the token endpoint to use it
-    - [ ] (L2) Remove `CancellationToken.None` usage in the delegated password verification path where feasible
+    - [x] (L2) Remove `CancellationToken.None` usage in the delegated password verification path where feasible
 *   **Test Case (Unit):**
-    - [ ] (L2) Delegated credential validation can be tested without blocking threads or requiring sync-over-async
+    - [x] (L2) Delegated credential validation can be tested without blocking threads or requiring sync-over-async
 
 *   **Component:** PII / Sensitive Data Logging Audit
-    - [ ] (L2) Audit logs for PII disclosure in passwordless flows (email, phone)
+    - [x] (L2) Audit logs for PII disclosure in passwordless flows (email, phone)
         - `PasswordlessEmailEndpointsExtensions.cs` (logs email)
         - `PasswordlessSmsEndpointsExtensions.cs` (logs phone)
         - `ConsoleSmsProvider.cs` (writes full SMS message including OTP)
-    - [ ] (L2) Define a standard redaction strategy:
+    - [x] (L2) Define a standard redaction strategy:
         - Mask email/phone values in logs (e.g., `j***@example.com`, `+1******4567`)
         - Never log OTP values or magic link tokens
-    - [ ] (L2) Replace `Console.WriteLine` in default providers with `ILogger` (or ensure these providers are *explicitly* dev-only and opt-in)
+    - [x] (L2) Replace `Console.WriteLine` in default providers with `ILogger` (or ensure these providers are *explicitly* dev-only and opt-in)
 *   **Test Case:**
-    - [ ] (L2) Tests assert logs do not contain OTP/token material for passwordless flows
+    - [x] (L2) Tests assert logs do not contain OTP/token material for passwordless flows
 
 *   **Component:** Remove Silent Exception Swallowing
-    - [ ] (L2) Remove `catch { }` blocks in Basic auth parsing helpers:
+    - [x] (L2) Remove `catch { }` blocks in Basic auth parsing helpers:
         - `TokenEndpointExtensions.cs` (`ExtractClientCredentials`)
         - `TokenManagementEndpointsExtensions.cs` (`ExtractClientCredentials`)
         - *Guidance:* Prefer `Try*` parsing patterns and consider logging at Debug/Trace level for malformed Authorization headers
 *   **Test Case:**
-    - [ ] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
+    - [x] (L2) Malformed Basic auth headers reliably return `invalid_client` without throwing and without leaking secrets
+
+---
+
+### Feature 1.13.10: OpenAPI Documentation
+
+**Goal:** Provide automatic API documentation and discoverability for all CoreIdent HTTP endpoints.
+
+**Estimated Duration:** 1-2 weeks
+
+**Prerequisites:** XML documentation complete (1.13.7)
+
+---
+
+*   **Component:** OpenAPI Integration Package
+    - [x] (L1) Create new project `CoreIdent.OpenApi` targeting `net10.0`
+    - [x] (L1) Add dependency on `Microsoft.AspNetCore.OpenApi` for .NET 10 OpenAPI support
+    - [x] (L1) Add dependency on `CoreIdent.Core` for access to endpoint models
+    - [x] (L2) Design OpenAPI configuration options:
+        ```csharp
+        public class CoreIdentOpenApiOptions
+        {
+            public string DocumentTitle { get; set; } = "CoreIdent API";
+            public string DocumentVersion { get; set; } = "v1";
+            public string OpenApiRoute { get; set; } = "/openapi/v1.json";
+            public bool IncludeXmlComments { get; set; } = true;
+            public bool IncludeSecurityDefinitions { get; set; } = true;
+        }
+        ```
+    - [x] (L2) Create extension method `AddCoreIdentOpenApi()` for `IServiceCollection`
+    - [x] (L2) Create extension method `MapCoreIdentOpenApi()` for `IEndpointRouteBuilder`
+    - [x] (L2) Configure OpenAPI document to include:
+        - All OAuth 2.0 and OIDC endpoints (token, authorize, userinfo, etc.)
+        - Passwordless endpoints (magic links, OTPs, WebAuthn)
+        - Token management endpoints
+        - Discovery endpoints (.well-known)
+        - JWKS endpoint
+        - Passkey endpoints (if enabled)
+    - [x] (L2) Add proper security schemes:
+        - `client_secret_basic` for client authentication
+        - `client_secret_post` for client authentication
+        - `authorization_code` flow with PKCE
+        - `refresh_token` flow
+        - `Bearer` token authentication
+    - [x] (L2) Add request/response examples for key endpoints
+    - [x] (L2) Add descriptions from XML documentation to OpenAPI schemas
+
+*   **Component:** Optional API Reference UI (Scalar)
+    - [x] (L2) Do not ship a UI in CoreIdent packages (no Swashbuckle / no Swagger UI)
+    - [x] (L2) Ensure the generated OpenAPI document is compatible with Scalar
+    - [x] (L2) Document how a host app can add Scalar to serve the OpenAPI JSON (host-managed)
+
+*   **Documentation Updates:**
+    - [x] (L2) Update `Developer_Guide.md` with OpenAPI setup instructions
+    - [x] (L2) Add OpenAPI configuration examples to README_Detailed.md
+    - [x] (L2) Document security scheme usage in API documentation
+    - [x] (L2) Document optional Scalar integration (no UI implementation in CoreIdent)
+
+*   **Test Cases:**
+    - [x] (L2) OpenAPI document builds without warnings
+    - [x] (L2) All public endpoints are included in OpenAPI document
+    - [x] (L2) Security schemes are properly defined and usable
+    - [x] (L2) Smoke test: `GET /openapi/v1.json` returns 200 with valid OpenAPI document
+
+*   **Quality Gates:**
+    - [x] (L2) OpenAPI document passes validation (no schema errors)
+    - [x] (L2) All examples in documentation are valid
+    - [x] (L2) Security definitions match actual endpoint requirements
+    - [x] (L2) CI build includes OpenAPI validation step
 
 ---
 

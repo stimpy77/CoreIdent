@@ -4,15 +4,27 @@ using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace CoreIdent.Core.Middleware;
 
+/// <summary>
+/// Middleware that rejects authenticated requests whose JWT has been revoked.
+/// </summary>
 public sealed class TokenRevocationMiddleware
 {
     private readonly RequestDelegate _next;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="next">Next middleware delegate.</param>
     public TokenRevocationMiddleware(RequestDelegate next)
     {
         _next = next ?? throw new ArgumentNullException(nameof(next));
     }
 
+    /// <summary>
+    /// Invokes the middleware.
+    /// </summary>
+    /// <param name="context">HTTP context.</param>
+    /// <param name="tokenRevocationStore">Token revocation store.</param>
     public async Task InvokeAsync(HttpContext context, ITokenRevocationStore tokenRevocationStore)
     {
         if (context is null)

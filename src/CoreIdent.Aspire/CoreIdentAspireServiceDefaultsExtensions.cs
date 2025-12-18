@@ -14,11 +14,20 @@ using OpenTelemetry.Trace;
 
 namespace CoreIdent.Aspire;
 
+/// <summary>
+/// Aspire helper extensions for wiring CoreIdent observability and health checks into a host application.
+/// </summary>
 public static class CoreIdentAspireServiceDefaultsExtensions
 {
     private static readonly PathString HealthEndpointPath = new("/health");
     private static readonly PathString AlivenessEndpointPath = new("/alive");
 
+    /// <summary>
+    /// Adds CoreIdent defaults for metrics, tracing, health checks, and service discovery.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host application builder type.</typeparam>
+    /// <param name="builder">The host application builder.</param>
+    /// <returns>The same builder, for chaining.</returns>
     public static TBuilder AddCoreIdentDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
@@ -41,6 +50,13 @@ public static class CoreIdentAspireServiceDefaultsExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Adds a database connectivity health check for the specified <typeparamref name="TDbContext"/>.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host application builder type.</typeparam>
+    /// <typeparam name="TDbContext">The Entity Framework Core <see cref="Microsoft.EntityFrameworkCore.DbContext"/> type.</typeparam>
+    /// <param name="builder">The host application builder.</param>
+    /// <returns>The same builder, for chaining.</returns>
     public static TBuilder AddCoreIdentDbContextHealthCheck<TBuilder, TDbContext>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
         where TDbContext : Microsoft.EntityFrameworkCore.DbContext
@@ -53,6 +69,15 @@ public static class CoreIdentAspireServiceDefaultsExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Maps default CoreIdent health endpoints when running in Development (or when explicitly enabled).
+    /// </summary>
+    /// <param name="app">The web application.</param>
+    /// <param name="includeProduction">
+    /// When <see langword="true"/>, maps endpoints regardless of environment.
+    /// When <see langword="false"/>, maps endpoints only for Development and Testing.
+    /// </param>
+    /// <returns>The same application, for chaining.</returns>
     public static WebApplication MapCoreIdentDefaultEndpoints(this WebApplication app, bool includeProduction = false)
     {
         ArgumentNullException.ThrowIfNull(app);

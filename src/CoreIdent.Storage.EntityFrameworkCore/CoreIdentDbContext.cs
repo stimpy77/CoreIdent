@@ -3,23 +3,61 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreIdent.Storage.EntityFrameworkCore;
 
+/// <summary>
+/// Entity Framework Core <see cref="DbContext"/> for CoreIdent storage.
+/// </summary>
 public class CoreIdentDbContext : DbContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CoreIdentDbContext"/> class.
+    /// </summary>
+    /// <param name="options">The database context options.</param>
     public CoreIdentDbContext(DbContextOptions<CoreIdentDbContext> options)
         : base(options)
     {
     }
 
+    /// <summary>
+    /// Gets the set of revoked token records.
+    /// </summary>
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+    /// <summary>
+    /// Gets the set of OAuth/OIDC client records.
+    /// </summary>
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
+    /// <summary>
+    /// Gets the set of scope records.
+    /// </summary>
     public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
+    /// <summary>
+    /// Gets the set of refresh token records.
+    /// </summary>
     public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
+    /// <summary>
+    /// Gets the set of authorization code records.
+    /// </summary>
     public DbSet<AuthorizationCodeEntity> AuthorizationCodes => Set<AuthorizationCodeEntity>();
+    /// <summary>
+    /// Gets the set of passwordless token records.
+    /// </summary>
     public DbSet<PasswordlessTokenEntity> PasswordlessTokens => Set<PasswordlessTokenEntity>();
+    /// <summary>
+    /// Gets the set of user grant records.
+    /// </summary>
     public DbSet<UserGrantEntity> UserGrants => Set<UserGrantEntity>();
+    /// <summary>
+    /// Gets the set of user records.
+    /// </summary>
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    /// <summary>
+    /// Gets the set of passkey credential records.
+    /// </summary>
     public DbSet<PasskeyCredentialEntity> PasskeyCredentials => Set<PasskeyCredentialEntity>();
 
+    /// <summary>
+    /// Configures the EF Core model.
+    /// </summary>
+    /// <param name="modelBuilder">The model builder.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -10,10 +10,17 @@ public sealed class InMemoryScopeStore : IScopeStore
 {
     private readonly ConcurrentDictionary<string, CoreIdentScope> _scopes = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Creates a new, empty in-memory scope store.
+    /// </summary>
     public InMemoryScopeStore()
     {
     }
 
+    /// <summary>
+    /// Creates a new in-memory scope store seeded with the provided scopes.
+    /// </summary>
+    /// <param name="scopes">The scopes to seed.</param>
     public InMemoryScopeStore(IEnumerable<CoreIdentScope> scopes)
     {
         SeedScopes(scopes);
@@ -68,6 +75,9 @@ public sealed class InMemoryScopeStore : IScopeStore
 /// </summary>
 public static class StandardOidcScopes
 {
+    /// <summary>
+    /// The <c>openid</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope OpenId = new()
     {
         Name = StandardScopes.OpenId,
@@ -79,6 +89,9 @@ public static class StandardOidcScopes
         UserClaims = ["sub"]
     };
 
+    /// <summary>
+    /// The <c>profile</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope Profile = new()
     {
         Name = StandardScopes.Profile,
@@ -90,6 +103,9 @@ public static class StandardOidcScopes
         UserClaims = ["name", "family_name", "given_name", "middle_name", "nickname", "preferred_username", "profile", "picture", "website", "gender", "birthdate", "zoneinfo", "locale", "updated_at"]
     };
 
+    /// <summary>
+    /// The <c>email</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope Email = new()
     {
         Name = StandardScopes.Email,
@@ -101,6 +117,9 @@ public static class StandardOidcScopes
         UserClaims = ["email", "email_verified"]
     };
 
+    /// <summary>
+    /// The <c>address</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope Address = new()
     {
         Name = StandardScopes.Address,
@@ -112,6 +131,9 @@ public static class StandardOidcScopes
         UserClaims = ["address"]
     };
 
+    /// <summary>
+    /// The <c>phone</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope Phone = new()
     {
         Name = StandardScopes.Phone,
@@ -123,6 +145,9 @@ public static class StandardOidcScopes
         UserClaims = ["phone_number", "phone_number_verified"]
     };
 
+    /// <summary>
+    /// The <c>offline_access</c> scope.
+    /// </summary>
     public static readonly CoreIdentScope OfflineAccess = new()
     {
         Name = StandardScopes.OfflineAccess,
@@ -134,6 +159,9 @@ public static class StandardOidcScopes
         UserClaims = []
     };
 
+    /// <summary>
+    /// All standard OIDC scopes.
+    /// </summary>
     public static readonly IReadOnlyList<CoreIdentScope> All =
     [
         OpenId,

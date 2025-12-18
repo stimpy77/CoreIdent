@@ -13,18 +13,55 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Service registration helpers for CoreIdent.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds CoreIdent services using options resolved from configuration/DI.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// <para>
+    /// This method registers CoreIdent's default services and in-memory stores using <c>TryAdd*</c> so you can
+    /// override any store/service by registering your own implementation before calling <see cref="AddCoreIdent(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    /// </para>
+    /// <para>
+    /// <see cref="CoreIdentOptions"/> is validated on startup. You must configure <see cref="CoreIdentOptions.Issuer"/> and
+    /// <see cref="CoreIdentOptions.Audience"/> via configuration binding or by using an overload of <see cref="AddCoreIdent(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{CoreIdent.Core.Configuration.CoreIdentOptions})"/>.
+    /// </para>
+    /// </remarks>
     public static IServiceCollection AddCoreIdent(this IServiceCollection services)
     {
         return services.AddCoreIdent(configureOptions: null, configureRoutes: null);
     }
 
+    /// <summary>
+    /// Adds CoreIdent services and configures <see cref="CoreIdentOptions"/>.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureOptions">Options configuration callback.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// <para>
+    /// For a minimal host, you typically call <see cref="AddCoreIdent(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{CoreIdent.Core.Configuration.CoreIdentOptions})"/> and then
+    /// <see cref="AddSigningKey(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{CoreIdent.Core.Extensions.CoreIdentKeyOptionsBuilder})"/>.
+    /// </para>
+    /// </remarks>
     public static IServiceCollection AddCoreIdent(this IServiceCollection services, Action<CoreIdentOptions> configureOptions)
     {
         return services.AddCoreIdent(configureOptions, configureRoutes: null);
     }
 
+    /// <summary>
+    /// Adds CoreIdent services and optionally configures options and routes.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureOptions">Optional CoreIdent options configuration.</param>
+    /// <param name="configureRoutes">Optional route options configuration.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddCoreIdent(
         this IServiceCollection services,
         Action<CoreIdentOptions>? configureOptions,
@@ -135,6 +172,16 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Configures resource owner endpoints.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Configuration callback.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// This only configures endpoint behavior (custom result handling). It does not map endpoints.
+    /// You must still call <c>app.MapCoreIdentEndpoints()</c> or map resource-owner endpoints explicitly.
+    /// </remarks>
     public static IServiceCollection ConfigureResourceOwnerEndpoints(
         this IServiceCollection services,
         Action<CoreIdentResourceOwnerOptions> configure)
@@ -147,6 +194,21 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Configures JWT signing key selection.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configure">Key options configuration callback.</param>
+    /// <returns>The service collection.</returns>
+    /// <remarks>
+    /// <para>
+    /// For production, prefer asymmetric keys (RSA/ECDSA). Symmetric keys are intended for development/testing only
+    /// and are not published via JWKS.
+    /// </para>
+    /// <para>
+    /// This registers an <see cref="ISigningKeyProvider"/> implementation based on the configured key type.
+    /// </para>
+    /// </remarks>
     public static IServiceCollection AddSigningKey(this IServiceCollection services, Action<CoreIdentKeyOptionsBuilder> configure)
     {
         if (services is null)
@@ -188,10 +250,21 @@ public static class ServiceCollectionExtensions
     }
 }
 
+/// <summary>
+/// Builder for configuring <see cref="CoreIdentKeyOptions"/> via fluent methods.
+/// </summary>
 public sealed class CoreIdentKeyOptionsBuilder
 {
     private readonly CoreIdentKeyOptions _options = new();
 
+    /// <summary>
+    /// Configures RSA signing using a PEM file path.
+    /// </summary>
+    /// <param name="keyPath">Path to the private key PEM file.</param>
+    /// <returns>The builder.</returns>
+    /// <remarks>
+    /// Use this for typical production deployments where the host can read a private key file from disk.
+    /// </remarks>
     public CoreIdentKeyOptionsBuilder UseRsa(string keyPath)
     {
         _options.Type = KeyType.RSA;
@@ -199,6 +272,14 @@ public sealed class CoreIdentKeyOptionsBuilder
         return this;
     }
 
+    /// <summary>
+    /// Configures RSA signing using a PEM string.
+    /// </summary>
+    /// <param name="pemString">PEM-encoded private key.</param>
+    /// <returns>The builder.</returns>
+    /// <remarks>
+    /// Use this when keys are loaded from a secrets provider and supplied as an in-memory string.
+    /// </remarks>
     public CoreIdentKeyOptionsBuilder UseRsaPem(string pemString)
     {
         _options.Type = KeyType.RSA;
@@ -206,6 +287,14 @@ public sealed class CoreIdentKeyOptionsBuilder
         return this;
     }
 
+    /// <summary>
+    /// Configures ECDSA signing using a PEM file path.
+    /// </summary>
+    /// <param name="keyPath">Path to the private key PEM file.</param>
+    /// <returns>The builder.</returns>
+    /// <remarks>
+    /// ECDSA signing is typically used with P-256 (ES256).
+    /// </remarks>
     public CoreIdentKeyOptionsBuilder UseEcdsa(string keyPath)
     {
         _options.Type = KeyType.ECDSA;
@@ -213,6 +302,14 @@ public sealed class CoreIdentKeyOptionsBuilder
         return this;
     }
 
+    /// <summary>
+    /// Configures symmetric (HS256) signing. Intended for development/testing only.
+    /// </summary>
+    /// <param name="secret">Symmetric key material.</param>
+    /// <returns>The builder.</returns>
+    /// <remarks>
+    /// Symmetric keys are not published via JWKS and should not be used for multi-tenant or internet-facing deployments.
+    /// </remarks>
     public CoreIdentKeyOptionsBuilder UseSymmetric(string secret)
     {
         _options.Type = KeyType.Symmetric;

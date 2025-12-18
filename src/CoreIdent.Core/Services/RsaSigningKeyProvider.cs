@@ -20,8 +20,14 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     private readonly Lazy<string> _keyId;
     private bool _disposed;
 
+    /// <inheritdoc />
     public string Algorithm => SecurityAlgorithms.RsaSha256;
 
+    /// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="options">Key options.</param>
+    /// <param name="logger">Logger.</param>
     public RsaSigningKeyProvider(IOptions<CoreIdentKeyOptions> options, ILogger<RsaSigningKeyProvider> logger)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
@@ -30,6 +36,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
         _keyId = new Lazy<string>(() => ComputeKeyId(_signingKey.Value));
     }
 
+    /// <inheritdoc />
     public Task<SigningCredentials> GetSigningCredentialsAsync(CancellationToken ct = default)
     {
         var key = _signingKey.Value;
@@ -38,6 +45,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
         return Task.FromResult(credentials);
     }
 
+    /// <inheritdoc />
     public Task<IEnumerable<SecurityKeyInfo>> GetValidationKeysAsync(CancellationToken ct = default)
     {
         var key = _signingKey.Value;
@@ -49,7 +57,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
             KeyId = _keyId.Value
         };
 
-        var keyInfo = new SecurityKeyInfo(_keyId.Value, publicKey, ExpiresAt: null);
+        var keyInfo = new SecurityKeyInfo(_keyId.Value, publicKey, expiresAt: null);
         return Task.FromResult<IEnumerable<SecurityKeyInfo>>([keyInfo]);
     }
 
@@ -132,6 +140,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
         return Base64UrlEncoder.Encode(hash);
     }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         if (_disposed) return;

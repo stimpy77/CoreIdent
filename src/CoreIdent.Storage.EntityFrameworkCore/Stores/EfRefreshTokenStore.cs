@@ -15,11 +15,20 @@ public sealed class EfRefreshTokenStore : IRefreshTokenStore
     private readonly CoreIdentDbContext _context;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfRefreshTokenStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
     public EfRefreshTokenStore(CoreIdentDbContext context)
         : this(context, timeProvider: null)
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfRefreshTokenStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
+    /// <param name="timeProvider">An optional time provider.</param>
     public EfRefreshTokenStore(CoreIdentDbContext context, TimeProvider? timeProvider)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

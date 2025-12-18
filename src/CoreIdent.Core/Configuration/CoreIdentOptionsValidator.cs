@@ -4,8 +4,17 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Configuration;
 
+/// <summary>
+/// Validates <see cref="CoreIdentOptions"/>.
+/// </summary>
 public sealed class CoreIdentOptionsValidator : IValidateOptions<CoreIdentOptions>
 {
+    /// <summary>
+    /// Validates a <see cref="CoreIdentOptions"/> instance.
+    /// </summary>
+    /// <param name="name">The name of the options instance being validated.</param>
+    /// <param name="options">The options instance being validated.</param>
+    /// <returns>A <see cref="ValidateOptionsResult"/> indicating whether the options instance is valid.</returns>
     public ValidateOptionsResult Validate(string? name, CoreIdentOptions options)
     {
         var errors = new List<string>();

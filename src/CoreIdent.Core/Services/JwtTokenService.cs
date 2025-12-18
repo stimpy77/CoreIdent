@@ -6,6 +6,9 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Services;
 
+/// <summary>
+/// Issues signed JWT access tokens.
+/// </summary>
 public class JwtTokenService : ITokenService
 {
     private readonly ICoreIdentRealmContext _realmContext;
@@ -13,6 +16,12 @@ public class JwtTokenService : ITokenService
     private readonly ILogger<JwtTokenService> _logger;
     private readonly JsonWebTokenHandler _handler = new();
 
+/// <summary>
+    /// Creates a new instance.
+    /// </summary>
+    /// <param name="realmContext">Realm context.</param>
+    /// <param name="signingKeyProviderResolver">Signing key provider resolver.</param>
+    /// <param name="logger">Logger.</param>
     public JwtTokenService(
         ICoreIdentRealmContext realmContext,
         IRealmSigningKeyProviderResolver signingKeyProviderResolver,
@@ -23,6 +32,7 @@ public class JwtTokenService : ITokenService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <inheritdoc />
     public async Task<string> CreateJwtAsync(
         string issuer,
         string audience,

@@ -22,6 +22,7 @@ If you are looking for the high-level roadmap and design intent, start with:
 - `docs/Technical_Plan.md`
 - `docs/DEVPLAN.md`
 - `docs/Realms.md`
+- Realms (future work): [Realms](https://github.com/stimpy77/CoreIdent/blob/feat/realms-foundation/docs/Realms.md) — Draft realm-ready foundation for future multi-tenant / multi-issuer / per-realm keys+stores scenarios.
 - `docs/Passkeys.md`
 - `docs/Aspire_Integration.md`
 
@@ -48,6 +49,72 @@ CoreIdent currently provides a **minimal, modular OAuth/OIDC foundation** on .NE
 CoreIdent is not trying to be “everything at once” yet. The focus is **secure defaults** (asymmetric signing by default) and **testable primitives**.
 
 ---
+
+## Third-party extensibility opportunities
+
+CoreIdent is designed so third parties can build “flavors” (membership systems, admin surfaces, hosted identity offerings, etc.) **without forking** `CoreIdent.Core`.
+
+The primary rule is: prefer replacing behavior via **DI + interfaces** rather than editing CoreIdent code.
+
+### Replace storage (or add a storage package)
+
+CoreIdent’s persistence is expressed as store interfaces. A third party can provide:
+
+- `IUserStore` (users + claim storage)
+- `IClientStore` (OAuth clients)
+- `IScopeStore` (scopes used by discovery + token issuance)
+- `IAuthorizationCodeStore` (authorization codes)
+- `IRefreshTokenStore` (refresh tokens, rotation, family revocation)
+- `IUserGrantStore` (consent grants)
+- `ITokenRevocationStore` (revoked access token tracking)
+- `IPasswordlessTokenStore` (passwordless token/OTP storage)
+
+Notes:
+
+- `IScopeStore` is currently a **read-only** interface. If you need scope administration, own a write model (DB tables + admin API) and expose a read projection via `IScopeStore`.
+- Store defaults are registered with `TryAdd*` patterns, so registering your implementation before calling `AddCoreIdent()` takes precedence.
+
+### Customize token claims and identity surfaces
+
+There are two main “claims seams”:
+
+- `IUserStore.GetClaimsAsync(subjectId, ...)` for user-owned claims (roles/groups/flags owned by your membership layer)
+- `ICustomClaimsProvider` for computed/derived claims added during token issuance
+
+This enables membership and enterprise layers to inject authorization state into access tokens and ID tokens without modifying CoreIdent endpoints.
+
+### Customize signing keys and key management
+
+Token signing and JWKS publishing use `ISigningKeyProvider`.
+
+Third parties can integrate external key systems by implementing `ISigningKeyProvider` (for example, loading from an HSM, Key Vault, KMS, or a per-tenant certificate store) and registering it via `AddSigningKey(...)`.
+
+### Customize and/or replace endpoint behavior
+
+For the resource-owner convenience endpoints, you can override response behavior via `CoreIdentResourceOwnerOptions`:
+
+- `RegisterHandler`
+- `LoginHandler`
+- `ProfileHandler`
+
+You can also avoid `MapCoreIdentEndpoints()` and map only the endpoints you want using the granular mapping extensions.
+
+### Integrate passwordless providers
+
+For production deployments, third parties commonly replace the default delivery providers:
+
+- Implement `IEmailSender` to use an email API provider
+- Implement `ISmsProvider` to use an SMS provider
+
+Passwordless storage is similarly replaceable via `IPasswordlessTokenStore`.
+
+### Delegate user identity to an existing system
+
+If you already have a user database and credential validation, you can avoid forking by using `CoreIdent.Adapters.DelegatedUserStore` to delegate:
+
+- user lookup (`FindUserByIdAsync`, `FindUserByUsernameAsync`)
+- credential validation
+- optional `GetClaimsAsync` for membership/roles
 
 ## Embedded Auth vs Membership (Guidance Placeholder)
 
@@ -151,6 +218,55 @@ app.MapCoreIdentEndpoints();
 
 app.Run();
 ```
+
+## 1.2 OpenAPI documentation (Feature 1.13.10)
+
+CoreIdent supports OpenAPI document generation via the `CoreIdent.OpenApi` package (built on .NET 10's `Microsoft.AspNetCore.OpenApi`).
+
+CoreIdent does **not** ship a built-in UI (no Swashbuckle / Swagger UI). Instead, the host app can optionally add a UI such as Scalar.
+
+### 1.2.1 Add OpenAPI services
+
+Add the package reference:
+
+```xml
+<PackageReference Include="CoreIdent.OpenApi" Version="1.0.0" />
+```
+
+Register OpenAPI services:
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+builder.Services.AddCoreIdentOpenApi(options =>
+{
+    options.DocumentTitle = "My API";
+    options.DocumentVersion = "v1";
+    options.OpenApiRoute = "/openapi/v1.json";
+});
+```
+
+### 1.2.2 Map the OpenAPI endpoint
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+app.MapCoreIdentOpenApi();
+```
+
+This maps an endpoint equivalent to `MapOpenApi(...)` so that `GET /openapi/v1.json` returns the OpenAPI JSON document.
+
+### 1.2.3 Optional UI: Scalar (host-managed)
+
+To serve an interactive API reference UI, install `Scalar.AspNetCore` in your host app and map it alongside the OpenAPI JSON:
+
+```csharp
+using Scalar.AspNetCore;
+
+app.MapCoreIdentOpenApi();
+app.MapScalarApiReference();
+```
+
 
 ### What you get
 
@@ -511,6 +627,9 @@ If you want a more controlled surface area, map individual endpoints:
 - `MapCoreIdentTokenEndpoint(tokenPath)`
 - `MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath)`
 - `MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath)`
+- `MapCoreIdentUserInfoEndpoint(userInfoPath)`
+- `MapCoreIdentPasswordlessEmailEndpoints(startPath, verifyPath)`
+- `MapCoreIdentPasswordlessSmsEndpoints(startPath, verifyPath)`
 
 ---
 
@@ -844,6 +963,17 @@ Request body (JSON):
 ```json
 { "phone_number": "+15551234567" }
 ```
+
+Optionally, you can provide a `message_prefix` that will be prepended to the OTP message:
+
+```json
+{ "phone_number": "+15551234567", "message_prefix": "Your login code:" }
+```
+
+For form posts, the corresponding field names are:
+
+- `phone_number`
+- `message_prefix`
 
 Phone numbers must be in E.164 format (for example: `+15551234567`). CoreIdent applies minimal normalization before validation (trims whitespace, removes spaces/hyphens/parentheses, and converts a leading `00` prefix to `+`).
 

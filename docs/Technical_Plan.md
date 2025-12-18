@@ -40,25 +40,29 @@ This document provides detailed technical specifications, architecture decisions
 public interface ISigningKeyProvider
 {
     Task<SigningCredentials> GetSigningCredentialsAsync(CancellationToken ct = default);
-    Task<IEnumerable<SecurityKey>> GetValidationKeysAsync(CancellationToken ct = default);
-    string Algorithm { get; } // RS256, ES256, HS256
+    Task<IEnumerable<SecurityKeyInfo>> GetValidationKeysAsync(CancellationToken ct = default);
+    string Algorithm { get; }
 }
 
-public interface IKeyRotationService
-{
-    Task RotateKeysAsync(CancellationToken ct = default);
-    Task<KeyRotationStatus> GetStatusAsync(CancellationToken ct = default);
-}
+public record SecurityKeyInfo(string KeyId, SecurityKey Key, DateTime? ExpiresAt);
 
 // Configuration
 public class CoreIdentKeyOptions
 {
-    public KeyType Type { get; set; } = KeyType.RSA; // RSA, ECDSA, Symmetric
-    public int KeySize { get; set; } = 2048; // For RSA
-    public string? KeyFilePath { get; set; } // PEM file path
-    public string? KeyVaultUri { get; set; } // Azure Key Vault
-    public TimeSpan RotationInterval { get; set; } = TimeSpan.FromDays(90);
-    public TimeSpan KeyOverlapPeriod { get; set; } = TimeSpan.FromDays(7);
+    public KeyType Type { get; set; } = KeyType.RSA;
+    public int RsaKeySize { get; set; } = 2048;
+    public string? PrivateKeyPem { get; set; }
+    public string? PrivateKeyPath { get; set; }
+    public string? CertificatePath { get; set; }
+    public string? CertificatePassword { get; set; }
+    public string? SymmetricKey { get; set; }
+}
+
+public enum KeyType
+{
+    RSA,
+    ECDSA,
+    Symmetric
 }
 ```
 
@@ -66,12 +70,12 @@ public class CoreIdentKeyOptions
 
 1. **Create `ISigningKeyProvider` interface** in `CoreIdent.Core/Services/`
 2. **Implement providers:**
-   - `FileBasedKeyProvider` — Load from PEM files (dev/simple deployments)
-   - `GeneratedKeyProvider` — Generate on startup, persist to configured store
-   - `AzureKeyVaultProvider` — Separate package `CoreIdent.KeyManagement.AzureKeyVault`
+   - `RsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured
+   - `EcdsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured
+   - `SymmetricSigningKeyProvider` — HS256 (development/testing only)
 3. **Update `JwtTokenService`** to use `ISigningKeyProvider` instead of raw key from options
 4. **Update JWKS endpoint** to return multiple keys with `kid` (key ID)
-5. **Deprecate `SigningKeySecret`** — Keep for backward compat, log warning if used
+5. **Deprecate symmetric signing** — HS256 remains available for development/testing only and is never published via JWKS
 
 #### JWKS Endpoint Changes
 
@@ -838,10 +842,10 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 
 ## Open Questions
 
-1. **Key storage for generated keys** — File system? Database? Require external (Key Vault)?
-2. **Multi-tenancy** — Should CoreIdent support multiple issuers in one instance?
-3. **Blazor-specific support** — Dedicated package or examples only?
-4. **Rate limiting** — Built-in or defer to middleware (e.g., `AspNetCoreRateLimit`)?
+1. **Key storage for generated keys** — Current behavior is to generate an ephemeral key at startup (with a warning) if none is configured. Persisted key storage and rotation are deferred.
+2. **Multi-tenancy** — Deferred; current scope is a single issuer per host.
+3. **Blazor-specific support** — Deferred to Phase 1.5 client libraries / examples.
+4. **Rate limiting** — Passwordless endpoints have built-in per-recipient throttling (`MaxAttemptsPerHour`). Broader request rate limiting is deferred to host middleware.
 
 ---
 

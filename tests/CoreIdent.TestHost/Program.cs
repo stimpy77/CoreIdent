@@ -5,6 +5,7 @@ using CoreIdent.Passkeys.AspNetIdentity.Extensions;
 using CoreIdent.Passwords.AspNetIdentity.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
+using CoreIdent.OpenApi.Extensions;
 using CoreIdent.TestHost;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddCoreIdentOpenApi();
+
 var app = builder.Build();
 
 app.UseAuthentication();
@@ -51,6 +54,8 @@ app.MapCoreIdentDefaultEndpoints();
 app.MapCoreIdentEndpoints();
 
 app.MapCoreIdentPasskeyEndpoints();
+
+app.MapCoreIdentOpenApi();
 
 app.Run();
 

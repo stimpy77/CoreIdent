@@ -37,6 +37,7 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 - If a feature cannot be tested automatically, document why and what manual verification was done
 - Never commit code that breaks existing tests
 - **Use Shouldly assertions with explicit messages** — every assertion should include a descriptive message clarifying expected vs. actual
+- **Coverage gate for CoreIdent.Core** — Any change touching `src/CoreIdent.Core` must maintain **>= 90% normalized merged line coverage** for `CoreIdent.Core` (CI enforces this).
 
 ### Package Management
 
@@ -99,16 +100,28 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 
 ```
 src/
-  CoreIdent.Core/              # Interfaces, models, core services
-  CoreIdent.Storage.EntityFrameworkCore/  # EF Core implementations
-  CoreIdent.Client/            # OAuth client library
-  CoreIdent.Providers.*/       # External provider integrations
-  CoreIdent.UI.Web/            # Razor/Blazor components
+  CoreIdent.Core/                        # Interfaces, models, core services, endpoints
+  CoreIdent.Storage.EntityFrameworkCore/ # EF Core store implementations
+  CoreIdent.Adapters.DelegatedUserStore/ # Adapter for existing user stores
+  CoreIdent.Passkeys/                    # Passkey/WebAuthn support
+  CoreIdent.Passkeys.AspNetIdentity/     # Passkey integration with ASP.NET Identity
+  CoreIdent.Passwords.AspNetIdentity/    # Password integration with ASP.NET Identity
+  CoreIdent.Aspire/                      # .NET Aspire integration (health checks, tracing)
+  CoreIdent.Cli/                         # CLI tool (dotnet coreident)
+  CoreIdent.Templates/                   # dotnet new template pack
 tests/
-  CoreIdent.Core.Tests/        # Unit tests
-  CoreIdent.Integration.Tests/ # Integration tests
-  CoreIdent.Testing/           # Shared test infrastructure
-```
+  CoreIdent.Core.Tests/                  # Unit tests
+  CoreIdent.Integration.Tests/           # Integration tests
+  CoreIdent.Testing/                     # Shared test infrastructure
+  CoreIdent.TestHost/                    # Runnable test server
+  CoreIdent.Cli.Tests/                   # CLI tests
+  CoreIdent.Templates.Tests/             # Template tests
+templates/
+  coreident-api/                         # Minimal API template
+  coreident-server/                      # Full server template with consent UI
+  coreident-api-fsharp/                  # F# template
+website/
+  index.html, features.html, style.css   # Project website
 
 ## Before You Start Coding
 
@@ -119,6 +132,26 @@ tests/
 5. Implement the feature
 6. Run all tests
 7. Commit with a clear message referencing the feature
+
+## Coding Standards / Quality Gates (Do Not Skip)
+
+- **Build cleanliness**
+  - Ensure packable library projects build with **no warnings** (or explicitly documented accepted warnings)
+  - Keep nullable enabled (`<Nullable>enable</Nullable>`) and fix nullable warnings as they appear
+- **XML documentation**
+  - All public APIs must have XML docs (CS1591 treated as error)
+  - If a public API is user-facing (DI/extension methods/endpoints), prefer adding practical guidance in `<remarks>`
+- **Public endpoint documentation**
+  - Whenever adding/modifying endpoints, update `docs/Developer_Guide.md`
+  - Maintain an OpenAPI/Swagger plan (and implementation when scheduled) so endpoints are discoverable
+- **Formatting and hygiene**
+  - Run `dotnet format` when touching many files / style-heavy changes
+  - Avoid unused usings and dead code paths
+- **Security / logging**
+  - Do not log secrets, tokens, OTPs, magic links, or raw PII
+  - Prefer redaction helpers for email/phone values in logs
+- **Docs stay in sync**
+  - If code changes affect configuration, routes, DI, or behaviors, update docs in the same PR
 
 ## When Stuck
 

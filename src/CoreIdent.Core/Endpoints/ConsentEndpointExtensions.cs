@@ -15,8 +15,16 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for the consent UI flow.
+/// </summary>
 public static class ConsentEndpointExtensions
 {
+    /// <summary>
+    /// Maps consent endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentConsentEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -27,6 +35,12 @@ public static class ConsentEndpointExtensions
         return endpoints.MapCoreIdentConsentEndpoints(consentPath);
     }
 
+    /// <summary>
+    /// Maps consent endpoints at the specified path.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="consentPath">Consent endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentConsentEndpoints(this IEndpointRouteBuilder endpoints, string consentPath)
     {
         ArgumentNullException.ThrowIfNull(endpoints);

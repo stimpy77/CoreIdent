@@ -13,6 +13,10 @@ public sealed class EfScopeStore : IScopeStore
 {
     private readonly CoreIdentDbContext _context;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfScopeStore"/> class.
+    /// </summary>
+    /// <param name="context">The EF Core database context.</param>
     public EfScopeStore(CoreIdentDbContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));

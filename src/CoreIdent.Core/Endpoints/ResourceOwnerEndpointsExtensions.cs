@@ -19,8 +19,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for resource owner (username/password) flows.
+/// </summary>
 public static class ResourceOwnerEndpointsExtensions
 {
+    /// <summary>
+    /// Maps resource owner endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentResourceOwnerEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -34,6 +42,14 @@ public static class ResourceOwnerEndpointsExtensions
         return endpoints.MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath);
     }
 
+    /// <summary>
+    /// Maps resource owner endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="registerPath">Registration endpoint path.</param>
+    /// <param name="loginPath">Login endpoint path.</param>
+    /// <param name="profilePath">Profile endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentResourceOwnerEndpoints(
         this IEndpointRouteBuilder endpoints,
         string registerPath,

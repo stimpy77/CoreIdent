@@ -9,6 +9,8 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dotnet-coreident</ToolCommandName>
     <PackageId>CoreIdent.Cli</PackageId>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

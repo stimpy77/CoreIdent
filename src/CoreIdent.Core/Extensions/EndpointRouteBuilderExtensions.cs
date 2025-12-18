@@ -6,8 +6,26 @@ using Microsoft.Extensions.Options;
 
 namespace CoreIdent.Core.Extensions;
 
+/// <summary>
+/// Endpoint mapping helpers for CoreIdent.
+/// </summary>
 public static class EndpointRouteBuilderExtensions
 {
+    /// <summary>
+    /// Maps all CoreIdent endpoints using options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
+    /// <remarks>
+    /// <para>
+    /// This maps the current CoreIdent endpoint surface (token issuance, revocation/introspection, discovery/JWKS,
+    /// authorization/consent, userinfo, resource-owner convenience endpoints, and passwordless endpoints).
+    /// </para>
+    /// <para>
+    /// If you want a smaller surface area, avoid this helper and instead call the granular <c>MapCoreIdent*</c> methods
+    /// from <c>CoreIdent.Core.Endpoints</c>.
+    /// </para>
+    /// </remarks>
     public static IEndpointRouteBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -20,6 +38,12 @@ public static class EndpointRouteBuilderExtensions
         return endpoints.MapCoreIdentEndpoints(coreOptions, routeOptions);
     }
 
+    /// <summary>
+    /// Maps all CoreIdent endpoints using options resolved from DI, with route options configured inline.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="configureRoutes">Route options configuration.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentEndpoints(this IEndpointRouteBuilder endpoints, Action<CoreIdentRouteOptions> configureRoutes)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -34,6 +58,17 @@ public static class EndpointRouteBuilderExtensions
         return endpoints.MapCoreIdentEndpoints(coreOptions, routeOptions);
     }
 
+    /// <summary>
+    /// Maps all CoreIdent endpoints using the provided options.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="coreOptions">CoreIdent options.</param>
+    /// <param name="routeOptions">Route options.</param>
+    /// <returns>The endpoint route builder.</returns>
+    /// <remarks>
+    /// Discovery and JWKS endpoints are derived from the <see cref="CoreIdentOptions.Issuer"/> path unless overridden.
+    /// All other endpoints are mapped under <see cref="CoreIdentRouteOptions.BasePath"/>.
+    /// </remarks>
     public static IEndpointRouteBuilder MapCoreIdentEndpoints(
         this IEndpointRouteBuilder endpoints,
         CoreIdentOptions coreOptions,

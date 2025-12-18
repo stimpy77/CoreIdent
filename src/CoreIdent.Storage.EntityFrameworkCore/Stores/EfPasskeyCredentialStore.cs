@@ -6,15 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CoreIdent.Storage.EntityFrameworkCore.Stores;
 
+/// <summary>
+/// Entity Framework Core implementation of <see cref="IPasskeyCredentialStore"/>.
+/// </summary>
 public sealed class EfPasskeyCredentialStore : IPasskeyCredentialStore
 {
     private readonly CoreIdentDbContext _db;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EfPasskeyCredentialStore"/> class.
+    /// </summary>
+    /// <param name="db">The EF Core database context.</param>
     public EfPasskeyCredentialStore(CoreIdentDbContext db)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<PasskeyCredential>> GetByUserIdAsync(string userId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -27,6 +35,7 @@ public sealed class EfPasskeyCredentialStore : IPasskeyCredentialStore
         return entities.Select(MapToModel).ToList();
     }
 
+    /// <inheritdoc />
     public async Task<PasskeyCredential?> GetByCredentialIdAsync(byte[] credentialId, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(credentialId);
@@ -38,6 +47,7 @@ public sealed class EfPasskeyCredentialStore : IPasskeyCredentialStore
         return entity is null ? null : MapToModel(entity);
     }
 
+    /// <inheritdoc />
     public async Task UpsertAsync(PasskeyCredential credential, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(credential);
@@ -66,6 +76,7 @@ public sealed class EfPasskeyCredentialStore : IPasskeyCredentialStore
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(string userId, byte[] credentialId, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);

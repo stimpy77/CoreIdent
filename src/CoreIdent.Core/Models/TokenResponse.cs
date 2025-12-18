@@ -78,11 +78,38 @@ public record TokenErrorResponse
 /// </summary>
 public static class TokenErrors
 {
+    /// <summary>
+    /// The request is missing a required parameter, includes an invalid parameter value, or is otherwise malformed.
+    /// </summary>
     public const string InvalidRequest = "invalid_request";
+
+    /// <summary>
+    /// Client authentication failed.
+    /// </summary>
     public const string InvalidClient = "invalid_client";
+
+    /// <summary>
+    /// The provided authorization grant or refresh token is invalid.
+    /// </summary>
     public const string InvalidGrant = "invalid_grant";
+
+    /// <summary>
+    /// The authenticated client is not authorized to use this authorization grant type.
+    /// </summary>
     public const string UnauthorizedClient = "unauthorized_client";
+
+    /// <summary>
+    /// The authorization grant type is not supported by the authorization server.
+    /// </summary>
     public const string UnsupportedGrantType = "unsupported_grant_type";
+
+    /// <summary>
+    /// The requested scope is invalid.
+    /// </summary>
     public const string InvalidScope = "invalid_scope";
+
+    /// <summary>
+    /// The authorization server encountered an unexpected condition.
+    /// </summary>
     public const string ServerError = "server_error";
 }

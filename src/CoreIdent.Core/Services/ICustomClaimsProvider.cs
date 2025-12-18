@@ -55,9 +55,11 @@ public record ClaimsContext
 /// </summary>
 public class NullCustomClaimsProvider : ICustomClaimsProvider
 {
+    /// <inheritdoc />
     public Task<IEnumerable<Claim>> GetAccessTokenClaimsAsync(ClaimsContext context, CancellationToken ct = default)
         => Task.FromResult(Enumerable.Empty<Claim>());
 
+    /// <inheritdoc />
     public Task<IEnumerable<Claim>> GetIdTokenClaimsAsync(ClaimsContext context, CancellationToken ct = default)
         => Task.FromResult(Enumerable.Empty<Claim>());
 }

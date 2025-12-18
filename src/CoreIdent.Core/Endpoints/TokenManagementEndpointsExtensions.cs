@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Text;
 using CoreIdent.Core.Configuration;
 using CoreIdent.Core.Extensions;
@@ -18,8 +19,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CoreIdent.Core.Endpoints;
 
+/// <summary>
+/// Endpoint mapping for token management endpoints such as revocation and introspection.
+/// </summary>
 public static class TokenManagementEndpointsExtensions
 {
+    /// <summary>
+    /// Maps token management endpoints using route options resolved from DI.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -32,6 +41,13 @@ public static class TokenManagementEndpointsExtensions
         return endpoints.MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath);
     }
 
+    /// <summary>
+    /// Maps token management endpoints at the specified paths.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="revokePath">Revocation endpoint path.</param>
+    /// <param name="introspectPath">Introspection endpoint path.</param>
+    /// <returns>The endpoint route builder.</returns>
     public static IEndpointRouteBuilder MapCoreIdentTokenManagementEndpoints(this IEndpointRouteBuilder endpoints, string revokePath, string? introspectPath = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -45,7 +61,8 @@ public static class TokenManagementEndpointsExtensions
 
         ArgumentException.ThrowIfNullOrWhiteSpace(introspectPath);
 
-        endpoints.MapPost(revokePath, async (
+        endpoints
+            .MapPost(revokePath, async (
             HttpRequest request,
             ICoreIdentRealmContext realmContext,
             IRealmSigningKeyProviderResolver signingKeyProviderResolver,
@@ -83,7 +100,7 @@ public static class TokenManagementEndpointsExtensions
             var realmId = realmContext.RealmId;
             var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
 
-            var (clientId, clientSecret) = ExtractClientCredentials(request, form);
+            var (clientId, clientSecret) = ExtractClientCredentials(request, form, logger);
 
             activity?.SetTag("client_id", clientId);
 
@@ -160,10 +177,15 @@ public static class TokenManagementEndpointsExtensions
                 logger.LogError(ex, "Error processing token revocation request.");
                 return Results.Json(new { error = "server_error", error_description = "An error occurred processing the request." }, statusCode: StatusCodes.Status500InternalServerError);
             }
-        });
+        })
+            .Produces(StatusCodes.Status200OK)
+            .Produces<TokenErrorResponse>(StatusCodes.Status400BadRequest, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status401Unauthorized, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status500InternalServerError, "application/json");
 
         // Introspection endpoint (RFC 7662)
-        endpoints.MapPost(introspectPath, async (
+        endpoints
+            .MapPost(introspectPath, async (
             HttpRequest request,
             ICoreIdentRealmContext realmContext,
             IRealmSigningKeyProviderResolver signingKeyProviderResolver,
@@ -201,7 +223,7 @@ public static class TokenManagementEndpointsExtensions
             var realmId = realmContext.RealmId;
             var signingKeyProvider = await signingKeyProviderResolver.GetSigningKeyProviderAsync(realmId, ct);
 
-            var (clientId, clientSecret) = ExtractClientCredentials(request, form);
+            var (clientId, clientSecret) = ExtractClientCredentials(request, form, logger);
 
             activity?.SetTag("client_id", clientId);
 
@@ -263,7 +285,11 @@ public static class TokenManagementEndpointsExtensions
 
             // Unknown token
             return Results.Json(new TokenIntrospectionResponse { Active = false });
-        });
+        })
+            .Produces<TokenIntrospectionResponse>(StatusCodes.Status200OK, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status400BadRequest, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status401Unauthorized, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status500InternalServerError, "application/json");
 
         return endpoints;
     }
@@ -458,27 +484,37 @@ public static class TokenManagementEndpointsExtensions
         }
     }
 
-    private static (string? ClientId, string? ClientSecret) ExtractClientCredentials(HttpRequest request, IFormCollection form)
+    private static (string? ClientId, string? ClientSecret) ExtractClientCredentials(HttpRequest request, IFormCollection form, ILogger logger)
     {
         var authorization = request.Headers.Authorization.ToString();
 
         if (!string.IsNullOrWhiteSpace(authorization) && authorization.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
         {
-            try
+            var encoded = authorization["Basic ".Length..].Trim();
+            if (!string.IsNullOrWhiteSpace(encoded))
             {
-                var encoded = authorization["Basic ".Length..].Trim();
-                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
-                var colonIndex = decoded.IndexOf(':');
+                Span<byte> buffer = encoded.Length <= 256
+                    ? stackalloc byte[encoded.Length]
+                    : new byte[encoded.Length];
 
-                if (colonIndex > 0)
+                if (Convert.TryFromBase64String(encoded, buffer, out var bytesWritten))
                 {
-                    var clientId = Uri.UnescapeDataString(decoded[..colonIndex]);
-                    var clientSecret = Uri.UnescapeDataString(decoded[(colonIndex + 1)..]);
-                    return (clientId, clientSecret);
+                    var decoded = Encoding.UTF8.GetString(buffer[..bytesWritten]);
+                    var colonIndex = decoded.IndexOf(':');
+
+                    if (colonIndex > 0)
+                    {
+                        var clientId = WebUtility.UrlDecode(decoded[..colonIndex]);
+                        var clientSecret = WebUtility.UrlDecode(decoded[(colonIndex + 1)..]);
+                        return (clientId, clientSecret);
+                    }
+
+                    logger.LogDebug("Malformed Basic authorization header (missing ':'); falling back to form credentials.");
                 }
-            }
-            catch
-            {
+                else
+                {
+                    logger.LogDebug("Malformed Basic authorization header (invalid base64); falling back to form credentials.");
+                }
             }
         }
 
