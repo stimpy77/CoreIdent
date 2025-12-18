@@ -577,6 +577,9 @@ If you want a more controlled surface area, map individual endpoints:
 - `MapCoreIdentTokenEndpoint(tokenPath)`
 - `MapCoreIdentTokenManagementEndpoints(revokePath, introspectPath)`
 - `MapCoreIdentResourceOwnerEndpoints(registerPath, loginPath, profilePath)`
+- `MapCoreIdentUserInfoEndpoint(userInfoPath)`
+- `MapCoreIdentPasswordlessEmailEndpoints(startPath, verifyPath)`
+- `MapCoreIdentPasswordlessSmsEndpoints(startPath, verifyPath)`
 
 ---
 
@@ -910,6 +913,17 @@ Request body (JSON):
 ```json
 { "phone_number": "+15551234567" }
 ```
+
+Optionally, you can provide a `message_prefix` that will be prepended to the OTP message:
+
+```json
+{ "phone_number": "+15551234567", "message_prefix": "Your login code:" }
+```
+
+For form posts, the corresponding field names are:
+
+- `phone_number`
+- `message_prefix`
 
 Phone numbers must be in E.164 format (for example: `+15551234567`). CoreIdent applies minimal normalization before validation (trims whitespace, removes spaces/hyphens/parentheses, and converts a leading `00` prefix to `+`).
 
