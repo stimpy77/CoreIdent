@@ -1295,14 +1295,14 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 #### 1.13.8: Test Coverage Review
 
 *   **Component:** Coverage Analysis
-    - [ ] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
-    - [ ] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
-    - [ ] (L2) Add tests for any uncovered critical paths
+    - [x] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
+    - [x] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
+    - [x] (L2) Add tests for any uncovered critical paths
 *   **Component:** Test Quality
-    - [ ] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
-    - [ ] (L2) Review flaky tests and stabilize
+    - [x] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
+    - [x] (L2) Review flaky tests and stabilize (repeat-runs performed; no flakes reproduced)
 *   **Documentation:**
-    - [ ] (L1) Document test coverage expectations in CONTRIBUTING.md
+    - [x] (L1) Document test coverage expectations in CONTRIBUTING.md
 
 ---
 
