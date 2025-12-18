@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoreIdent - Holistic .NET Authentication</title>
+    <title>CoreIdent - Open-Source OAuth/OIDC for .NET 10+</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,15 +14,15 @@
         <div class="container">
             <div class="logo">
                 <a href="index.html">
-                    <img src="assets/logo.png" alt="CoreIdent Logo">
+                    <span class="wordmark">CoreIdent</span>
                 </a>
             </div>
             <nav>
                 <ul>
                     <li><a href="index.html" class="active">Home</a></li>
                     <li><a href="features.html">Roadmap</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank">Developer Guide</a></li>
-                    <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer">Developer Guide</a></li>
+                    <li><a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer">GitHub</a></li>
                 </ul>
             </nav>
         </div>
@@ -32,23 +32,33 @@
     <section id="hero" class="hero-gradient">
         <div class="hero-inner container hero-flex">
             <div class="hero-content">
-                <h1 class="hero-title">Holistic <span class="hero-highlight">.NET 10+</span> Authentication</h1>
-                <p class="hero-subtitle">Open-source OAuth/OIDC foundation for .NET 10+. Issue tokens, publish discovery + JWKS, and plug into your apps with clean, testable primitives.</p>
+                <h1 class="hero-title">Complete <span class="hero-highlight">OAuth/OIDC</span> for .NET 10+</h1>
+                <p class="hero-subtitle">Add secure authentication to your app in minutes. Open-source, self-hosted, no vendor lock-in.</p>
                 <div class="hero-cta-row">
-                    <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" class="button primary">Developer Guide</a>
-                    <a href="features.html" class="button secondary">Roadmap</a>
-                    <a href="https://github.com/stimpy77/CoreIdent" target="_blank" class="button secondary">GitHub</a>
+                    <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer" class="button primary">Get Started</a>
+                    <a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer" class="button secondary">View on GitHub</a>
                 </div>
                 <div class="hero-badges">
-                    <a href="https://opensource.org/licenses/MIT" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
-                    <a href="https://dotnet.microsoft.com/" target="_blank"><img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"></a>
+                    <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+                    <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"></a>
+                    <a data-stars-badge href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/github/stars/stimpy77/CoreIdent?style=social" alt="GitHub Stars"></a>
                 </div>
                 <div class="hero-consulting">
-                    <a href="https://jondavis.net" target="_blank">Need help? Consulting available</a>
+                    <a href="https://jondavis.net" target="_blank" rel="noopener noreferrer">Need help? Consulting available</a>
                 </div>
             </div>
-            <div class="hero-logo-block hero-logo-full">
-                <img src="assets/logo.png" alt="CoreIdent Logo" class="hero-logo-full-img">
+            <div class="hero-code-block">
+                <pre><code>var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCoreIdent(o => {
+    o.Issuer = "https://auth.example.com";
+    o.Audience = "https://api.example.com";
+});
+builder.Services.AddSigningKey(o => o.UseRsa("key.pem"));
+
+var app = builder.Build();
+app.MapCoreIdentEndpoints();
+app.Run();</code></pre>
+                <p class="hero-code-caption">That's it. Token issuance, OIDC discovery, JWKS &mdash; ready to go.</p>
             </div>
         </div>
     </section>
@@ -58,75 +68,92 @@
         <div class="pillars-grid">
             <div class="pillar-card">
                 <div class="pillar-icon">🔐</div>
-                <h3>OAuth/OIDC Foundation</h3>
-                <p>Token endpoint with multiple grants (including authorization_code + PKCE), plus discovery and JWKS.</p>
-            </div>
-            <div class="pillar-card">
-                <div class="pillar-icon">🧩</div>
-                <h3>Pluggable Stores</h3>
-                <p>In-memory defaults for development and tests, with EF Core implementations for persistence.</p>
+                <h3>Full OAuth 2.0 / OIDC</h3>
+                <p>Authorization Code + PKCE, client credentials, refresh tokens, discovery, JWKS, revocation, introspection.</p>
             </div>
             <div class="pillar-card">
                 <div class="pillar-icon">🔑</div>
-                <h3>Secure by Default</h3>
-                <p>Asymmetric signing (RS256/ES256), public keys only in JWKS, refresh token rotation, and theft detection.</p>
+                <h3>Passwordless-First</h3>
+                <p>Email magic links, passkeys/WebAuthn, and SMS OTP built-in. Modern auth without password headaches.</p>
             </div>
             <div class="pillar-card">
-                <div class="pillar-icon">🧪</div>
-                <h3>Testing &amp; DevEx</h3>
-                <p>Reusable fixtures/builders and comprehensive integration tests for endpoints and flows.</p>
+                <div class="pillar-icon">🧩</div>
+                <h3>Flexible Storage</h3>
+                <p>In-memory for development, EF Core for production. Swap stores without changing your code.</p>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon">🛡️</div>
+                <h3>Secure by Default</h3>
+                <p>RS256/ES256 signing, refresh token rotation, theft detection. No insecure defaults.</p>
             </div>
         </div>
     </section>
 
     <!-- FEATURES OVERVIEW -->
     <section id="features" class="container">
-        <h2>Highlights</h2>
+        <h2>What's Included</h2>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon">🔑</div>
-                <h4>Asymmetric Keys + JWKS</h4>
-                <p>RS256/ES256 token signing with safe JWKS publishing (public keys only).</p>
+                <div class="feature-icon">✉️</div>
+                <h4>Email Magic Links</h4>
+                <p>Passwordless login via secure email tokens. Pluggable email provider interface.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">✉️</div>
-                <h4>Passwordless Auth</h4>
-                <p>Email magic links and passkeys were part of the 0.4->1.0 roadmap.</p>
+                <div class="feature-icon">🔐</div>
+                <h4>Passkeys / WebAuthn</h4>
+                <p>Modern biometric and hardware key authentication. Built on FIDO2 standards.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h4>SMS OTP</h4>
+                <p>One-time passwords via SMS. Pluggable SMS provider for Twilio, AWS SNS, etc.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📊</div>
-                <h4>.NET 10 Metrics</h4>
-                <p>Planned OpenTelemetry integration leveraging .NET 10 built-in metrics.</p>
+                <h4>OpenTelemetry Metrics</h4>
+                <p>Built-in metrics via System.Diagnostics.Metrics. Track token issuance, auth durations, and more.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🧪</div>
-                <h4>Test Infrastructure</h4>
-                <p>Reusable fixtures, fluent builders, and assertion extensions for endpoint testing.</p>
+                <div class="feature-icon">🛠️</div>
+                <h4>CLI Tool</h4>
+                <p><code>dotnet coreident</code> for project init, key generation, client management, and migrations.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🔒</div>
-                <h4>Modern Protocols</h4>
-                <p>Token revocation (RFC 7009) and introspection (RFC 7662) implemented; more planned (DPoP, PAR, device flow).</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌍</div>
-                <h4>F#-Friendly APIs</h4>
-                <p>Core library APIs are designed to be friendly to both C# and F# consumers.</p>
+                <div class="feature-icon">☁️</div>
+                <h4>Aspire Integration</h4>
+                <p>Health checks, distributed tracing, and service defaults for .NET Aspire apps.</p>
             </div>
         </div>
     </section>
 
     <!-- CURRENT STATUS SECTION -->
     <section id="current-status" class="container">
-        <h2>Current Status</h2>
+        <h2>Implementation Status</h2>
         <div class="status-content">
-            <p class="status-highlight"><strong>CoreIdent 1.0 is in active development</strong> with a working OAuth/OIDC foundation on .NET 10.</p>
+            <p class="status-highlight"><strong>CoreIdent 1.0</strong> &mdash; Production-ready OAuth/OIDC foundation for .NET 10+</p>
             <ul class="status-list">
-                <li><strong>Implemented:</strong> Token issuance, discovery, JWKS, authorization code + PKCE (with consent), revocation, introspection</li>
-                <li><strong>Implemented:</strong> In-memory stores + EF Core stores, refresh token rotation + theft detection</li>
-                <li><strong>Implemented:</strong> Test infrastructure + integration coverage for core endpoints</li>
-                <li><strong>Planned next:</strong> Passwordless flows (email magic links, passkeys), providers, client libraries</li>
+                <li>
+                    <span class="status-badge complete">Complete</span>
+                    <span class="status-item"><strong>OAuth 2.0 / OIDC:</strong> Token endpoint, authorization code + PKCE, discovery, JWKS, revocation, introspection</span>
+                </li>
+                <li>
+                    <span class="status-badge complete">Complete</span>
+                    <span class="status-item"><strong>Passwordless:</strong> Email magic links, passkeys/WebAuthn, SMS OTP</span>
+                </li>
+                <li>
+                    <span class="status-badge complete">Complete</span>
+                    <span class="status-item"><strong>Infrastructure:</strong> EF Core stores, CLI tool, Aspire integration, OpenTelemetry metrics</span>
+                </li>
+                <li>
+                    <span class="status-badge planned">Next</span>
+                    <span class="status-item"><strong>External Providers:</strong> Google, Microsoft, GitHub OAuth integration</span>
+                </li>
+                <li>
+                    <span class="status-badge planned">Next</span>
+                    <span class="status-item"><strong>Client Libraries:</strong> MAUI, WPF, Blazor authentication clients</span>
+                </li>
             </ul>
+            <p style="margin-top: 1.5rem;"><a href="features.html" class="button secondary">View Full Roadmap</a></p>
         </div>
     </section>
 
@@ -134,9 +161,9 @@
     <section id="community" class="container">
         <div class="community-block">
             <h2>Open for Your Contribution</h2>
-            <p>Join the CoreIdent community on <a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a>.<br>
+            <p>Join the CoreIdent community on <a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer">GitHub</a>.<br>
             <span class="community-badges">
-                <img src="https://img.shields.io/github/stars/stimpy77/CoreIdent?style=social" alt="GitHub Stars">
+                <img data-stars-badge src="https://img.shields.io/github/stars/stimpy77/CoreIdent?style=social" alt="GitHub Stars">
                 <img src="https://img.shields.io/nuget/dt/CoreIdent.Core.svg" alt="NuGet Downloads">
             </span>
             </p>
@@ -149,48 +176,75 @@
         <p class="intro-text">Start with the Developer Guide (current codebase), then the planning documents for roadmap and intent:</p>
         <div class="doc-links">
             <div class="doc-card">
-                <h4>📘 Developer Guide</h4>
+                <h4>Developer Guide</h4>
                 <p>Practical reference for configuration, endpoints, persistence, and testing.</p>
-                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" class="button secondary">View</a>
+                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer" class="button secondary">View</a>
             </div>
             <div class="doc-card">
-                <h4>📋 Project Overview</h4>
+                <h4>Project Overview</h4>
                 <p>Vision, principles, architecture, and phased roadmap.</p>
-                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Project_Overview.md" target="_blank" class="button secondary">View</a>
+                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Project_Overview.md" target="_blank" rel="noopener noreferrer" class="button secondary">View</a>
             </div>
             <div class="doc-card">
-                <h4>🔧 Technical Plan</h4>
+                <h4>Technical Plan</h4>
                 <p>Detailed specifications, interfaces, and implementation guidance.</p>
-                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Technical_Plan.md" target="_blank" class="button secondary">View</a>
+                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Technical_Plan.md" target="_blank" rel="noopener noreferrer" class="button secondary">View</a>
             </div>
             <div class="doc-card">
-                <h4>✅ Development Plan</h4>
+                <h4>Development Plan</h4>
                 <p>Task-level checklist with components, test cases, and docs.</p>
-                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/DEVPLAN.md" target="_blank" class="button secondary">View</a>
+                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/DEVPLAN.md" target="_blank" rel="noopener noreferrer" class="button secondary">View</a>
             </div>
         </div>
         <div class="cta-buttons">
-            <a href="https://github.com/stimpy77/CoreIdent" target="_blank" class="button primary">View on GitHub</a>
+            <a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer" class="button primary">View on GitHub</a>
         </div>
     </section>
 
     <footer>
         <div class="container footer-content">
             <div class="badges">
-                <a href="https://opensource.org/licenses/MIT" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
-                <a href="https://dotnet.microsoft.com/" target="_blank"><img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"></a>
-                <a href="https://github.com/stimpy77/CoreIdent" target="_blank"><img src="https://img.shields.io/github/stars/stimpy77/CoreIdent?style=social" alt="GitHub Stars"></a>
+                <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+                <a href="https://dotnet.microsoft.com/" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"></a>
+                <a data-stars-badge href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/github/stars/stimpy77/CoreIdent?style=social" alt="GitHub Stars"></a>
             </div>
             <div class="footer-links">
-                <a href="https://github.com/stimpy77/CoreIdent" target="_blank">GitHub</a> |
+                <a href="https://github.com/stimpy77/CoreIdent" target="_blank" rel="noopener noreferrer">GitHub</a> |
                 <a href="features.html">Feature Roadmap</a> |
-                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank">Developer Guide</a> |
-                <a href="https://jondavis.net" target="_blank">Consulting</a>
+                <a href="https://github.com/stimpy77/CoreIdent/blob/main/docs/Developer_Guide.md" target="_blank" rel="noopener noreferrer">Developer Guide</a> |
+                <a href="https://jondavis.net" target="_blank" rel="noopener noreferrer">Consulting</a>
             </div>
             <div class="footer-text">
-                &copy; 2025 CoreIdent. Holistic .NET Authentication.
+                &copy; 2025 CoreIdent. Open-source OAuth/OIDC for .NET.
             </div>
         </div>
     </footer>
-</body>
-</html>
+
+    <script>
+        (async () => {
+            const starsThreshold = 25;
+            const badges = document.querySelectorAll('[data-stars-badge]');
+            for (const badge of badges) {
+                badge.style.display = 'none';
+            }
+
+            try {
+                const res = await fetch('https://api.github.com/repos/stimpy77/CoreIdent', { headers: { 'Accept': 'application/vnd.github+json' } });
+                if (!res.ok) {
+                    return;
+                }
+
+                const data = await res.json();
+                const stars = data?.stargazers_count ?? 0;
+                if (stars >= starsThreshold) {
+                    for (const badge of badges) {
+                        badge.style.display = '';
+                    }
+                }
+            } catch {
+                // If GitHub rate-limits or the request fails, keep the badge hidden.
+            }
+        })();
+    </script>
+ </body>
+ </html>

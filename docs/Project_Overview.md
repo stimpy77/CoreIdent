@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-CoreIdent is a **holistic, open-source authentication and identity solution for .NET 10+**. It provides a unified approach to security across multiple scenarios:
+CoreIdent is a **complete, open-source authentication toolkit for .NET 10+**. It provides a unified approach to security across multiple scenarios:
 
 1. **Embedded Authentication** — Drop-in auth for ASP.NET Core apps with minimal configuration
 2. **External Provider Integration** — Easy connection to third-party OAuth/OIDC providers (Google, Microsoft, etc.)

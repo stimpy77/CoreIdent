@@ -40,6 +40,13 @@ header .container {
   text-decoration: none;
 }
 
+.wordmark {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: #1a365d;
+}
+
 .logo img {
   height: 40px;
   width: auto;
@@ -201,6 +208,47 @@ h3, h4 {
 }
 .hero-consulting a:hover {
   opacity: 1;
+}
+
+/* HERO CODE BLOCK */
+.hero-code-block {
+  flex: 0 0 520px;
+  min-width: 320px;
+  max-width: 560px;
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+.hero-code-block pre {
+  margin: 0;
+  padding: 20px 24px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.hero-code-block code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  color: #e2e8f0;
+  white-space: pre;
+}
+.hero-code-caption {
+  margin: 0;
+  padding: 12px 24px;
+  background: #334155;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  text-align: center;
+  border-top: 1px solid #475569;
+}
+
+@media (max-width: 1100px) {
+  .hero-code-block {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 /* PILLARS / VALUE PROPS */
@@ -381,26 +429,46 @@ h3, h4 {
 }
 
 .status-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 0.7rem;
-  padding: 8px 0;
-  font-size: 1.1rem;
+  padding: 10px 0;
+  font-size: 1.05rem;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .status-badge {
-  display: inline-block;
-  background: #e0eaff;
-  color: #4a7bfd;
-  border-radius: 6px;
-  padding: 0.15em 0.7em;
-  font-size: 0.9em;
-  margin-left: 0.4em;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1.1;
+  margin: 2px 0 0 0;
 }
 
 .status-badge.complete {
-  background: #dcfce7;
-  color: #16a34a;
+  background-color: #10b981;
+  color: #fff;
+}
+
+.status-badge.planned {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+.status-badge.under-consideration {
+  background-color: #64748b;
+  color: #fff;
+}
+
+.status-item {
+  flex: 1 1 auto;
 }
 
 /* Feature Table Styles */
@@ -440,29 +508,6 @@ h3, h4 {
 
 .feature-table tr:hover {
     background-color: #f1f5f9;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-
-.status-badge.complete {
-    background-color: #10b981;
-    color: white;
-}
-
-.status-badge.planned {
-    background-color: #3b82f6;
-    color: white;
-}
-
-.status-badge.under-consideration {
-    background-color: #64748b;
-    color: white;
 }
 
 .document-links {

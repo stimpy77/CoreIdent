@@ -99,15 +99,28 @@ This file provides instructions for AI assistants (Claude, Copilot, etc.) workin
 
 ```
 src/
-  CoreIdent.Core/              # Interfaces, models, core services
-  CoreIdent.Storage.EntityFrameworkCore/  # EF Core implementations
-  CoreIdent.Client/            # OAuth client library
-  CoreIdent.Providers.*/       # External provider integrations
-  CoreIdent.UI.Web/            # Razor/Blazor components
+  CoreIdent.Core/                        # Interfaces, models, core services, endpoints
+  CoreIdent.Storage.EntityFrameworkCore/ # EF Core store implementations
+  CoreIdent.Adapters.DelegatedUserStore/ # Adapter for existing user stores
+  CoreIdent.Passkeys/                    # Passkey/WebAuthn support
+  CoreIdent.Passkeys.AspNetIdentity/     # Passkey integration with ASP.NET Identity
+  CoreIdent.Passwords.AspNetIdentity/    # Password integration with ASP.NET Identity
+  CoreIdent.Aspire/                      # .NET Aspire integration (health checks, tracing)
+  CoreIdent.Cli/                         # CLI tool (dotnet coreident)
+  CoreIdent.Templates/                   # dotnet new template pack
 tests/
-  CoreIdent.Core.Tests/        # Unit tests
-  CoreIdent.Integration.Tests/ # Integration tests
-  CoreIdent.Testing/           # Shared test infrastructure
+  CoreIdent.Core.Tests/                  # Unit tests
+  CoreIdent.Integration.Tests/           # Integration tests
+  CoreIdent.Testing/                     # Shared test infrastructure
+  CoreIdent.TestHost/                    # Runnable test server
+  CoreIdent.Cli.Tests/                   # CLI tests
+  CoreIdent.Templates.Tests/             # Template tests
+templates/
+  coreident-api/                         # Minimal API template
+  coreident-server/                      # Full server template with consent UI
+  coreident-api-fsharp/                  # F# template
+website/
+  index.html, features.html, style.css   # Project website
 ```
 
 ## Before You Start Coding

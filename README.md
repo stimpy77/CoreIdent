@@ -1,6 +1,6 @@
 # CoreIdent
 
-**Holistic, open-source authentication and identity for .NET 10+**
+**Open-source OAuth 2.0 / OIDC toolkit for .NET 10+**
 
 [![Build Status](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,171 +9,82 @@
 
 ---
 
-CoreIdent is a **holistic, open-source authentication and identity toolkit** for .NET 10+.
-
-It’s designed to cover the practical spectrum—from **“I just need auth in my app”** to **running a full OAuth 2.0 / OpenID Connect server**—with a **passwordless-first** roadmap (email magic links, passkeys) and a strong focus on developer experience.
-
-CoreIdent aims to grow into a single solution for:
-
-- **Embedded auth for apps** (drop-in defaults)
-- **External providers** (Google/Microsoft/GitHub, etc.)
-- **Identity server capabilities** (OAuth 2.0 / OIDC)
-- **Client libraries** for common .NET app types
-
-CoreIdent 1.0 currently provides a clean, testable core for:
-
-- **Issuing tokens** (JWT access tokens, refresh tokens)
-- **Standards endpoints** (discovery + JWKS)
-- **Core OAuth flows** (including Authorization Code + PKCE)
-- **Pluggable persistence** (in-memory defaults, EF Core implementations)
-- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
-- **CLI tool** (`dotnet coreident`) for init/key generation/client helper/migrations
-- **Metrics** via `System.Diagnostics.Metrics` (optional)
-
-## Status
-
-CoreIdent is in active development as a **holistic authentication and identity toolkit for .NET 10+**.
-
-- **Prerequisite**: .NET 10 SDK
-
-## Quickstart (2 minutes)
-
-If you want to see CoreIdent running quickly, use the test host:
-
-```bash
-dotnet run --project tests/CoreIdent.TestHost
-```
-
-If you want to scaffold a new host app, use the template pack:
-
-```bash
-dotnet new install CoreIdent.Templates
-
-dotnet new coreident-api -n MyCoreIdentApi
-dotnet new coreident-server -n MyCoreIdentServer
-dotnet new coreident-api-fsharp -n MyCoreIdentApiFSharp
-```
-
-Template parameters:
-
-- **`coreident-api`**
-  - `--useEfCore <true|false>`
-  - `--usePasswordless <true|false>`
-- **`coreident-server`**
-  - `--usePasskeys <true|false>`
-  - `--usePasswordless <true|false>`
-- **`coreident-api-fsharp`**
-  - `--useEfCore <true|false>`
-  - `--usePasswordless <true|false>`
-
-Then visit:
-
-- `/.well-known/openid-configuration`
-- `/.well-known/jwks.json`
-
-## Choose your path
-
-- **Integrate CoreIdent into an app**
-  - [docs/Developer_Guide.md](docs/Developer_Guide.md)
-- **Aspire integration (service defaults)**
-  - [docs/Aspire_Integration.md](docs/Aspire_Integration.md)
-- **Add passkeys (WebAuthn)**
-  - [docs/Passkeys.md](docs/Passkeys.md)
-- **Use the CLI**
-  - [docs/CLI_Reference.md](docs/CLI_Reference.md)
-- **Understand the roadmap / implementation status**
-  - [docs/DEVPLAN.md](docs/DEVPLAN.md)
-- **Contribute / development environment**
-  - [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## What CoreIdent 1.0 provides today
-
-- **Token endpoint** (`/auth/token`)
-  - `client_credentials`
-  - `refresh_token`
-  - `authorization_code` (PKCE required)
-  - `password` (deprecated; logs a warning)
-- **Authorization endpoint + consent UI** (`/auth/authorize`, `/auth/consent`)
-- **Token revocation** (RFC 7009) and **introspection** (RFC 7662)
-- **OIDC UserInfo endpoint** (`/auth/userinfo`)
-- **OIDC discovery document** and **JWKS publishing** (public keys only)
-- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
-- **In-memory stores** by default + **EF Core store implementations**
-- **Test infrastructure** under `tests/` (fixtures + integration coverage)
-- **Passwordless authentication**
-  - Email magic links
-  - Passkeys/WebAuthn
-  - SMS OTP
-
-## What’s next
-- **External providers** (Google/Microsoft/GitHub, etc.)
-- **Client libraries** and broader “drop-in auth for apps” experiences
-
-## Getting started
-
-### 1) Minimal “OAuth server” host
+CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.0 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
 
 ```csharp
-using CoreIdent.Core.Extensions;
-
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddCoreIdent(o =>
-{
-    o.Issuer = "https://issuer.example";
-    o.Audience = "https://resource.example";
+builder.Services.AddCoreIdent(o => {
+    o.Issuer = "https://auth.example.com";
+    o.Audience = "https://api.example.com";
 });
-
-// Production: prefer RSA/ECDSA.
-builder.Services.AddSigningKey(o => o.UseRsa("/path/to/private-key.pem"));
+builder.Services.AddSigningKey(o => o.UseRsa("/path/to/key.pem"));
 
 var app = builder.Build();
 app.MapCoreIdentEndpoints();
 app.Run();
 ```
 
-### 2) Use EF Core persistence
+**That's it.** You now have token issuance, OIDC discovery, JWKS, and more.
+
+## Features
+
+* **Token endpoint** — `client_credentials`, `refresh_token`, `authorization_code` (PKCE required), `password` (deprecated)
+* **Authorization Code + PKCE** — Full flow with consent UI
+* **OIDC discovery & JWKS** — Standards-compliant metadata and public key publishing
+* **Token revocation** (RFC 7009) & **introspection** (RFC 7662)
+* **Passwordless authentication** — Email magic links, passkeys/WebAuthn, SMS OTP
+* **Pluggable storage** — In-memory for dev, EF Core for production
+* **Secure by default** — RS256/ES256 signing, refresh token rotation, theft detection
+* **CLI tool** — `dotnet coreident init`, key generation, client management
+* **Metrics** — OpenTelemetry-compatible via `System.Diagnostics.Metrics`
+* **Aspire integration** — Health checks, distributed tracing, service defaults
+
+## Quick Start
+
+### Option 1: Use the Test Host
+
+```bash
+dotnet run --project tests/CoreIdent.TestHost
+```
+
+Visit `/.well-known/openid-configuration` to see the discovery document.
+
+### Option 2: Use Templates
+
+```bash
+dotnet new install CoreIdent.Templates
+dotnet new coreident-server -n MyAuthServer
+cd MyAuthServer && dotnet run
+```
+
+**Available templates:**
+- `coreident-api` — Minimal API with token endpoints
+- `coreident-server` — Full server with consent UI and passkeys
+- `coreident-api-fsharp` — F# version
+
+## Add EF Core Persistence
 
 ```csharp
-using CoreIdent.Storage.EntityFrameworkCore;
-using CoreIdent.Storage.EntityFrameworkCore.Extensions;
-using Microsoft.EntityFrameworkCore;
-
-builder.Services.AddCoreIdent(o =>
-{
-    o.Issuer = "https://issuer.example";
-    o.Audience = "https://resource.example";
-});
-
-builder.Services.AddSigningKey(o => o.UseRsa("/path/to/private-key.pem"));
-
 builder.Services.AddDbContext<CoreIdentDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("CoreIdent")));
-
 builder.Services.AddEntityFrameworkCoreStores();
 ```
 
 ## Documentation
 
-- **Developer Guide (recommended starting point)**
-  - [docs/Developer_Guide.md](docs/Developer_Guide.md)
-- **Aspire integration**
-  - [docs/Aspire_Integration.md](docs/Aspire_Integration.md)
-- **Passkeys (WebAuthn) guide**
-  - [docs/Passkeys.md](docs/Passkeys.md)
-- **Project docs**
-  - [docs/Project_Overview.md](docs/Project_Overview.md)
-  - [docs/Technical_Plan.md](docs/Technical_Plan.md)
-  - [docs/DEVPLAN.md](docs/DEVPLAN.md)
-- **CLI reference**
-  - [docs/CLI_Reference.md](docs/CLI_Reference.md)
-- **Detailed reference**
-  - [docs/README_Detailed.md](docs/README_Detailed.md)
+| Guide | Description |
+|-------|-------------|
+| [Developer Guide](docs/Developer_Guide.md) | **Start here** — Configuration, endpoints, persistence |
+| [Passkeys Guide](docs/Passkeys.md) | WebAuthn/passkey setup |
+| [CLI Reference](docs/CLI_Reference.md) | `dotnet coreident` commands |
+| [Aspire Integration](docs/Aspire_Integration.md) | Health checks, tracing, service defaults |
+| [Project Overview](docs/Project_Overview.md) | Architecture and vision |
+| [Development Plan](docs/DEVPLAN.md) | Roadmap and task checklist |
 
 ## Contributing
 
-If you want to contribute, start with [docs/DEVPLAN.md](docs/DEVPLAN.md) and the integration tests in [tests/](tests/).
+CoreIdent is MIT-licensed and open source. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 ## License
 
-[MIT License](LICENSE)
+[MIT](LICENSE)

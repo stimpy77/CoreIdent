@@ -26,7 +26,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 # CoreIdent
 
-**Holistic, open-source authentication and identity for .NET 10+**
+**Open-source OAuth 2.0 / OIDC toolkit for .NET 10+**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
@@ -35,7 +35,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 ## What is CoreIdent?
 
-CoreIdent is a **unified authentication solution** for the .NET ecosystem. It is designed to cover the spectrum from simple embedded auth to running a full OAuth 2.0 / OpenID Connect server, with additional capabilities delivered incrementally across phases.
+CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.0 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
 
 ## Embedded Auth vs Membership (Guidance Placeholder)
 
@@ -57,22 +57,27 @@ This section is a placeholder for DEVPLAN 1.13.6.
 
 ## Current Status
 
-CoreIdent is in active development on .NET 10.
+**CoreIdent 1.0** — Production-ready OAuth/OIDC foundation for .NET 10+
 
-**Prerequisites:** .NET 10 SDK installed (required for all projects and tests)
+**Prerequisites:** .NET 10 SDK
 
-Current focus areas include:
+### Implemented Features
 
-- **.NET 10** only (`net10.0`)
+- **OAuth 2.0 / OIDC** — Token endpoint, authorization code + PKCE, discovery, JWKS, revocation (RFC 7009), introspection (RFC 7662)
+- **Passwordless authentication** — Email magic links, passkeys/WebAuthn, SMS OTP
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
-- **OAuth/OIDC foundation** (discovery, JWKS, token endpoint, revocation, introspection)
-- **Authorization Code + PKCE** with a minimal consent UI
-- **Resource-owner convenience endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`)
-- **Pluggable persistence** (in-memory defaults, EF Core implementations)
-- **Developer experience**: test infrastructure, CLI tool, devcontainer/Codespaces support
-- **Observability**: optional `System.Diagnostics.Metrics` instrumentation
+- **Authorization Code + PKCE** with consent UI
+- **Resource-owner endpoints** (`/auth/register`, `/auth/login`, `/auth/profile`, `/auth/userinfo`)
+- **Pluggable persistence** — In-memory defaults, EF Core implementations
+- **CLI tool** — `dotnet coreident` for init, key generation, client management
+- **Aspire integration** — Health checks, distributed tracing, service defaults
+- **OpenTelemetry metrics** — `System.Diagnostics.Metrics` instrumentation
+- **Templates** — `coreident-api`, `coreident-server`, `coreident-api-fsharp`
 
-> Note: CoreIdent focuses on a clean, modular core with secure defaults and a strong developer experience.
+### Coming Next
+
+- **External providers** — Google, Microsoft, GitHub OAuth integration
+- **Client libraries** — MAUI, WPF, Blazor authentication clients
 
 ---
 
