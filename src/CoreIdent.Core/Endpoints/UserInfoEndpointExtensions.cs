@@ -46,7 +46,11 @@ public static class UserInfoEndpointExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentException.ThrowIfNullOrWhiteSpace(userInfoPath);
 
-        endpoints.MapGet(userInfoPath, HandleUserInfoAsync);
+        endpoints
+            .MapGet(userInfoPath, HandleUserInfoAsync)
+            .Produces<UserInfoResponse>(StatusCodes.Status200OK, "application/json")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         return endpoints;
     }

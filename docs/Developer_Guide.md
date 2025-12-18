@@ -218,6 +218,55 @@ app.MapCoreIdentEndpoints();
 app.Run();
 ```
 
+## 1.2 OpenAPI documentation (Feature 1.13.10)
+
+CoreIdent supports OpenAPI document generation via the `CoreIdent.OpenApi` package (built on .NET 10's `Microsoft.AspNetCore.OpenApi`).
+
+CoreIdent does **not** ship a built-in UI (no Swashbuckle / Swagger UI). Instead, the host app can optionally add a UI such as Scalar.
+
+### 1.2.1 Add OpenAPI services
+
+Add the package reference:
+
+```xml
+<PackageReference Include="CoreIdent.OpenApi" Version="1.0.0" />
+```
+
+Register OpenAPI services:
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+builder.Services.AddCoreIdentOpenApi(options =>
+{
+    options.DocumentTitle = "My API";
+    options.DocumentVersion = "v1";
+    options.OpenApiRoute = "/openapi/v1.json";
+});
+```
+
+### 1.2.2 Map the OpenAPI endpoint
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+app.MapCoreIdentOpenApi();
+```
+
+This maps an endpoint equivalent to `MapOpenApi(...)` so that `GET /openapi/v1.json` returns the OpenAPI JSON document.
+
+### 1.2.3 Optional UI: Scalar (host-managed)
+
+To serve an interactive API reference UI, install `Scalar.AspNetCore` in your host app and map it alongside the OpenAPI JSON:
+
+```csharp
+using Scalar.AspNetCore;
+
+app.MapCoreIdentOpenApi();
+app.MapScalarApiReference();
+```
+
+
 ### What you get
 
 With defaults, CoreIdent maps:

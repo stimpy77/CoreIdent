@@ -73,6 +73,7 @@ This section is a placeholder for DEVPLAN 1.13.6.
 - **Aspire integration** — Health checks, distributed tracing, service defaults
 - **OpenTelemetry metrics** — `System.Diagnostics.Metrics` instrumentation
 - **Templates** — `coreident-api`, `coreident-server`, `coreident-api-fsharp`
+- **OpenAPI** — OpenAPI JSON document generation via `CoreIdent.OpenApi` (no built-in UI)
 
 ### Coming Next
 
@@ -90,6 +91,51 @@ CoreIdent includes passwordless flows:
 - SMS one-time passcodes (OTP)
 
 For the SMS OTP endpoint and configuration reference, see the Developer Guide section [4.8 Passwordless SMS OTP](Developer_Guide.md#48-passwordless-sms-otp-feature-13).
+
+---
+
+## OpenAPI documentation (Feature 1.13.10)
+
+CoreIdent can generate an OpenAPI JSON document for all mapped endpoints.
+
+- **Document generation**: `CoreIdent.OpenApi` (built on .NET 10 `Microsoft.AspNetCore.OpenApi`)
+- **UI**: host-managed (CoreIdent does not ship Swashbuckle / Swagger UI)
+
+### Minimal setup
+
+```csharp
+using CoreIdent.OpenApi.Extensions;
+
+builder.Services.AddCoreIdentOpenApi(options =>
+{
+    options.DocumentTitle = "CoreIdent API";
+    options.DocumentVersion = "v1";
+    options.OpenApiRoute = "/openapi/v1.json";
+});
+
+var app = builder.Build();
+
+app.MapCoreIdentEndpoints();
+app.MapCoreIdentOpenApi();
+```
+
+### Optional UI (Scalar)
+
+In the host app:
+
+```bash
+dotnet add package Scalar.AspNetCore
+```
+
+Then:
+
+```csharp
+using Scalar.AspNetCore;
+
+app.MapCoreIdentOpenApi();
+app.MapScalarApiReference();
+```
+
 
 ## Documentation
 

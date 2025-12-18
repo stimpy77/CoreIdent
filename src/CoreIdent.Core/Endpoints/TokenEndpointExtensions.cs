@@ -50,7 +50,11 @@ public static class TokenEndpointExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenPath);
 
-        endpoints.MapPost(tokenPath, HandleTokenRequest);
+        endpoints
+            .MapPost(tokenPath, HandleTokenRequest)
+            .Produces<TokenResponse>(StatusCodes.Status200OK, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status400BadRequest, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status401Unauthorized, "application/json");
 
         return endpoints;
     }

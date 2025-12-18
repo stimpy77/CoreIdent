@@ -60,7 +60,8 @@ public static class TokenManagementEndpointsExtensions
 
         ArgumentException.ThrowIfNullOrWhiteSpace(introspectPath);
 
-        endpoints.MapPost(revokePath, async (
+        endpoints
+            .MapPost(revokePath, async (
             HttpRequest request,
             ISigningKeyProvider signingKeyProvider,
             ITokenRevocationStore tokenRevocationStore,
@@ -171,10 +172,15 @@ public static class TokenManagementEndpointsExtensions
                 logger.LogError(ex, "Error processing token revocation request.");
                 return Results.Json(new { error = "server_error", error_description = "An error occurred processing the request." }, statusCode: StatusCodes.Status500InternalServerError);
             }
-        });
+        })
+            .Produces(StatusCodes.Status200OK)
+            .Produces<TokenErrorResponse>(StatusCodes.Status400BadRequest, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status401Unauthorized, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status500InternalServerError, "application/json");
 
         // Introspection endpoint (RFC 7662)
-        endpoints.MapPost(introspectPath, async (
+        endpoints
+            .MapPost(introspectPath, async (
             HttpRequest request,
             ISigningKeyProvider signingKeyProvider,
             ITokenRevocationStore tokenRevocationStore,
@@ -270,7 +276,11 @@ public static class TokenManagementEndpointsExtensions
 
             // Unknown token
             return Results.Json(new TokenIntrospectionResponse { Active = false });
-        });
+        })
+            .Produces<TokenIntrospectionResponse>(StatusCodes.Status200OK, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status400BadRequest, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status401Unauthorized, "application/json")
+            .Produces<TokenErrorResponse>(StatusCodes.Status500InternalServerError, "application/json");
 
         return endpoints;
     }

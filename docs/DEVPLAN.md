@@ -1362,10 +1362,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ---
 
 *   **Component:** OpenAPI Integration Package
-    - [ ] (L1) Create new project `CoreIdent.OpenApi` targeting `net10.0`
-    - [ ] (L1) Add dependency on `Microsoft.AspNetCore.OpenApi` for .NET 10 OpenAPI support
-    - [ ] (L1) Add dependency on `CoreIdent.Core` for access to endpoint models
-    - [ ] (L2) Design OpenAPI configuration options:
+    - [x] (L1) Create new project `CoreIdent.OpenApi` targeting `net10.0`
+    - [x] (L1) Add dependency on `Microsoft.AspNetCore.OpenApi` for .NET 10 OpenAPI support
+    - [x] (L1) Add dependency on `CoreIdent.Core` for access to endpoint models
+    - [x] (L2) Design OpenAPI configuration options:
         ```csharp
         public class CoreIdentOpenApiOptions
         {
@@ -1376,46 +1376,46 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             public bool IncludeSecurityDefinitions { get; set; } = true;
         }
         ```
-    - [ ] (L2) Create extension method `AddCoreIdentOpenApi()` for `IServiceCollection`
-    - [ ] (L2) Create extension method `MapCoreIdentOpenApi()` for `IEndpointRouteBuilder`
-    - [ ] (L2) Configure OpenAPI document to include:
+    - [x] (L2) Create extension method `AddCoreIdentOpenApi()` for `IServiceCollection`
+    - [x] (L2) Create extension method `MapCoreIdentOpenApi()` for `IEndpointRouteBuilder`
+    - [x] (L2) Configure OpenAPI document to include:
         - All OAuth 2.0 and OIDC endpoints (token, authorize, userinfo, etc.)
         - Passwordless endpoints (magic links, OTPs, WebAuthn)
         - Token management endpoints
         - Discovery endpoints (.well-known)
         - JWKS endpoint
         - Passkey endpoints (if enabled)
-    - [ ] (L2) Add proper security schemes:
+    - [x] (L2) Add proper security schemes:
         - `client_secret_basic` for client authentication
         - `client_secret_post` for client authentication
         - `authorization_code` flow with PKCE
         - `refresh_token` flow
         - `Bearer` token authentication
-    - [ ] (L2) Add request/response examples for key endpoints
-    - [ ] (L2) Add descriptions from XML documentation to OpenAPI schemas
+    - [x] (L2) Add request/response examples for key endpoints
+    - [x] (L2) Add descriptions from XML documentation to OpenAPI schemas
 
 *   **Component:** Optional API Reference UI (Scalar)
-    - [ ] (L2) Do not ship a UI in CoreIdent packages (no Swashbuckle / no Swagger UI)
-    - [ ] (L2) Ensure the generated OpenAPI document is compatible with Scalar
-    - [ ] (L2) Document how a host app can add Scalar to serve the OpenAPI JSON (host-managed)
+    - [x] (L2) Do not ship a UI in CoreIdent packages (no Swashbuckle / no Swagger UI)
+    - [x] (L2) Ensure the generated OpenAPI document is compatible with Scalar
+    - [x] (L2) Document how a host app can add Scalar to serve the OpenAPI JSON (host-managed)
 
 *   **Documentation Updates:**
-    - [ ] (L2) Update `Developer_Guide.md` with OpenAPI setup instructions
-    - [ ] (L2) Add OpenAPI configuration examples to README_Detailed.md
-    - [ ] (L2) Document security scheme usage in API documentation
-    - [ ] (L2) Document optional Scalar integration (no UI implementation in CoreIdent)
+    - [x] (L2) Update `Developer_Guide.md` with OpenAPI setup instructions
+    - [x] (L2) Add OpenAPI configuration examples to README_Detailed.md
+    - [x] (L2) Document security scheme usage in API documentation
+    - [x] (L2) Document optional Scalar integration (no UI implementation in CoreIdent)
 
 *   **Test Cases:**
-    - [ ] (L2) OpenAPI document builds without warnings
-    - [ ] (L2) All public endpoints are included in OpenAPI document
-    - [ ] (L2) Security schemes are properly defined and usable
-    - [ ] (L2) Smoke test: `GET /openapi/v1.json` returns 200 with valid OpenAPI document
+    - [x] (L2) OpenAPI document builds without warnings
+    - [x] (L2) All public endpoints are included in OpenAPI document
+    - [x] (L2) Security schemes are properly defined and usable
+    - [x] (L2) Smoke test: `GET /openapi/v1.json` returns 200 with valid OpenAPI document
 
 *   **Quality Gates:**
-    - [ ] (L2) OpenAPI document passes validation (no schema errors)
-    - [ ] (L2) All examples in documentation are valid
-    - [ ] (L2) Security definitions match actual endpoint requirements
-    - [ ] (L2) CI build includes OpenAPI validation step
+    - [x] (L2) OpenAPI document passes validation (no schema errors)
+    - [x] (L2) All examples in documentation are valid
+    - [x] (L2) Security definitions match actual endpoint requirements
+    - [x] (L2) CI build includes OpenAPI validation step
 
 ---
 
