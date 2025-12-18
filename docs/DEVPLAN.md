@@ -1298,6 +1298,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [x] (L2) Run coverage report (e.g., `dotnet test --collect:"XPlat Code Coverage"`)
     - [x] (L2) Identify gaps in critical paths (token issuance, revocation, auth flows)
     - [x] (L2) Add tests for any uncovered critical paths
+    - [ ] (L2) Achieve 90% line coverage for all of `src/CoreIdent.Core` (merged, de-duplicated across all test projects)
 *   **Component:** Test Quality
     - [x] (L1) Ensure all tests have descriptive assertion messages (per CLAUDE.md Shouldly guidance)
     - [x] (L2) Review flaky tests and stabilize (repeat-runs performed; no flakes reproduced)
