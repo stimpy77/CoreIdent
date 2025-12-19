@@ -123,6 +123,7 @@ public sealed class TemplateInstantiationTests
         {
             FileName = "dotnet",
             WorkingDirectory = workingDir,
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
@@ -135,10 +136,11 @@ public sealed class TemplateInstantiationTests
         using var proc = Process.Start(psi);
         proc.ShouldNotBeNull();
 
-        var stdout = await proc!.StandardOutput.ReadToEndAsync();
-        var stderr = await proc.StandardError.ReadToEndAsync();
+        var stdoutTask = proc!.StandardOutput.ReadToEndAsync();
+        var stderrTask = proc.StandardError.ReadToEndAsync();
 
         await proc.WaitForExitAsync();
+        var (stdout, stderr) = (await stdoutTask, await stderrTask);
 
         if (proc.ExitCode != 0)
         {
