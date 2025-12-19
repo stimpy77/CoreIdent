@@ -9,28 +9,37 @@ internal static class UrlHelpers
 
         if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var absolute))
         {
-            var builder = new UriBuilder(absolute);
-            var query = ParseQuery(builder.Uri.ToString());
+            var query = ParseQuery(absolute.ToString());
 
             foreach (var (k, v) in parameters)
             {
                 query[k] = v;
             }
 
-            builder.Query = string.Join("&", query.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
-            return builder.Uri.ToString();
+            var absolutePath = absolute.GetLeftPart(UriPartial.Path);
+            var absoluteQueryString = string.Join("&", query.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+            var absoluteFragment = absolute.Fragment;
+            return string.IsNullOrWhiteSpace(absoluteQueryString)
+                ? $"{absolutePath}{absoluteFragment}"
+                : $"{absolutePath}?{absoluteQueryString}{absoluteFragment}";
         }
 
         // Relative or unknown: basic append.
-        var existing = ParseQuery(baseUrl);
+        var relativeFragmentIndex = baseUrl.IndexOf('#');
+        var relativeFragment = relativeFragmentIndex >= 0 ? baseUrl.Substring(relativeFragmentIndex) : string.Empty;
+        var withoutFragment = relativeFragmentIndex >= 0 ? baseUrl.Substring(0, relativeFragmentIndex) : baseUrl;
+
+        var existing = ParseQuery(withoutFragment);
         foreach (var (k, v) in parameters)
         {
             existing[k] = v;
         }
 
-        var path = baseUrl.Split('?', 2)[0];
-        var qs = string.Join("&", existing.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
-        return string.IsNullOrWhiteSpace(qs) ? path : $"{path}?{qs}";
+        var relativePath = withoutFragment.Split('?', 2)[0];
+        var relativeQueryString = string.Join("&", existing.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+        return string.IsNullOrWhiteSpace(relativeQueryString)
+            ? $"{relativePath}{relativeFragment}"
+            : $"{relativePath}?{relativeQueryString}{relativeFragment}";
     }
 
     public static Dictionary<string, string> ParseQuery(string url)

@@ -412,46 +412,102 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
         var tokens = await _tokenStorage.GetTokensAsync(ct);
 
-        var discovery = await GetDiscoveryAsync(ct);
-        if (!string.IsNullOrWhiteSpace(discovery.UserInfoEndpoint))
-        {
-            var userInfoUri = GetAbsoluteEndpointUri(discovery.UserInfoEndpoint);
-
-            using var resp = await SendUserInfoAsync(userInfoUri, accessToken, ct);
-            if (!resp.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var json = await resp.Content.ReadAsStringAsync(ct);
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                return null;
-            }
-
-            using var doc = JsonDocument.Parse(json);
-            var claims = new List<Claim>();
-
-            foreach (var prop in doc.RootElement.EnumerateObject())
-            {
-                AddClaimsFromJson(claims, prop.Name, prop.Value);
-            }
-
-            return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "CoreIdent"));
-        }
-
+        ClaimsPrincipal? idTokenPrincipal = null;
         if (!string.IsNullOrWhiteSpace(tokens?.IdToken))
         {
             var validated = await ValidateIdTokenAsync(tokens.IdToken, expectedNonce: null, ct);
-            if (!validated.IsSuccess || validated.Principal is null)
+            if (validated.IsSuccess)
             {
-                return null;
+                idTokenPrincipal = validated.Principal;
             }
-
-            return validated.Principal;
         }
 
-        return null;
+        var userInfo = await GetUserInfoAsync(accessToken, ct);
+        if (userInfo is null)
+        {
+            return idTokenPrincipal;
+        }
+
+        if (idTokenPrincipal is null)
+        {
+            return userInfo;
+        }
+
+        var mergedIdentity = new ClaimsIdentity(idTokenPrincipal.Claims, authenticationType: "CoreIdent");
+        foreach (var c in userInfo.Claims)
+        {
+            if (!mergedIdentity.HasClaim(c.Type, c.Value))
+            {
+                mergedIdentity.AddClaim(c);
+            }
+        }
+
+        return new ClaimsPrincipal(mergedIdentity);
+    }
+
+    /// <summary>
+    /// Retrieves user information from the UserInfo endpoint using the current access token.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A ClaimsPrincipal containing user claims from the UserInfo endpoint, or null if unsuccessful.</returns>
+    public Task<ClaimsPrincipal?> GetUserInfoAsync(CancellationToken ct = default)
+        => GetUserInfoAsync(accessToken: null, ct);
+
+    private async Task<ClaimsPrincipal?> GetUserInfoAsync(string? accessToken, CancellationToken ct)
+    {
+        accessToken ??= await GetAccessTokenAsync(ct);
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return null;
+        }
+
+        var discovery = await GetDiscoveryAsync(ct);
+        if (string.IsNullOrWhiteSpace(discovery.UserInfoEndpoint))
+        {
+            return null;
+        }
+
+        var userInfoUri = GetAbsoluteEndpointUri(discovery.UserInfoEndpoint);
+
+        using var resp = await SendUserInfoAsync(userInfoUri, accessToken, ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var json = await resp.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        using var doc = JsonDocument.Parse(json);
+        var claims = new List<Claim>();
+
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            AddClaimsFromJson(claims, prop.Name, prop.Value);
+        }
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "CoreIdent"));
+    }
+
+    /// <summary>
+    /// Retrieves user information from the validated ID token without calling the UserInfo endpoint.
+    /// This method validates the ID token signature and returns the claims contained within it.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A ClaimsPrincipal containing validated ID token claims, or null if no valid ID token is available.</returns>
+    public async Task<ClaimsPrincipal?> GetValidatedIdTokenUserAsync(CancellationToken ct = default)
+    {
+        var tokens = await _tokenStorage.GetTokensAsync(ct);
+        if (string.IsNullOrWhiteSpace(tokens?.IdToken))
+        {
+            return null;
+        }
+
+        var validated = await ValidateIdTokenAsync(tokens.IdToken, expectedNonce: null, ct);
+        return validated.IsSuccess ? validated.Principal : null;
     }
 
     private async Task<HttpResponseMessage> SendUserInfoAsync(Uri userInfoUri, string accessToken, CancellationToken ct)

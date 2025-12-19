@@ -61,6 +61,7 @@ public static class UserInfoEndpointExtensions
         ICustomClaimsProvider customClaimsProvider,
         ISigningKeyProvider signingKeyProvider,
         IOptions<CoreIdentOptions> coreOptions,
+        IOptions<CoreIdentUserInfoOptions> userInfoOptions,
         CancellationToken ct)
     {
         var logger = httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("CoreIdent.UserInfo");
@@ -115,10 +116,48 @@ public static class UserInfoEndpointExtensions
 
         var allowed = GetAllowedUserInfoClaimNames(scopes);
 
+        var reserved = GetReservedUserInfoClaimNames();
+        var customScope = userInfoOptions.Value.CustomClaimsScope;
+        var customScopeGranted = !string.IsNullOrWhiteSpace(customScope)
+            && scopes.Contains(customScope, StringComparer.Ordinal);
+
+        HashSet<string>? customAllowed = null;
+        var includeAllCustom = false;
+        if (customScopeGranted)
+        {
+            if (userInfoOptions.Value.CustomClaimNames is { Count: > 0 })
+            {
+                customAllowed = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var name in userInfoOptions.Value.CustomClaimNames)
+                {
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        continue;
+                    }
+
+                    customAllowed.Add(NormalizeClaimName(name));
+                }
+            }
+            else
+            {
+                includeAllCustom = true;
+            }
+        }
+
         foreach (var claim in userClaims.Concat(customClaims))
         {
             var name = NormalizeClaimName(claim.Type);
-            if (!allowed.Contains(name))
+
+            if (reserved.Contains(name))
+            {
+                continue;
+            }
+
+            var include = allowed.Contains(name)
+                || (customAllowed is not null && customAllowed.Contains(name))
+                || includeAllCustom;
+
+            if (!include)
             {
                 continue;
             }
@@ -190,6 +229,27 @@ public static class UserInfoEndpointExtensions
         }
 
         return allowed;
+    }
+
+    private static HashSet<string> GetReservedUserInfoClaimNames()
+    {
+        return new HashSet<string>(StringComparer.Ordinal)
+        {
+            "iss",
+            "aud",
+            "exp",
+            "nbf",
+            "iat",
+            "jti",
+            "nonce",
+            "at_hash",
+            "c_hash",
+            "sid",
+            "auth_time",
+            "azp",
+            "scope",
+            "client_id"
+        };
     }
 
     private static string NormalizeClaimName(string claimType)
