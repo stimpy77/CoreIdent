@@ -79,6 +79,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<CoreIdentRouteOptions>();
 
+        services.AddOptions<CoreIdentUserInfoOptions>();
+
         services.AddOptions<CoreIdentResourceOwnerOptions>();
 
         services.AddOptions<CoreIdentAuthorizationCodeOptions>();

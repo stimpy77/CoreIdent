@@ -1200,20 +1200,6 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-#### 1.13.4: Browser Automation Testing Infrastructure
-
-> **Decision:** Deferred to Phase 1.5. This is a significant infrastructure investment that is not blocking for 1.0 GA.
-
-*   **Status:** 🔜 **Deferred to Phase 1.5**
-*   **Rationale:** Browser automation testing (Playwright/Puppeteer) requires substantial setup and is better suited for the client library phase where E2E testing becomes critical.
-*   **Placeholder items (to be expanded in Phase 1.5):**
-    - [ ] (L3) Evaluate Playwright vs Puppeteer for .NET integration testing
-    - [ ] (L3) Create `CoreIdent.Testing.Browser` package with browser automation utilities
-    - [ ] (L3) Implement WebAuthn/Passkey E2E tests with virtual authenticator
-    - [ ] (L3) Implement OAuth flow E2E tests (authorization code, passwordless)
-
----
-
 #### 1.13.5: Version String and Documentation Path Cleanup (1.0 GA Preparation)
 
 > **Decision:** Move to **1.0 GA** before starting Phase 1.5. This feature is the gate for GA release.
@@ -1432,8 +1418,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.1: Core Client Library
 
 *   **Component:** `CoreIdent.Client` Package
-    - [ ] (L1) Create new project targeting `net10.0`
-    - [ ] (L1) Define `ICoreIdentClient` interface
+    - [x] (L1) Create new project targeting `net10.0`
+    - [x] (L1) Define `ICoreIdentClient` interface
         ```csharp
         public interface ICoreIdentClient
         {
@@ -1446,7 +1432,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             event EventHandler<AuthStateChangedEventArgs>? AuthStateChanged;
         }
         ```
-    - [ ] (L1) Define `CoreIdentClientOptions`
+    - [x] (L1) Define `CoreIdentClientOptions`
         ```csharp
         public class CoreIdentClientOptions
         {
@@ -1462,7 +1448,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
         }
         ```
 *   **Component:** Token Storage Abstraction
-    - [ ] (L1) Define `ISecureTokenStorage` interface
+    - [x] (L1) Define `ISecureTokenStorage` interface
         ```csharp
         public interface ISecureTokenStorage
         {
@@ -1471,34 +1457,80 @@ This document provides a detailed breakdown of tasks, components, test cases, an
             Task ClearTokensAsync(CancellationToken ct = default);
         }
         ```
-    - [ ] (L1) Implement `InMemoryTokenStorage` (default, non-persistent)
-    - [ ] (L2) Implement `FileTokenStorage` (encrypted file, for console apps)
+    - [x] (L1) Implement `InMemoryTokenStorage` (default, non-persistent)
+    - [x] (L2) Implement `FileTokenStorage` (encrypted file, for console apps)
 *   **Component:** Browser Abstraction
-    - [ ] (L1) Define `IBrowserLauncher` interface
+    - [x] (L1) Define `IBrowserLauncher` interface
         ```csharp
         public interface IBrowserLauncher
         {
             Task<BrowserResult> LaunchAsync(string url, string redirectUri, CancellationToken ct = default);
         }
         ```
-    - [ ] (L3) Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
+    - [x] (L3) Implement `SystemBrowserLauncher` (opens default browser, listens on localhost)
 *   **Component:** OAuth/OIDC Flow Implementation
-    - [ ] (L3) Implement Authorization Code + PKCE flow
-    - [ ] (L2) Implement token refresh logic
-    - [ ] (L2) Implement logout (end session)
-    - [ ] (L2) Handle discovery document fetching and caching
+    - [x] (L3) Implement Authorization Code + PKCE flow
+    - [x] (L2) Implement token refresh logic
+    - [x] (L2) Implement logout (revocation + optional end session when available)
+    - [x] (L2) Handle discovery document fetching and caching
 *   **Test Case (Unit):**
-    - [ ] (L2) PKCE code verifier/challenge generation is correct
-    - [ ] (L2) Token refresh triggers before expiry
-    - [ ] (L2) State parameter prevents CSRF
+    - [x] (L2) PKCE code verifier/challenge generation is correct
+    - [x] (L2) Token refresh triggers before expiry
+    - [x] (L2) State parameter prevents CSRF
 *   **Test Case (Integration):**
-    - [ ] (L3) Full login flow against CoreIdent test server
-    - [ ] (L2) Token refresh works correctly
-    - [ ] (L1) Logout clears tokens
+    - [x] (L3) Full login flow against CoreIdent test server
+    - [x] (L2) Token refresh works correctly
+    - [x] (L1) Logout clears tokens
 
 ---
 
-### Feature 1.5.2: MAUI Client
+### Feature 1.5.2: Browser Automation Testing Infrastructure
+
+> **Decision:** Implement early in Phase 1.5 as shared testing infrastructure for client libraries.
+
+*   **Status:** 🔜 **Phase 1.5 (early), recommended to prioritize**
+*   **Rationale:** Most client features can be tested headlessly, but browser/E2E infrastructure is needed to validate real redirect-based flows, storage behavior in-browser, and future WebAuthn/passkey work. Building this once and reusing it across client packages reduces regression risk and avoids platform-specific ad-hoc harnesses.
+
+*   **Testing tiers (design goal):**
+    - (Tier 1) Unit tests (pure logic: PKCE, URL building, token parsing, claim merging)
+    - (Tier 2) Headless integration tests (real HTTP against a local CoreIdent test host; no real browser UI)
+    - (Tier 3) Browser-driven E2E (Playwright; real redirect + callback; used for a small set of smoke tests)
+
+*   **Component:** Tooling decision
+    - [ ] (L1) Standardize on **Playwright** as the primary browser automation tool (single supported harness)
+    - [ ] (L2) Document local setup + CI prerequisites (browsers, env vars, timeouts, headless/headful)
+
+*   **Component:** `CoreIdent.Testing` building blocks
+    - [ ] (L2) Create `CoreIdent.Testing.Host` helpers to start a CoreIdent server for tests (in-proc or local port)
+    - [ ] (L2) Create `CoreIdent.Testing.Http` helpers (assertions for discovery, token, userinfo, revocation)
+    - [ ] (L2) Create `CoreIdent.Testing.Browser` helpers for redirect-based flows:
+        - [ ] (L2) Playwright fixture + deterministic tracing/screenshot capture on failure
+        - [ ] (L2) Helpers for callback listener (localhost redirect URI) and URL wait conditions
+        - [ ] (L2) “Headless authorize” harness (non-UI) for fast CI coverage when the server supports it
+
+*   **Component:** OAuth/OIDC E2E coverage (CoreIdent + external providers)
+    - [ ] (L2) Authorization Code + PKCE flow works end-to-end against CoreIdent test host
+    - [ ] (L2) Token refresh behavior works end-to-end (refresh threshold + rotation scenarios)
+    - [ ] (L2) Logout works (revocation + end session when advertised)
+    - [ ] (L2) UserInfo behavior is correct (scope-gated claims, reserved claims filtering)
+    - [ ] (L3) External provider smoke lane (Keycloak or other containerized provider) for cross-provider parity
+
+*   **Component:** WebAuthn/Passkey E2E (future expansion)
+    - [ ] (L3) Implement passkey E2E tests using Playwright virtual authenticator (where supported)
+
+*   **CI strategy:**
+    - [ ] (L2) Run Tier 1 + Tier 2 on every PR
+    - [ ] (L3) Run Tier 3 browser smoke tests on a dedicated lane (nightly and/or required on main)
+    - [ ] (L3) Keep Tier 3 small and stable; favor headless integration tests for most coverage
+
+*   **Quality gates:**
+    - [ ] (L2) Tests produce deterministic diagnostics (traces/logs) on failure
+    - [ ] (L2) Timeouts are explicit and bounded; tests fail fast and do not hang CI
+    - [ ] (L3) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
+
+---
+
+### Feature 1.5.3: MAUI Client
 
 *   **Component:** `CoreIdent.Client.Maui` Package
     - [ ] (L1) Create project targeting `net10.0-android;net10.0-ios;net10.0-maccatalyst`
@@ -1513,7 +1545,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.5.3: WPF/WinForms Client
+### Feature 1.5.4: WPF/WinForms Client
 
 *   **Component:** `CoreIdent.Client.Wpf` Package
     - [ ] (L1) Create project targeting `net10.0-windows`
@@ -1528,7 +1560,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.5.4: Console Client
+### Feature 1.5.5: Console Client
 
 *   **Component:** `CoreIdent.Client.Console` Package
     - [ ] (L1) Create project targeting `net10.0`
@@ -1542,7 +1574,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.5.5: Blazor WASM Client
+### Feature 1.5.6: Blazor WASM Client
 
 *   **Component:** `CoreIdent.Client.Blazor` Package
     - [ ] (L1) Create project targeting `net10.0`
@@ -1709,9 +1741,16 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L3) Bind tokens to DPoP key
 *   **Component:** Token Validation DPoP Support
     - [ ] (L3) Add DPoP proof validation to protected endpoints
+*   **Component:** Client Library DPoP Support
+    - [ ] (L2) Implement DPoP proof JWT creation (ES256) with `typ=dpop+jwt` and public JWK header
+    - [ ] (L2) Send `DPoP` header on token endpoint requests when enabled
+    - [ ] (L2) Send `Authorization: DPoP <token>` + `DPoP` proof (with `ath`) for UserInfo when enabled
+    - [ ] (L2) Handle `DPoP-Nonce` replay/nonce requirements (header + `use_dpop_nonce` errors)
+    - [ ] (L2) Ensure DPoP key material lifecycle is handled safely (no leaks)
 *   **Test Case:**
     - [ ] (L3) DPoP-bound token requires valid proof
     - [ ] (L3) Token without DPoP is rejected if DPoP was used at issuance
+    - [ ] (L2) Client sends DPoP headers when `UseDPoP=true`
 
 ---
 
