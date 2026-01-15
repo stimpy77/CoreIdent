@@ -58,11 +58,46 @@ jobs:
       - name: Run Integration Tests
         run: dotnet test tests/CoreIdent.Integration.Tests --no-build -c Release --verbosity minimal
 
-  # Tier 3: E2E and Browser tests - slower, run on main/nightly/PRs
+  # Tier 3: Full test suite with coverage - main branch only
+  full-test-suite:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.ref == 'refs/heads/main' || github.event.schedule != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Run All Tests (excluding E2E)
+        run: |
+          dotnet test tests/CoreIdent.Core.Tests --no-build -c Release --verbosity minimal --collect:"XPlat Code Coverage"
+          dotnet test tests/CoreIdent.Integration.Tests --no-build -c Release --verbosity minimal
+          dotnet test tests/CoreIdent.Cli.Tests --no-build -c Release --verbosity minimal
+          dotnet test tests/CoreIdent.Templates.Tests --no-build -c Release --verbosity minimal
+
+      - name: Upload Coverage
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.cobertura.xml
+
+  # Tier 4: E2E and Browser tests - slowest, run last
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: integration-tests
+    needs: full-test-suite
     if: github.ref == 'refs/heads/main' || github.event.schedule != '' || github.event.pull_request != null
     steps:
       - name: Checkout
@@ -95,38 +130,3 @@ jobs:
         with:
           name: playwright-traces
           path: playwright-traces/
-
-  # Full test suite - main branch only
-  full-test-suite:
-    name: Full Test Suite
-    runs-on: ubuntu-latest
-    needs: e2e-tests
-    if: github.ref == 'refs/heads/main' || github.event.schedule != ''
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore
-        run: dotnet restore CoreIdent.sln
-
-      - name: Build
-        run: dotnet build CoreIdent.sln --no-restore -c Release
-
-      - name: Run All Tests (excluding E2E)
-        run: |
-          dotnet test tests/CoreIdent.Core.Tests --no-build -c Release --verbosity minimal --collect:"XPlat Code Coverage"
-          dotnet test tests/CoreIdent.Integration.Tests --no-build -c Release --verbosity minimal
-          dotnet test tests/CoreIdent.Cli.Tests --no-build -c Release --verbosity minimal
-          dotnet test tests/CoreIdent.Templates.Tests --no-build -c Release --verbosity minimal
-
-      - name: Upload Coverage
-        if: github.event_name == 'schedule'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.cobertura.xml
