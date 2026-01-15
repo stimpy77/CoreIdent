@@ -80,7 +80,8 @@ jobs:
         run: dotnet build CoreIdent.sln --no-restore -c Release
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        working-directory: tests/CoreIdent.E2E.Tests
+        run: pwsh bin/Release/net10.0/playwright.ps1 install --with-deps
 
       - name: Run E2E Tests
         run: dotnet test tests/CoreIdent.E2E.Tests --no-build -c Release --filter "Category=E2E" --verbosity minimal
