@@ -173,6 +173,202 @@ jobs:
           path: playwright-traces/
 ```
 
+## Supported CI Runners and Platform Requirements
+
+### CI Runner Support Matrix
+
+| Runner Type | Unit Tests | Integration Tests | Browser E2E | MAUI UI | WPF UI |
+|-------------|:----------:|:-----------------:|:-----------:|:-------:|:------:|
+| **GitHub Actions** |
+| `ubuntu-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ❌ |
+| `windows-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ✅² |
+| `macos-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ❌ |
+| **Azure DevOps** |
+| `ubuntu-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ❌ |
+| `windows-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ✅² |
+| `vmImage: macOS-latest` | ✅ | ✅ | ✅ | ⚠️¹ | ❌ |
+| **Self-Hosted** |
+| Linux | ✅ | ✅ | ✅ | ⚠️³ | ❌ |
+| Windows | ✅ | ✅ | ✅ | ⚠️³ | ✅ |
+| macOS | ✅ | ✅ | ✅ | ⚠️³ | ❌ |
+
+**Notes:**
+- ✅ = Fully supported
+- ⚠️ = Partial support with additional setup
+- ❌ = Not supported
+- ¹ = Android emulator tests possible but slow; iOS requires macOS with Xcode
+- ² = Requires Windows UI (non-headless agent)
+- ³ = Requires platform-specific emulators/simulators installed
+
+### Platform Requirements by Test Type
+
+#### Playwright Browser Tests (Current - Recommended)
+
+**Minimum Requirements:**
+- .NET 10 SDK
+- Playwright browsers: `dotnet playwright install --with-deps chromium`
+- 2GB RAM minimum, 4GB recommended
+- No display required (runs headless)
+
+**GitHub Actions Setup:**
+```yaml
+- name: Install Playwright
+  run: dotnet playwright install --with-deps chromium
+```
+
+#### MAUI UI Automation (Future - Feature 1.5.3)
+
+> **Status:** Not yet implemented. Requirements documented for planning purposes.
+
+**Android Testing:**
+| Requirement | CI Runner | Notes |
+|-------------|-----------|-------|
+| Android SDK | All | Auto-installed via `setup-android` action |
+| Android Emulator | All | Requires hardware acceleration (KVM on Linux) |
+| Java 17+ | All | Required by Android SDK |
+
+```yaml
+# GitHub Actions example for MAUI Android
+jobs:
+  maui-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Start Emulator
+        run: |
+          $ANDROID_HOME/emulator/emulator -avd test -no-window -gpu swiftshader &
+          adb wait-for-device
+```
+
+**iOS Testing:**
+| Requirement | CI Runner | Notes |
+|-------------|-----------|-------|
+| macOS runner | macOS only | iOS simulator requires macOS |
+| Xcode 15+ | macOS only | Required for iOS development |
+| iOS Simulator | macOS only | Auto-available on macOS runners |
+
+```yaml
+# GitHub Actions example for MAUI iOS
+jobs:
+  maui-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15 Pro"
+```
+
+**Cross-Platform MAUI CI Strategy:**
+```yaml
+jobs:
+  maui-unit-tests:
+    runs-on: ubuntu-latest  # No platform-specific dependencies
+
+  maui-android-e2e:
+    runs-on: ubuntu-latest  # Android emulator with KVM
+    if: github.event.schedule  # Nightly only (slow)
+
+  maui-ios-e2e:
+    runs-on: macos-latest  # iOS simulator required
+    if: github.event.schedule  # Nightly only (slow)
+```
+
+#### WPF UI Automation (Future - Feature 1.5.4)
+
+> **Status:** Not yet implemented. Requirements documented for planning purposes.
+
+**Requirements:**
+| Requirement | CI Runner | Notes |
+|-------------|-----------|-------|
+| Windows runner | Windows only | WPF is Windows-only |
+| Non-headless agent | Self-hosted or Windows UI | UI automation needs display |
+| .NET 10 Windows workload | Windows | `net10.0-windows` TFM |
+
+**CI Considerations:**
+- GitHub Actions `windows-latest` does NOT support UI automation by default
+- Options for WPF UI testing:
+  1. **Self-hosted Windows runner** with display access
+  2. **FlaUI + Microsoft UI Automation** (can work headless in some scenarios)
+  3. **Virtual display** using third-party tools (not officially supported)
+
+```yaml
+# Self-hosted Windows runner with UI access
+jobs:
+  wpf-ui-tests:
+    runs-on: [self-hosted, windows, ui-enabled]
+    steps:
+      - name: Run WPF UI Tests
+        run: dotnet test CoreIdent.Client.Wpf.Tests --filter "Category=UI"
+```
+
+**Alternative: Unit + Integration Tests Only**
+
+For WPF clients without UI automation:
+```yaml
+jobs:
+  wpf-headless-tests:
+    runs-on: windows-latest
+    steps:
+      - name: Run WPF Unit + Integration Tests
+        run: dotnet test CoreIdent.Client.Wpf.Tests --filter "Category!=UI"
+```
+
+### Cost and Time Considerations
+
+| Test Type | Typical Duration | CI Minutes | Recommendation |
+|-----------|------------------|------------|----------------|
+| Unit Tests | 10-30s | ~0.5 min | Every PR |
+| Integration Tests | 30-60s | ~1 min | Every PR |
+| Browser E2E (Playwright) | 1-5 min | ~3 min | Every PR |
+| Android Emulator E2E | 10-20 min | ~15 min | Nightly/Release |
+| iOS Simulator E2E | 10-20 min | ~15 min | Nightly/Release |
+| WPF UI E2E | 5-10 min | ~8 min | Nightly/Release |
+
+### Recommended CI Strategy
+
+```yaml
+# PR builds: Fast feedback
+on: pull_request
+jobs:
+  quick-tests:  # < 5 minutes
+    runs-on: ubuntu-latest
+    steps:
+      - run: dotnet test --filter "Category!=E2E&Category!=UI"
+
+# Main branch: Full E2E
+on:
+  push:
+    branches: [main]
+jobs:
+  browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - run: dotnet playwright install --with-deps chromium
+      - run: dotnet test --filter "Category=E2E"
+
+# Nightly: Platform-specific UI tests
+on:
+  schedule:
+    - cron: '0 2 * * *'
+jobs:
+  android-e2e:
+    runs-on: ubuntu-latest
+    # ... Android emulator setup
+  ios-e2e:
+    runs-on: macos-latest
+    # ... iOS simulator setup
+  wpf-e2e:
+    runs-on: [self-hosted, windows, ui-enabled]
+    # ... WPF UI automation
+```
+
 ## Diagnostic Output
 
 On test failure, Playwright automatically captures:

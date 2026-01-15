@@ -1515,23 +1515,23 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** OAuth/OIDC E2E coverage (CoreIdent + external providers)
     - [x] (L2) Authorization Code + PKCE flow works end-to-end against CoreIdent test host
-    - [ ] (L2) Token refresh behavior works end-to-end (refresh threshold + rotation scenarios)
-    - [ ] (L2) Logout works (revocation + end session when advertised)
-    - [ ] (L2) UserInfo behavior is correct (scope-gated claims, reserved claims filtering)
+    - [x] (L2) Token refresh behavior works end-to-end (refresh threshold + rotation scenarios)
+    - [x] (L2) Logout works (revocation + end session when advertised)
+    - [x] (L2) UserInfo behavior is correct (scope-gated claims, reserved claims filtering)
     - [x] (L3) External provider smoke lane (Keycloak or other containerized provider) for cross-provider parity
 
 *   **Component:** WebAuthn/Passkey E2E (future expansion)
     - [x] (L3) Implement passkey E2E tests using Playwright virtual authenticator (where supported)
 
 *   **CI strategy:**
-    - [ ] (L2) Run Tier 1 + Tier 2 on every PR
-    - [ ] (L1) Run Tier 3 browser smoke tests on a dedicated lane (nightly and/or required on main)
-    - [ ] (L1) Keep Tier 3 small and stable; favor headless integration tests for most coverage
+    - [x] (L2) Run Tier 1 + Tier 2 on every PR
+    - [x] (L1) Run Tier 3 browser smoke tests on a dedicated lane (nightly and/or required on main)
+    - [x] (L1) Keep Tier 3 small and stable; favor headless integration tests for most coverage
 
 *   **Quality gates:**
     - [x] (L2) Tests produce deterministic diagnostics (traces/logs) on failure
     - [x] (L2) Timeouts are explicit and bounded; tests fail fast and do not hang CI
-    - [ ] (L1) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
+    - [x] (L1) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
 
 ---
 
