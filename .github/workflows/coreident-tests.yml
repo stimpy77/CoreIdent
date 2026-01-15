@@ -73,14 +73,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install Playwright
-        run: dotnet playwright install --with-deps chromium
-
       - name: Restore
         run: dotnet restore CoreIdent.sln
 
       - name: Build
         run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Install Playwright Browsers
+        run: pwsh tests/CoreIdent.E2E.Tests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
 
       - name: Run E2E Tests
         run: dotnet test tests/CoreIdent.E2E.Tests --no-build -c Release --filter "Category=E2E" --verbosity minimal
@@ -109,9 +109,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Install Playwright
-        run: dotnet playwright install --with-deps chromium
 
       - name: Restore
         run: dotnet restore CoreIdent.sln
