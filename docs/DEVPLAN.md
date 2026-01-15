@@ -17,6 +17,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 - `[ ]` — Not started
 - `[~]` — Partial / needs revisit after prior feature is implemented
 
+**LX Levels (LLM capability required):**
+- `L1`: Low stakes, low accuracy requirements — if wrong, easy to fix, doesn't break anything important
+- `L2`: Moderate stakes — should be correct, errors catchable in review/testing
+- `L3`: High stakes, high accuracy requirements — must be correct, worth spending money to succeed
+
 ## TL;DR: Protocol & Feature Status Summary
 
 | Protocol / Feature | Phase | Feature | Status |
@@ -1497,8 +1502,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - (Tier 3) Browser-driven E2E (Playwright; real redirect + callback; used for a small set of smoke tests)
 
 *   **Component:** Tooling decision
-    - [ ] (L1) Standardize on **Playwright** as the primary browser automation tool (single supported harness)
-    - [ ] (L2) Document local setup + CI prerequisites (browsers, env vars, timeouts, headless/headful)
+    - [ ] (L2) Standardize on **Playwright** as the primary browser automation tool (single supported harness)
+    - [ ] (L1) Document local setup + CI prerequisites (browsers, env vars, timeouts, headless/headful)
 
 *   **Component:** `CoreIdent.Testing` building blocks
     - [ ] (L2) Create `CoreIdent.Testing.Host` helpers to start a CoreIdent server for tests (in-proc or local port)
@@ -1520,13 +1525,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **CI strategy:**
     - [ ] (L2) Run Tier 1 + Tier 2 on every PR
-    - [ ] (L3) Run Tier 3 browser smoke tests on a dedicated lane (nightly and/or required on main)
-    - [ ] (L3) Keep Tier 3 small and stable; favor headless integration tests for most coverage
+    - [ ] (L1) Run Tier 3 browser smoke tests on a dedicated lane (nightly and/or required on main)
+    - [ ] (L1) Keep Tier 3 small and stable; favor headless integration tests for most coverage
 
 *   **Quality gates:**
     - [ ] (L2) Tests produce deterministic diagnostics (traces/logs) on failure
     - [ ] (L2) Timeouts are explicit and bounded; tests fail fast and do not hang CI
-    - [ ] (L3) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
+    - [ ] (L1) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
 
 ---
 
@@ -1534,7 +1539,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Client.Maui` Package
     - [ ] (L1) Create project targeting `net10.0-android;net10.0-ios;net10.0-maccatalyst`
-    - [ ] (L2) Implement `MauiSecureTokenStorage` using `SecureStorage`
+    - [ ] (L3) Implement `MauiSecureTokenStorage` using `SecureStorage`
     - [ ] (L3) Implement `MauiBrowserLauncher` using `WebAuthenticator`
     - [ ] (L1) Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
 *   **Test Case:**
@@ -1549,7 +1554,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Client.Wpf` Package
     - [ ] (L1) Create project targeting `net10.0-windows`
-    - [ ] (L2) Implement `DpapiTokenStorage` using Windows DPAPI
+    - [ ] (L3) Implement `DpapiTokenStorage` using Windows DPAPI
     - [ ] (L3) Implement `WebView2BrowserLauncher` (embedded browser)
     - [ ] (L2) Implement `SystemBrowserLauncher` (external browser with localhost callback)
 *   **Test Case:**
@@ -1564,11 +1569,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Client.Console` Package
     - [ ] (L1) Create project targeting `net10.0`
-    - [ ] (L2) Implement `EncryptedFileTokenStorage`
+    - [ ] (L3) Implement `EncryptedFileTokenStorage`
     - [ ] (L2) Implement device code flow support (for headless scenarios)
 *   **Test Case:**
     - [ ] (L2) Device code flow works
-    - [ ] (L2) File storage is encrypted
+    - [ ] (L3) File storage is encrypted
 *   **Documentation:**
     - [ ] (L1) Console/CLI app integration guide
 
@@ -1578,7 +1583,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Client.Blazor` Package
     - [ ] (L1) Create project targeting `net10.0`
-    - [ ] (L2) Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
+    - [ ] (L3) Implement `BrowserStorageTokenStorage` using `localStorage`/`sessionStorage`
     - [ ] (L3) Integrate with Blazor's `AuthenticationStateProvider`
 *   **Test Case:**
     - [ ] (L2) Auth state propagates to Blazor components
@@ -1602,13 +1607,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Providers.Abstractions` Package
     - [ ] (L1) Create new project
-    - [ ] (L1) Define `IExternalAuthProvider` interface
-    - [ ] (L1) Define `ExternalAuthResult` model
-    - [ ] (L1) Define `ExternalUserProfile` model
+    - [ ] (L2) Define `IExternalAuthProvider` interface
+    - [ ] (L2) Define `ExternalAuthResult` model
+    - [ ] (L2) Define `ExternalUserProfile` model
 *   **Component:** Account Linking
     - [ ] (L1) Add `ExternalLogin` entity to user model
-    - [ ] (L2) Support linking multiple providers to one user
-    - [ ] (L2) Handle provider-to-user mapping
+    - [ ] (L3) Support linking multiple providers to one user
+    - [ ] (L3) Handle provider-to-user mapping
 *   **Documentation:**
     - [ ] (L1) Document provider implementation guide
 
@@ -1618,8 +1623,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Providers.Google` Package
     - [ ] (L1) Create new project
-    - [ ] (L2) Implement `IExternalAuthProvider` for Google
-    - [ ] (L2) Handle OAuth flow with Google
+    - [ ] (L3) Implement `IExternalAuthProvider` for Google
+    - [ ] (L3) Handle OAuth flow with Google
     - [ ] (L1) Map Google profile to `ExternalUserProfile`
 *   **Component:** Configuration
     - [ ] (L1) Create `GoogleProviderOptions` (ClientId, ClientSecret, Scopes)
@@ -1636,8 +1641,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Providers.Microsoft` Package
     - [ ] (L1) Create new project
-    - [ ] (L2) Implement for Microsoft/Entra ID
-    - [ ] (L2) Support both personal and work/school accounts
+    - [ ] (L3) Implement for Microsoft/Entra ID
+    - [ ] (L3) Support both personal and work/school accounts
 *   **Documentation:**
     - [ ] (L1) Add Microsoft/Entra setup guide
 
@@ -1647,7 +1652,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `CoreIdent.Providers.GitHub` Package
     - [ ] (L1) Create new project
-    - [ ] (L2) Implement for GitHub OAuth
+    - [ ] (L3) Implement for GitHub OAuth
 *   **Documentation:**
     - [ ] (L1) Add GitHub setup guide
 
@@ -1668,14 +1673,14 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** `IKeyRotationService`
     - [ ] (L1) Define interface for key rotation operations
     - [ ] (L3) Implement automatic rotation based on schedule
-    - [ ] (L2) Support overlap period for old keys
+    - [ ] (L3) Support overlap period for old keys
 *   **Component:** Multiple Keys in JWKS
-    - [ ] (L2) Extend JWKS endpoint to return all active keys
+    - [ ] (L3) Extend JWKS endpoint to return all active keys
     - [ ] (L1) Include key expiry metadata
 *   **Test Case:**
     - [ ] (L3) Old tokens remain valid during overlap period
-    - [ ] (L2) New tokens use new key
-    - [ ] (L2) JWKS contains both keys during rotation
+    - [ ] (L3) New tokens use new key
+    - [ ] (L3) JWKS contains both keys during rotation
 
 ---
 
@@ -1685,11 +1690,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) Create `ISessionStore` interface
     - [ ] (L2) Track active sessions per user
 *   **Component:** OIDC Logout Endpoint
-    - [ ] (L2) Implement `GET /auth/logout` (end_session_endpoint)
-    - [ ] (L2) Support `id_token_hint`, `post_logout_redirect_uri`, `state`
-    - [ ] (L2) Revoke associated tokens
+    - [ ] (L3) Implement `GET /auth/logout` (end_session_endpoint)
+    - [ ] (L3) Support `id_token_hint`, `post_logout_redirect_uri`, `state`
+    - [ ] (L3) Revoke associated tokens
 *   **Test Case:**
-    - [ ] (L2) Logout invalidates session
+    - [ ] (L3) Logout invalidates session
     - [ ] (L1) Logout redirects correctly
 
 ---
@@ -1697,11 +1702,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 3.3: Dynamic Client Registration (RFC 7591)
 
 *   **Component:** Registration Endpoint
-    - [ ] (L2) Implement `POST /auth/register` for clients
-    - [ ] (L2) Support initial access tokens for authorization
+    - [ ] (L3) Implement `POST /auth/register` for clients
+    - [ ] (L3) Support initial access tokens for authorization
     - [ ] (L1) Return client credentials
 *   **Test Case:**
-    - [ ] (L2) Client can register and receive credentials
+    - [ ] (L3) Client can register and receive credentials
     - [ ] (L1) Invalid registration is rejected
 
 ---
@@ -1709,23 +1714,23 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 3.4: Device Authorization Flow (RFC 8628)
 
 *   **Component:** Device Authorization Endpoint
-    - [ ] (L2) Implement `POST /auth/device_authorization`
+    - [ ] (L3) Implement `POST /auth/device_authorization`
     - [ ] (L1) Return device_code, user_code, verification_uri
 *   **Component:** Device Token Endpoint
     - [ ] (L3) Extend token endpoint for `urn:ietf:params:oauth:grant-type:device_code`
 *   **Test Case:**
     - [ ] (L3) Device flow completes successfully
-    - [ ] (L2) Polling returns appropriate responses
+    - [ ] (L3) Polling returns appropriate responses
 
 ---
 
 ### Feature 3.5: Pushed Authorization Requests (RFC 9126)
 
 *   **Component:** PAR Endpoint
-    - [ ] (L2) Implement `POST /auth/par`
+    - [ ] (L3) Implement `POST /auth/par`
     - [ ] (L1) Return request_uri
 *   **Component:** Authorize Endpoint Extension
-    - [ ] (L2) Add `request_uri` parameter support to authorize endpoint
+    - [ ] (L3) Add `request_uri` parameter support to authorize endpoint
 *   **Test Case:**
     - [ ] (L3) PAR flow works end-to-end
 
@@ -1737,31 +1742,31 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L3) Implement DPoP proof parsing and validation
     - [ ] (L3) Validate `htm`, `htu`, `iat`, `jti`, signature
 *   **Component:** Token Endpoint DPoP Support
-    - [ ] (L2) Add DPoP header acceptance to token endpoint
+    - [ ] (L3) Add DPoP header acceptance to token endpoint
     - [ ] (L3) Bind tokens to DPoP key
 *   **Component:** Token Validation DPoP Support
     - [ ] (L3) Add DPoP proof validation to protected endpoints
 *   **Component:** Client Library DPoP Support
-    - [ ] (L2) Implement DPoP proof JWT creation (ES256) with `typ=dpop+jwt` and public JWK header
-    - [ ] (L2) Send `DPoP` header on token endpoint requests when enabled
-    - [ ] (L2) Send `Authorization: DPoP <token>` + `DPoP` proof (with `ath`) for UserInfo when enabled
-    - [ ] (L2) Handle `DPoP-Nonce` replay/nonce requirements (header + `use_dpop_nonce` errors)
-    - [ ] (L2) Ensure DPoP key material lifecycle is handled safely (no leaks)
+    - [ ] (L3) Implement DPoP proof JWT creation (ES256) with `typ=dpop+jwt` and public JWK header
+    - [ ] (L3) Send `DPoP` header on token endpoint requests when enabled
+    - [ ] (L3) Send `Authorization: DPoP <token>` + `DPoP` proof (with `ath`) for UserInfo when enabled
+    - [ ] (L3) Handle `DPoP-Nonce` replay/nonce requirements (header + `use_dpop_nonce` errors)
+    - [ ] (L3) Ensure DPoP key material lifecycle is handled safely (no leaks)
 *   **Test Case:**
     - [ ] (L3) DPoP-bound token requires valid proof
     - [ ] (L3) Token without DPoP is rejected if DPoP was used at issuance
-    - [ ] (L2) Client sends DPoP headers when `UseDPoP=true`
+    - [ ] (L3) Client sends DPoP headers when `UseDPoP=true`
 
 ---
 
 ### Feature 3.7: Rich Authorization Requests (RFC 9396)
 
 *   **Component:** Authorization Details Support
-    - [ ] (L2) Parse `authorization_details` parameter
-    - [ ] (L2) Store with authorization code
-    - [ ] (L2) Include in token claims
+    - [ ] (L3) Parse `authorization_details` parameter
+    - [ ] (L3) Store with authorization code
+    - [ ] (L3) Include in token claims
 *   **Test Case:**
-    - [ ] (L2) Authorization details flow through to token
+    - [ ] (L3) Authorization details flow through to token
 
 ---
 
@@ -1769,16 +1774,16 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** Token Exchange Endpoint
     - [ ] (L3) Implement `POST /auth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange`
-    - [ ] (L2) Support `subject_token` and `actor_token`
-    - [ ] (L2) Support token type indicators
+    - [ ] (L3) Support `subject_token` and `actor_token`
+    - [ ] (L3) Support token type indicators
 *   **Component:** Exchange Policies
     - [ ] (L1) Define `ITokenExchangePolicy` interface
-    - [ ] (L2) Implement delegation policy
+    - [ ] (L3) Implement delegation policy
     - [ ] (L3) Implement impersonation policy
 *   **Test Case:**
-    - [ ] (L2) Delegation exchange produces valid token
+    - [ ] (L3) Delegation exchange produces valid token
     - [ ] (L3) Impersonation exchange includes `act` claim
-    - [ ] (L2) Unauthorized exchanges are rejected
+    - [ ] (L3) Unauthorized exchanges are rejected
 *   **Documentation:**
     - [ ] (L1) Token exchange guide with use cases
 
@@ -1787,14 +1792,14 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 3.9: JWT-Secured Authorization Request (JAR)
 
 *   **Component:** Request Object Support
-    - [ ] (L2) Parse `request` parameter (JWT)
+    - [ ] (L3) Parse `request` parameter (JWT)
     - [ ] (L3) Validate signature against registered client keys
-    - [ ] (L2) Support `request_uri` for remote request objects
+    - [ ] (L3) Support `request_uri` for remote request objects
 *   **Component:** Encryption Support (Optional)
     - [ ] (L3) Decrypt JWE request objects
 *   **Test Case:**
-    - [ ] (L2) Signed request object is validated
-    - [ ] (L2) Invalid signature is rejected
+    - [ ] (L3) Signed request object is validated
+    - [ ] (L3) Invalid signature is rejected
 *   **Documentation:**
     - [ ] (L1) JAR implementation guide
 
@@ -1804,10 +1809,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 *   **Component:** `IWebhookService` Interface
     - [ ] (L1) Define webhook event types
-    - [ ] (L2) Define delivery mechanism
+    - [ ] (L3) Define delivery mechanism
 *   **Component:** Webhook Configuration
     - [ ] (L1) Per-event endpoint configuration
-    - [ ] (L2) Secret for signature verification
+    - [ ] (L3) Secret for signature verification
     - [ ] (L2) Retry policy configuration
 *   **Component:** Event Types
     - [ ] (L1) `user.created`, `user.updated`, `user.deleted`
@@ -1817,12 +1822,12 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) `client.created`, `client.updated`
 *   **Component:** Delivery
     - [ ] (L2) HTTP POST with JSON payload
-    - [ ] (L2) HMAC signature header
+    - [ ] (L3) HMAC signature header
     - [ ] (L3) Exponential backoff retry
 *   **Test Case:**
-    - [ ] (L2) Webhooks fire on events
+    - [ ] (L3) Webhooks fire on events
     - [ ] (L3) Retry logic works correctly
-    - [ ] (L2) Signature verification works
+    - [ ] (L3) Signature verification works
 *   **Documentation:**
     - [ ] (L1) Webhook integration guide
 
@@ -1831,7 +1836,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 3.11: OIDC Conformance Testing
 
 *   **Component:** Conformance Test Integration
-    - [ ] (L2) Set up OIDC conformance test suite
+    - [ ] (L3) Set up OIDC conformance test suite
     - [ ] (L1) Document test results
     - [ ] (L3) Fix any conformance issues
 *   **Documentation:**
@@ -1847,13 +1852,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** Resource Server Validation Package
     - [ ] (L2) Create `CoreIdent.ResourceServer` package
     - [ ] (L3) Implement introspection-based authentication handler/middleware (RFC 7662) for APIs
-    - [ ] (L2) Add caching strategy and guidance (fail-closed by default; configurable TTL; protect introspection endpoint)
+    - [ ] (L3) Add caching strategy and guidance (fail-closed by default; configurable TTL; protect introspection endpoint)
 *   **Component:** Optional Opaque/Reference Access Tokens
     - [ ] (L3) Add configuration to issue opaque/reference access tokens (instead of JWT) for APIs that require immediate revocation
-    - [ ] (L2) Ensure introspection becomes the validation path for opaque tokens
+    - [ ] (L3) Ensure introspection becomes the validation path for opaque tokens
 *   **Test Case (Integration):**
     - [ ] (L3) Revoked access token becomes inactive via introspection across services
-    - [ ] (L2) Cache behaves correctly (revocation latency bounded by cache TTL)
+    - [ ] (L3) Cache behaves correctly (revocation latency bounded by cache TTL)
 *   **Documentation:**
     - [ ] (L2) Document validation modes: offline JWT vs introspection vs opaque/reference tokens
     - [ ] (L2) Document when to choose which mode (embedded vs distributed)
@@ -1879,7 +1884,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L2) External provider buttons
 *   **Component:** Registration Page
     - [ ] (L2) Registration form
-    - [ ] (L2) Email verification flow
+    - [ ] (L3) Email verification flow
 *   **Component:** Consent Page
     - [ ] (L2) Scope display
     - [ ] (L1) Allow/Deny buttons
@@ -1895,13 +1900,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 4.2: Self-Service User Portal
 
 *   **Component:** Account Settings
-    - [ ] (L2) Change email (with verification)
-    - [ ] (L2) Change password
-    - [ ] (L2) Enable/disable MFA
+    - [ ] (L3) Change email (with verification)
+    - [ ] (L3) Change password
+    - [ ] (L3) Enable/disable MFA
 *   **Component:** Session Management
     - [ ] (L2) List active sessions (device, location, time)
-    - [ ] (L2) Revoke individual sessions
-    - [ ] (L2) "Sign out everywhere" option
+    - [ ] (L3) Revoke individual sessions
+    - [ ] (L3) "Sign out everywhere" option
 *   **Component:** Linked Accounts
     - [ ] (L2) View linked external providers
     - [ ] (L2) Link new provider
@@ -1912,7 +1917,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L2) View security events
 *   **Test Case:**
     - [ ] (L2) User can manage own account
-    - [ ] (L2) Session revocation works
+    - [ ] (L3) Session revocation works
 *   **Documentation:**
     - [ ] (L1) User portal customization guide
 
@@ -1926,7 +1931,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** Client Management Endpoints
     - [ ] (L2) CRUD operations for clients
 *   **Component:** Authorization
-    - [ ] (L2) Admin role/scope requirements
+    - [ ] (L3) Admin role/scope requirements
 *   **Documentation:**
     - [ ] (L1) Admin API reference
 
@@ -2032,20 +2037,20 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 5.7: Credential Breach Detection
 
 *   **Component:** HaveIBeenPwned Integration
-    - [ ] (L2) k-Anonymity API integration
+    - [ ] (L3) k-Anonymity API integration
     - [ ] (L1) Check on registration
     - [ ] (L1) Check on password change
     - [ ] (L2) Optional check on login
 *   **Component:** Policy Configuration
     - [ ] (L1) Block compromised passwords
     - [ ] (L1) Warn but allow
-    - [ ] (L2) Force password change
+    - [ ] (L3) Force password change
 *   **Component:** Alerts
-    - [ ] (L2) Notify user of compromised credential
+    - [ ] (L3) Notify user of compromised credential
     - [ ] (L1) Admin notification option
 *   **Test Case:**
-    - [ ] (L2) Known compromised password is detected
-    - [ ] (L2) Policy enforcement works
+    - [ ] (L3) Known compromised password is detected
+    - [ ] (L3) Policy enforcement works
 *   **Documentation:**
     - [ ] (L1) Breach detection setup guide
 
@@ -2054,8 +2059,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 5.8: API Gateway Integration
 
 *   **Component:** YARP Integration Examples
-    - [ ] (L2) Token validation middleware
-    - [ ] (L2) Token transformation
+    - [ ] (L3) Token validation middleware
+    - [ ] (L3) Token transformation
     - [ ] (L2) Rate limiting integration
 *   **Component:** Token Exchange for Downstream
     - [ ] (L3) Exchange external token for internal
@@ -2114,7 +2119,7 @@ The following items are tracked here for completeness and cross-referencing:
 - [x] (L2) OIDC UserInfo Endpoint — *Covered in Feature 1.10*
 - [x] (L2) User Consent Mechanism — *Covered in Feature 1.8*
 - [x] (L2) EF Core Storage Provider — *Covered in Features 0.3-0.4 (EfClientStore, EfScopeStore, etc.)*
-- [ ] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
+- [x] (L2) Delegated User Store Adapter — *Covered in Feature 1.9*
 - [x] (L2) User Registration Endpoint — *Covered in Feature 1.11*
 - [x] (L2) User Login Endpoint — *Covered in Feature 1.11*
 - [x] (L2) User Profile Endpoint — *Covered in Feature 1.11*
