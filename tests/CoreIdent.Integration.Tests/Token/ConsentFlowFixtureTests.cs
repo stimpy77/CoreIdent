@@ -44,7 +44,9 @@ public sealed class ConsentFlowFixtureTests : CoreIdentTestFixture
 
         var location = response.Headers.Location;
         location.ShouldNotBeNull();
-        location!.AbsolutePath.ShouldBe("/auth/consent", "Consent redirect should go to consent endpoint.");
+        // Location may be relative URI, so use OriginalString to check path
+        var locationPath = location!.IsAbsoluteUri ? location.AbsolutePath : location.OriginalString.Split('?')[0];
+        locationPath.ShouldBe("/auth/consent", "Consent redirect should go to consent endpoint.");
     }
 
     [Fact]
@@ -103,10 +105,13 @@ public sealed class ConsentFlowFixtureTests : CoreIdentTestFixture
 
         var backToAuthorize = consentResponse.Headers.Location;
         backToAuthorize.ShouldNotBeNull();
-        backToAuthorize!.AbsolutePath.ShouldBe("/auth/authorize");
+        // Location may be relative URI, so use OriginalString to check path
+        var authorizePath = backToAuthorize!.IsAbsoluteUri ? backToAuthorize.AbsolutePath : backToAuthorize.OriginalString.Split('?')[0];
+        authorizePath.ShouldBe("/auth/authorize");
 
         // Now call authorize again (grant exists) -> redirects back to client with code
-        var authorized = await Client.GetAsync(backToAuthorize.PathAndQuery);
+        var authorizePathAndQuery = backToAuthorize.IsAbsoluteUri ? backToAuthorize.PathAndQuery : backToAuthorize.OriginalString;
+        var authorized = await Client.GetAsync(authorizePathAndQuery);
         authorized.StatusCode.ShouldBe(HttpStatusCode.Redirect);
 
         var clientRedirect = authorized.Headers.Location;

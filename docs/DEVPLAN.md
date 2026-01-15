@@ -1493,7 +1493,7 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 > **Decision:** Implement early in Phase 1.5 as shared testing infrastructure for client libraries.
 
-*   **Status:** 🔜 **Phase 1.5 (early), recommended to prioritize**
+*   **Status:** ✅ **Implemented (L1/L2/L3)**
 *   **Rationale:** Most client features can be tested headlessly, but browser/E2E infrastructure is needed to validate real redirect-based flows, storage behavior in-browser, and future WebAuthn/passkey work. Building this once and reusing it across client packages reduces regression risk and avoids platform-specific ad-hoc harnesses.
 
 *   **Testing tiers (design goal):**
@@ -1502,26 +1502,26 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - (Tier 3) Browser-driven E2E (Playwright; real redirect + callback; used for a small set of smoke tests)
 
 *   **Component:** Tooling decision
-    - [ ] (L2) Standardize on **Playwright** as the primary browser automation tool (single supported harness)
-    - [ ] (L1) Document local setup + CI prerequisites (browsers, env vars, timeouts, headless/headful)
+    - [x] (L2) Standardize on **Playwright** as the primary browser automation tool (single supported harness)
+    - [x] (L1) Document local setup + CI prerequisites (browsers, env vars, timeouts, headless/headful)
 
 *   **Component:** `CoreIdent.Testing` building blocks
-    - [ ] (L2) Create `CoreIdent.Testing.Host` helpers to start a CoreIdent server for tests (in-proc or local port)
-    - [ ] (L2) Create `CoreIdent.Testing.Http` helpers (assertions for discovery, token, userinfo, revocation)
-    - [ ] (L2) Create `CoreIdent.Testing.Browser` helpers for redirect-based flows:
-        - [ ] (L2) Playwright fixture + deterministic tracing/screenshot capture on failure
-        - [ ] (L2) Helpers for callback listener (localhost redirect URI) and URL wait conditions
-        - [ ] (L2) “Headless authorize” harness (non-UI) for fast CI coverage when the server supports it
+    - [x] (L2) Create `CoreIdent.Testing.Host` helpers to start a CoreIdent server for tests (in-proc or local port)
+    - [x] (L2) Create `CoreIdent.Testing.Http` helpers (assertions for discovery, token, userinfo, revocation)
+    - [x] (L2) Create `CoreIdent.Testing.Browser` helpers for redirect-based flows:
+        - [x] (L2) Playwright fixture + deterministic tracing/screenshot capture on failure
+        - [x] (L2) Helpers for callback listener (localhost redirect URI) and URL wait conditions
+        - [x] (L2) "Headless authorize" harness (non-UI) for fast CI coverage when the server supports it
 
 *   **Component:** OAuth/OIDC E2E coverage (CoreIdent + external providers)
-    - [ ] (L2) Authorization Code + PKCE flow works end-to-end against CoreIdent test host
+    - [x] (L2) Authorization Code + PKCE flow works end-to-end against CoreIdent test host
     - [ ] (L2) Token refresh behavior works end-to-end (refresh threshold + rotation scenarios)
     - [ ] (L2) Logout works (revocation + end session when advertised)
     - [ ] (L2) UserInfo behavior is correct (scope-gated claims, reserved claims filtering)
-    - [ ] (L3) External provider smoke lane (Keycloak or other containerized provider) for cross-provider parity
+    - [x] (L3) External provider smoke lane (Keycloak or other containerized provider) for cross-provider parity
 
 *   **Component:** WebAuthn/Passkey E2E (future expansion)
-    - [ ] (L3) Implement passkey E2E tests using Playwright virtual authenticator (where supported)
+    - [x] (L3) Implement passkey E2E tests using Playwright virtual authenticator (where supported)
 
 *   **CI strategy:**
     - [ ] (L2) Run Tier 1 + Tier 2 on every PR
@@ -1529,8 +1529,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L1) Keep Tier 3 small and stable; favor headless integration tests for most coverage
 
 *   **Quality gates:**
-    - [ ] (L2) Tests produce deterministic diagnostics (traces/logs) on failure
-    - [ ] (L2) Timeouts are explicit and bounded; tests fail fast and do not hang CI
+    - [x] (L2) Tests produce deterministic diagnostics (traces/logs) on failure
+    - [x] (L2) Timeouts are explicit and bounded; tests fail fast and do not hang CI
     - [ ] (L1) Document supported CI runners and what platforms are required for MAUI/WPF UI automation (optional)
 
 ---
