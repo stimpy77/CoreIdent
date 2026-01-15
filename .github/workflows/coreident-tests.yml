@@ -1,0 +1,130 @@
+name: CoreIdent Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly build to catch regressions
+    - cron: '0 2 * * *'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  # Tier 1: Unit tests - fast, always run
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Run Unit Tests
+        run: dotnet test tests/CoreIdent.Core.Tests --no-build -c Release --verbosity minimal
+
+  # Tier 2: Integration tests - medium speed, always run
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Run Integration Tests
+        run: dotnet test tests/CoreIdent.Integration.Tests --no-build -c Release --verbosity minimal
+
+  # Tier 3: E2E and Browser tests - slower, run on main/nightly/PRs
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.ref == 'refs/heads/main' || github.event.schedule != '' || github.event.pull_request != null
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Playwright
+        run: dotnet playwright install --with-deps chromium
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Run E2E Tests
+        run: dotnet test tests/CoreIdent.E2E.Tests --no-build -c Release --filter "Category=E2E" --verbosity minimal
+        env:
+          PLAYWRIGHT_TRACES: ${{ github.event_name != 'pull_request' }}
+          PLAYWRIGHT_SCREENSHOTS: ${{ github.event_name != 'pull_request' }}
+
+      - name: Upload Playwright Traces
+        if: failure() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: playwright-traces/
+
+  # Full test suite - main branch only
+  full-test-suite:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.ref == 'refs/heads/main' || github.event.schedule != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Playwright
+        run: dotnet playwright install --with-deps chromium
+
+      - name: Restore
+        run: dotnet restore CoreIdent.sln
+
+      - name: Build
+        run: dotnet build CoreIdent.sln --no-restore -c Release
+
+      - name: Run All Tests
+        run: dotnet test CoreIdent.sln --no-build -c Release --filter "Category!=E2E" --verbosity minimal --collect:"XPlat Code Coverage"
+
+      - name: Upload Coverage
+        if: github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.cobertura.xml
