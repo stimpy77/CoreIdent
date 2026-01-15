@@ -117,8 +117,12 @@ jobs:
       - name: Build
         run: dotnet build CoreIdent.sln --no-restore -c Release
 
-      - name: Run All Tests
-        run: dotnet test CoreIdent.sln --no-build -c Release --filter "Category!=E2E" --verbosity minimal --collect:"XPlat Code Coverage"
+      - name: Run All Tests (excluding E2E)
+        run: |
+          dotnet test tests/CoreIdent.Core.Tests --no-build -c Release --verbosity minimal --collect:"XPlat Code Coverage"
+          dotnet test tests/CoreIdent.Integration.Tests --no-build -c Release --verbosity minimal
+          dotnet test tests/CoreIdent.Cli.Tests --no-build -c Release --verbosity minimal
+          dotnet test tests/CoreIdent.Templates.Tests --no-build -c Release --verbosity minimal
 
       - name: Upload Coverage
         if: github.event_name == 'schedule'
