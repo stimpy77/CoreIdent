@@ -40,7 +40,7 @@ jobs:
       - name: Test (with coverage, excluding E2E)
         run: |
           dotnet test tests/CoreIdent.Core.Tests -c Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
-          dotnet test tests/CoreIdent.Integration.Tests -c Release --no-build --logger "console;verbosity=minimal"
+          dotnet test tests/CoreIdent.Integration.Tests -c Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
           dotnet test tests/CoreIdent.Cli.Tests -c Release --no-build --logger "console;verbosity=minimal"
           dotnet test tests/CoreIdent.Templates.Tests -c Release --no-build --logger "console;verbosity=minimal"
 
