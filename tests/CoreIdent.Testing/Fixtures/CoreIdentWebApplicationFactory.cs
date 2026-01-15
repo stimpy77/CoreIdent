@@ -44,6 +44,13 @@ public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<globa
             services.AddAspNetIdentityPasswordHasher();
 
             ConfigureTestServices?.Invoke(services);
+
+            // Create database tables immediately to avoid race with background hosted services.
+            // This must happen during ConfigureServices so tables exist before the host starts.
+            var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();
+            db.Database.EnsureCreated();
         });
     }
 
