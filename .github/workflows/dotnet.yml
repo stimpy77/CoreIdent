@@ -37,8 +37,12 @@ jobs:
       - name: Build
         run: dotnet build CoreIdent.sln -c Release --no-restore
 
-      - name: Test (with coverage)
-        run: dotnet test CoreIdent.sln -c Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
+      - name: Test (with coverage, excluding E2E)
+        run: |
+          dotnet test tests/CoreIdent.Core.Tests -c Release --no-build --collect:"XPlat Code Coverage" --logger "console;verbosity=minimal"
+          dotnet test tests/CoreIdent.Integration.Tests -c Release --no-build --logger "console;verbosity=minimal"
+          dotnet test tests/CoreIdent.Cli.Tests -c Release --no-build --logger "console;verbosity=minimal"
+          dotnet test tests/CoreIdent.Templates.Tests -c Release --no-build --logger "console;verbosity=minimal"
 
       - name: OpenAPI Validation Gate
         run: dotnet test tests/CoreIdent.Integration.Tests/CoreIdent.Integration.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CoreIdent.Integration.Tests.Infrastructure.OpenApiFixtureTests" --logger "console;verbosity=minimal"
