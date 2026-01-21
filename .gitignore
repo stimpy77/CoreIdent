@@ -400,3 +400,12 @@ FodyWeavers.xsd
 *.sln.iml
 .idea/
 ._*
+
+# Claude AI agent artifacts
+.claude/
+
+# VS Code settings (explicit)
+.vscode/
+
+# Claude AI agent artifacts
+.claude/
