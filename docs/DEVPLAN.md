@@ -1538,15 +1538,18 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 ### Feature 1.5.3: MAUI Client
 
 *   **Component:** `CoreIdent.Client.Maui` Package
-    - [ ] (L1) Create project targeting `net10.0-android;net10.0-ios;net10.0-maccatalyst`
-    - [ ] (L3) Implement `MauiSecureTokenStorage` using `SecureStorage`
-    - [ ] (L3) Implement `MauiBrowserLauncher` using `WebAuthenticator`
-    - [ ] (L1) Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
+    - [x] (L1) Create project targeting `net10.0-android;net10.0-ios;net10.0-maccatalyst`
+    - [x] (L3) Implement `MauiSecureTokenStorage` using `SecureStorage`
+    - [x] (L3) Implement `MauiBrowserLauncher` using `WebAuthenticator`
+    - [x] (L1) Add `UseCoreIdentClient()` extension for `MauiAppBuilder`
 *   **Test Case:**
-    - [ ] (L2) Tokens persist across app restarts
-    - [ ] (L3) WebAuthenticator flow completes successfully
+    - [x] (L2) Tokens persist across app restarts
+    - [x] (L3) WebAuthenticator flow completes successfully
+*   **Test Case (Integration):**
+    - [x] (L2) Tier 2 headless integration: MAUI client logs in against CoreIdent test host using CoreIdent.Testing.Host + headless authorize harness (1.5.2)
+    - [x] (L3) Tier 3 UI automation (optional): device/simulator smoke test for WebAuthenticator redirect roundtrip (1.5.2)
 *   **Documentation:**
-    - [ ] (L1) MAUI integration guide with sample app
+    - [x] (L1) MAUI integration guide with sample app
 
 ---
 
@@ -1560,6 +1563,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Test Case:**
     - [ ] (L2) DPAPI storage encrypts/decrypts correctly
     - [ ] (L3) WebView2 flow works
+*   **Test Case (Integration):**
+    - [ ] (L2) Tier 2 integration: SystemBrowserLauncher login against CoreIdent test host with localhost callback (1.5.2)
+    - [ ] (L3) Tier 3 UI automation (Windows runner): WebView2 flow completes (1.5.2)
 *   **Documentation:**
     - [ ] (L1) WPF/WinForms integration guide
 
@@ -1574,6 +1580,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Test Case:**
     - [ ] (L2) Device code flow works
     - [ ] (L3) File storage is encrypted
+*   **Test Case (Integration):**
+    - [ ] (L2) Tier 2 integration: device code flow against CoreIdent test host (1.5.2)
+    - [ ] (L2) Tier 2 integration: token refresh + logout against CoreIdent test host (1.5.2)
 *   **Documentation:**
     - [ ] (L1) Console/CLI app integration guide
 
@@ -1588,6 +1597,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Test Case:**
     - [ ] (L2) Auth state propagates to Blazor components
     - [ ] (L2) Token refresh works in browser
+*   **Test Case (Integration):**
+    - [ ] (L2) Tier 2 integration: Blazor WASM login in Playwright against CoreIdent test host (1.5.2)
+    - [ ] (L2) Tier 3 browser smoke: token refresh + logout in real browser (1.5.2)
 *   **Documentation:**
     - [ ] (L1) Blazor WASM integration guide
 
