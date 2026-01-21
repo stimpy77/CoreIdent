@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CoreIdent.Core\CoreIdent.Core.csproj" />
+    <ProjectReference Include="..\..\src\CoreIdent.Client.Maui\CoreIdent.Client.Maui.csproj" />
     <ProjectReference Include="..\CoreIdent.Testing\CoreIdent.Testing.csproj" />
     <ProjectReference Include="..\CoreIdent.TestHost\CoreIdent.TestHost.csproj" />
   </ItemGroup>

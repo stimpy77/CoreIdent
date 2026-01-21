@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using CoreIdent.Core.Configuration;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Models;
 using CoreIdent.Testing.Seeders;
@@ -42,7 +43,11 @@ public sealed class KestrelTestHostFixture : IAsyncLifetime, IAsyncDisposable
         _app = TestHostApp.Build(
             args: [],
             sqliteDbPath: dbPath,
-            configureServices: null,
+            configureServices: services =>
+            {
+                // Disable cleanup hosted service to prevent race condition with DB creation
+                services.Configure<CoreIdentAuthorizationCodeOptions>(opts => opts.EnableCleanupHostedService = false);
+            },
             configureApp: app =>
             {
                 // Bind to ephemeral port on loopback.

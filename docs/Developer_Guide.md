@@ -182,6 +182,16 @@ The default implementation (`SystemBrowserLauncher`) requires:
 
 If your app uses a non-loopback redirect URI (mobile deep link, custom scheme, embedded web view, etc.), provide a custom `IBrowserLauncher`.
 
+### MAUI integration
+
+For .NET MAUI apps, use `CoreIdent.Client.Maui`. It provides:
+
+- `MauiSecureTokenStorage` backed by `SecureStorage`
+- `MauiBrowserLauncher` backed by `WebAuthenticator`
+- `UseCoreIdentClient()` for `MauiAppBuilder`
+
+See the full MAUI setup and sample app walkthrough in [docs/MAUI_Client_Guide.md](docs/MAUI_Client_Guide.md).
+
 ### Discovery and third-party providers (Keycloak readiness)
 
 `CoreIdent.Client` uses OIDC discovery (`.well-known/openid-configuration`) and follows the discovered endpoints.

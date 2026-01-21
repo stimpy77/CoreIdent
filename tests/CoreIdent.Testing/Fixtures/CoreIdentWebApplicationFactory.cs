@@ -1,3 +1,4 @@
+using CoreIdent.Core.Configuration;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using CoreIdent.Testing.Seeders;
@@ -42,6 +43,9 @@ public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<globa
             services.AddEntityFrameworkCoreStores();
 
             services.AddAspNetIdentityPasswordHasher();
+
+            // Disable cleanup hosted service to prevent race condition with DB creation
+            services.Configure<CoreIdentAuthorizationCodeOptions>(opts => opts.EnableCleanupHostedService = false);
 
             ConfigureTestServices?.Invoke(services);
 
