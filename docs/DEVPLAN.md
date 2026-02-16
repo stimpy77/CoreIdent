@@ -63,8 +63,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | PAR (RFC 9126) | 3 | 3.5 | 🔲 Planned |
 | DPoP (RFC 9449) | 3 | 3.6 | 🔲 Planned |
 | RAR (RFC 9396) | 3 | 3.7 | 🔲 Planned |
+| MCP-Compatible Authorization Server | 3 | 3.13 | 🔲 Planned |
 | UI Package | 4 | 4.1 | 🔲 Planned |
 | Admin API | 4 | 4.3 | 🔲 Planned |
+| Domain Verification | 4 | 4.5 | 🔲 Planned |
+| Connected Apps (Post-Auth Account Linking) | 4 | 4.6 | 🔲 Planned |
 | MFA Framework | 5 | 5.1 | 🔲 Planned |
 | SCIM | 5 | 5.4 | 🔲 Planned |
 | SPIFFE/SPIRE | 5 | 5.5 | 🔲 Planned |
@@ -1875,6 +1878,35 @@ This document provides a detailed breakdown of tasks, components, test cases, an
     - [ ] (L2) Document validation modes: offline JWT vs introspection vs opaque/reference tokens
     - [ ] (L2) Document when to choose which mode (embedded vs distributed)
 
+---
+
+### Feature 3.13: MCP-Compatible Authorization Server
+
+> **Goal:** Extend the OAuth 2.1 server to support the Model Context Protocol (MCP) authorization specification, enabling fine-grained authorization for AI agent workflows. MCP is the emerging standard (originated at Anthropic, now broadly adopted) for how AI agents connect to external tools and data sources. This is a protocol-level extension of the existing OAuth server — distinct from the removed "AI Framework SDK Integrations" and "CIBA for AI Actions" items, which concerned embedding AI SDKs or niche backchannel protocols.
+
+*   **Component:** MCP Authorization Metadata Discovery
+    - [ ] (L2) Extend `/.well-known/oauth-authorization-server` metadata for MCP compatibility
+    - [ ] (L1) Advertise supported MCP authorization capabilities
+*   **Component:** Third-Party Client Registration for MCP
+    - [ ] (L3) Support dynamic registration of MCP clients (tool servers)
+    - [ ] (L2) Define default restricted scopes for MCP tool access
+*   **Component:** Consent & Delegation for Agent Access
+    - [ ] (L3) Scoped consent UI for agent/tool authorization ("App X wants Agent Y to access Z on your behalf")
+    - [ ] (L3) Token scoping to limit agent capabilities per-session
+    - [ ] (L2) Support for audience-restricted tokens targeting specific MCP tool servers
+*   **Component:** Token Lifecycle for Agent Workflows
+    - [ ] (L2) Short-lived access tokens with constrained scopes for agent sessions
+    - [ ] (L3) Revocation hooks for agent session termination
+*   **Test Case:**
+    - [ ] (L3) MCP client can obtain scoped token via authorization code flow
+    - [ ] (L3) Agent token is rejected when scope is insufficient for requested tool
+    - [ ] (L2) MCP authorization metadata is correctly advertised
+*   **Documentation:**
+    - [ ] (L1) MCP integration guide with sample agent workflow
+    - [ ] (L2) Security considerations for agent authorization
+
+---
+
 ## Phase 4: UI & Administration
 
 **Goal:** Optional UI components for common flows.
@@ -1975,6 +2007,51 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 4.5: Domain Verification
+
+*   **Component:** Domain Claim & Verification
+    - [ ] (L2) `IDomainVerificationService` interface
+    - [ ] (L3) DNS TXT record verification method
+    - [ ] (L2) HTTP well-known file verification method
+    - [ ] (L2) Store verified domains per tenant/organization
+*   **Component:** Automatic Organization Association
+    - [ ] (L3) Auto-associate users with matching email domains on login/registration
+    - [ ] (L2) Configurable policy: auto-join vs require admin approval
+*   **Component:** SSO Enforcement
+    - [ ] (L3) Require SSO for verified domain users (block password login)
+    - [ ] (L2) Grace period configuration for SSO migration
+*   **Test Case:**
+    - [ ] (L3) DNS verification succeeds for correct TXT record
+    - [ ] (L3) Users with verified domain are associated to organization
+    - [ ] (L3) SSO enforcement blocks password login for domain users
+*   **Documentation:**
+    - [ ] (L1) Domain verification setup guide for B2B SaaS
+
+---
+
+### Feature 4.6: Connected Apps (Post-Auth Account Linking)
+
+*   **Component:** Connected App Registration
+    - [ ] (L1) `IConnectedAppProvider` interface
+    - [ ] (L2) Store connected app definitions (name, OAuth config, required scopes)
+    - [ ] (L1) Admin API for managing connected app definitions (coordinate with Feature 4.3)
+*   **Component:** User-Initiated OAuth Linking
+    - [ ] (L3) Initiate OAuth 2.0 authorization code flow to third-party service
+    - [ ] (L3) Store resulting tokens securely per user per connected app
+    - [ ] (L2) Token refresh lifecycle management for connected apps
+*   **Component:** User Portal Integration
+    - [ ] (L2) "Connected Accounts" section in self-service portal (coordinate with Feature 4.2)
+    - [ ] (L2) Connect / disconnect actions
+    - [ ] (L1) Display connection status and last-used time
+*   **Test Case:**
+    - [ ] (L3) User can link external account via OAuth flow
+    - [ ] (L3) Disconnecting removes stored tokens
+    - [ ] (L2) Token refresh keeps connection alive
+*   **Documentation:**
+    - [ ] (L1) Connected Apps integration guide
+
+---
+
 ## Phase 5: Advanced & Community
 
 **Goal:** Extended capabilities for specialized use cases.
@@ -1993,8 +2070,22 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 5.2: Fine-Grained Authorization Integration
 
-*   **Component:** FGA/RBAC Hooks (L3)
-*   **Component:** Policy evaluation interface (L2)
+> **Strategy:** CoreIdent does not aim to build a full authorization engine (Zanzibar/ReBAC). Instead, it provides clean integration points so teams can plug in purpose-built systems like OpenFGA, Cerbos, Ory Keto, SpiceDB, or Warrant. CoreIdent's role is to enrich tokens with the identity and context that authorization engines need, and to provide middleware that bridges authorization decisions into .NET request pipelines.
+
+*   **Component:** Authorization Decision Interface
+    - [ ] (L2) `IAuthorizationDecider` interface — check(subject, action, resource) → permit/deny
+    - [ ] (L1) Default pass-through implementation
+    - [ ] (L2) Middleware to enforce decisions on protected endpoints
+*   **Component:** Token Claims Enrichment for Authorization
+    - [ ] (L2) Configurable claims that external FGA systems typically consume (roles, groups, org membership, tenant context)
+    - [ ] (L1) `IAuthorizationContextProvider` — supply additional context at token issuance
+*   **Component:** Reference Integrations
+    - [ ] (L2) OpenFGA adapter example
+    - [ ] (L1) Documentation: mapping CoreIdent identity model to common FGA relationship schemas
+*   **Component:** RBAC Convenience Layer
+    - [ ] (L2) Built-in role/permission model for teams that don't need full FGA
+    - [ ] (L2) Role-to-scope mapping
+    - [ ] (L1) Admin API endpoints for role management (coordinate with Feature 4.3)
 
 ---
 
@@ -2023,6 +2114,8 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ### Feature 5.6: Risk-Based Authentication
 
+> **Strategy:** CoreIdent provides extensible risk-assessment interfaces and reference implementations. For teams needing a turnkey fraud/abuse engine with proprietary signal intelligence, integrate a dedicated service (e.g., Castle, Arkose Labs) via the `IRiskScorer` / `IRequestClassifier` hooks. The goal is composability, not competing with dedicated fraud platforms.
+
 *   **Component:** Device Fingerprinting
     - [ ] (L2) Collect device characteristics
     - [ ] (L2) Store known devices per user
@@ -2038,6 +2131,26 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 *   **Component:** Risk Scoring
     - [ ] (L1) `IRiskScorer` interface
     - [ ] (L2) Configurable risk thresholds
+*   **Component:** Credential Stuffing Protection
+    - [ ] (L2) Brute-force rate limiting per account
+    - [ ] (L3) Leaked credential detection integration (coordinate with Feature 5.7)
+    - [ ] (L2) Progressive challenge escalation (CAPTCHA → MFA → lockout)
+*   **Component:** Bot / Abuse Detection Hooks
+    - [ ] (L1) `IRequestClassifier` interface (human / bot / suspicious)
+    - [ ] (L2) Pluggable classification provider model
+    - [ ] (L1) Default: header/behavior heuristic classifier
+*   **Component:** Dormant Account Monitoring
+    - [ ] (L1) Track last-active timestamp per user
+    - [ ] (L2) Configurable dormancy threshold and policy (alert, disable, require re-verification)
+*   **Component:** Free-Tier / Signup Abuse Detection
+    - [ ] (L2) Email domain and alias pattern analysis hooks
+    - [ ] (L1) Configurable signup rate limits per IP/fingerprint
+*   **Component:** Admin Alerting
+    - [ ] (L1) `IRiskAlertSink` interface for risk event notifications
+    - [ ] (L2) Default implementations: log, webhook, email
+*   **Component:** Custom Blocking Rules
+    - [ ] (L2) IP range / country / device-based block/challenge rules
+    - [ ] (L1) Admin API for managing rules (coordinate with Feature 4.3)
 *   **Test Case:**
     - [ ] (L2) Unknown device triggers step-up
     - [ ] (L3) Impossible travel is detected
@@ -2148,6 +2261,7 @@ The following items are tracked here for completeness and cross-referencing:
 |---------|--------|
 | Web3 Wallet Login | Niche adoption |
 | LNURL-auth | Very niche |
-| AI Framework SDK Integrations | Premature |
-| CIBA for AI Actions | Specialized |
+| AI Framework SDK Integrations | Premature (note: MCP-compatible authorization in Feature 3.13 is a distinct, protocol-level OAuth 2.1 extension — not an AI SDK integration) |
+| CIBA for AI Actions | Specialized (note: MCP Auth in Feature 3.13 addresses AI agent authorization via standard OAuth flows, not the niche CIBA backchannel protocol) |
 | Token Vault / Secrets Management | Out of scope |
+| Feature Flags / Rollout Control | Out of scope; not an identity concern. Use dedicated tools (LaunchDarkly, Unleash, Flagsmith, etc.) |

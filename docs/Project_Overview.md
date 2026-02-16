@@ -160,6 +160,7 @@ Deliver a production-ready answer to the README-level promise of:
   - manage passkeys / MFA methods
 - Sessions/devices (as CoreIdent grows this surface)
   - list sessions, logout everywhere
+- Manage connected third-party accounts (GitHub, Slack, etc.)
 
 **Packaging note:**
 
@@ -204,13 +205,14 @@ Even if an Enterprise project eventually reaches feature parity with Keycloak ch
 
 **High-level feature checklist (what it would need to cover):**
 
-**Realms / multi-tenancy (Keycloak’s core differentiator):**
+**Realms / multi-tenancy (Keycloak's core differentiator):**
 
 - Per-realm issuer and audience
 - Per-realm signing keys (and key rotation policies)
 - Per-realm clients, scopes, and configuration
 - Per-realm admin boundaries and isolation guarantees
 - Per-realm branding/theming
+- Domain verification for enterprise onboarding (prove domain ownership → auto-associate users → enforce SSO)
 
 **Federation / identity brokering:**
 
@@ -545,6 +547,7 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 - **JWT-Secured Authorization Request (JAR)** — Signed/encrypted auth requests
 - **Revocable access for controlled distributed systems** — Introspection-first validation middleware + optional opaque/reference access tokens (for resource servers you control)
 - **Webhook System** — Events for user.created, login, token.issued, consent.granted
+- **MCP-Compatible Authorization Server** — Extend OAuth 2.1 server for Model Context Protocol (MCP) AI agent authorization: metadata discovery, scoped consent for agent/tool access, audience-restricted tokens, and agent session lifecycle
 - OIDC Conformance test suite integration
 - Rate limiting and abuse prevention
 
@@ -570,6 +573,8 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
   - Multiple issuers in one instance
   - Per-tenant configuration (keys, providers, branding)
   - Tenant isolation and data separation
+- **Domain Verification** — DNS TXT / HTTP well-known verification for enterprise domain ownership, automatic organization association, and SSO enforcement for verified domains
+- **Connected Apps (Post-Auth Account Linking)** — Let users link third-party accounts (GitHub, Slack, Jira, etc.) after authentication for integration purposes, with secure token storage and lifecycle management
 
 ---
 
@@ -578,17 +583,19 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 
 **Deliverables:**
 - MFA framework (TOTP, backup codes)
-- Fine-grained authorization (FGA/RBAC) integration points
+- **Fine-grained authorization integration** — Clean hooks for OpenFGA, Cerbos, SpiceDB, etc., plus a built-in RBAC convenience layer for simpler needs
 - Audit logging infrastructure
 - Anomaly detection hooks
 - Community provider packages (Apple, Twitter, LinkedIn, etc.)
 - **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
 - **Verifiable Credentials** — W3C VC integration points
 - **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
-- **Risk-Based Authentication**
-  - Device fingerprinting
-  - Geo-location checks
+- **Risk-Based Authentication** — Extensible risk-assessment interfaces (`IRiskScorer`, `IRequestClassifier`) with reference implementations
+  - Device fingerprinting and geo-location checks
+  - Credential stuffing protection and bot/abuse detection hooks
+  - Dormant account monitoring and signup abuse detection
   - Step-up auth for sensitive operations
+  - Admin alerting and custom blocking rules
 - **Credential Breach Detection**
   - HaveIBeenPwned API integration
   - Compromised credential alerts
@@ -611,6 +618,7 @@ These protocols are emerging or specialized; tracked for potential inclusion:
 | **OpenID Federation** | Draft | Trust chain management for large ecosystems |
 | **Selective Disclosure JWT (SD-JWT)** | Draft | Privacy-preserving credentials |
 | **SPIFFE/SPIRE** | CNCF Graduated | Workload identity; consider `CoreIdent.Identity.Spiffe` package |
+| **MCP (Model Context Protocol) Authorization** | Specification Stable | Supported via Phase 3 Feature 3.13; extends OAuth 2.1 server for AI agent authorization |
 
 ---
 
@@ -622,9 +630,10 @@ The following were in the original roadmap but are **removed** or **deferred ind
 |---------|--------|
 | **Web3 Wallet Login** | Niche adoption; community can add if needed |
 | **LNURL-auth** | Very niche (Bitcoin Lightning); not mainstream |
-| **AI Framework SDK Integrations** | Premature; unclear requirements |
-| **CIBA for AI Actions** | Specialized; defer until clear demand |
+| **AI Framework SDK Integrations** | Premature; unclear requirements (note: MCP-compatible authorization in Phase 3 is a distinct, protocol-level OAuth 2.1 extension — not an AI SDK integration) |
+| **CIBA for AI Actions** | Specialized; defer until clear demand (note: MCP Auth in Phase 3 addresses AI agent authorization via standard OAuth flows, not the niche CIBA backchannel protocol) |
 | **Token Vault / Secrets Management** | Out of scope; use dedicated tools (Azure Key Vault, etc.) |
+| **Feature Flags / Rollout Control** | Out of scope; not an identity concern. Use dedicated tools (LaunchDarkly, Unleash, Flagsmith, etc.) |
 
 ---
 
