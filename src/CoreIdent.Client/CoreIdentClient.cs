@@ -6,6 +6,8 @@ using System.Text.Json;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
+using static CoreIdent.Client.OAuthClientConstants;
+
 namespace CoreIdent.Client;
 
 /// <summary>
@@ -141,9 +143,9 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
         {
             var form = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["token"] = token,
-                ["token_type_hint"] = tokenTypeHint,
-                ["client_id"] = _options.ClientId
+                [Parameters.Token] = token,
+                [Parameters.TokenTypeHint] = tokenTypeHint,
+                [Parameters.ClientId] = _options.ClientId
             };
 
             var revocationUri = GetAbsoluteEndpointUri(revocationEndpoint);
@@ -206,18 +208,18 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
         var authorizeParams = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["client_id"] = _options.ClientId,
-            ["redirect_uri"] = _options.RedirectUri,
-            ["response_type"] = "code",
-            ["scope"] = scope,
-            ["state"] = state,
-            ["nonce"] = nonce
+            [Parameters.ClientId] = _options.ClientId,
+            [Parameters.RedirectUri] = _options.RedirectUri,
+            [Parameters.ResponseType] = Values.Code,
+            [Parameters.Scope] = scope,
+            [Parameters.State] = state,
+            [Parameters.Nonce] = nonce
         };
 
         if (_options.UsePkce)
         {
-            authorizeParams["code_challenge"] = codeChallenge!;
-            authorizeParams["code_challenge_method"] = "S256";
+            authorizeParams[Parameters.CodeChallenge] = codeChallenge!;
+            authorizeParams[Parameters.CodeChallengeMethod] = Values.S256;
         }
 
         var authorizeUrl = UrlHelpers.AppendQueryString(discovery.AuthorizationEndpoint, authorizeParams);
@@ -241,12 +243,12 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
             return AuthResult.Fail(error, desc);
         }
 
-        if (!query.TryGetValue("state", out var returnedState) || !string.Equals(returnedState, state, StringComparison.Ordinal))
+        if (!query.TryGetValue(Parameters.State, out var returnedState) || !string.Equals(returnedState, state, StringComparison.Ordinal))
         {
             return AuthResult.Fail("invalid_state", "State parameter mismatch.");
         }
 
-        if (!query.TryGetValue("code", out var code) || string.IsNullOrWhiteSpace(code))
+        if (!query.TryGetValue(Parameters.Code, out var code) || string.IsNullOrWhiteSpace(code))
         {
             return AuthResult.Fail("invalid_response", "Authorization response did not include a code.");
         }
@@ -340,9 +342,9 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
         {
             var query = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["id_token_hint"] = tokens.IdToken,
-                ["post_logout_redirect_uri"] = _options.PostLogoutRedirectUri,
-                ["state"] = Pkce.Base64UrlEncode(RandomNumberGenerator.GetBytes(16))
+                [Parameters.IdTokenHint] = tokens.IdToken,
+                [Parameters.PostLogoutRedirectUri] = _options.PostLogoutRedirectUri,
+                [Parameters.State] = Pkce.Base64UrlEncode(RandomNumberGenerator.GetBytes(16))
             };
 
             var url = UrlHelpers.AppendQueryString(discovery.EndSessionEndpoint, query);
@@ -704,7 +706,7 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
         if (!string.IsNullOrWhiteSpace(expectedNonce))
         {
-            var nonceClaim = principal.FindFirst("nonce")?.Value;
+            var nonceClaim = principal.FindFirst(Parameters.Nonce)?.Value;
             if (!string.Equals(nonceClaim, expectedNonce, StringComparison.Ordinal))
             {
                 return IdTokenValidationResult.Fail("invalid_nonce", "ID token nonce did not match.");
@@ -722,10 +724,10 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
     {
         var form = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["grant_type"] = "authorization_code",
-            ["client_id"] = _options.ClientId,
-            ["code"] = code,
-            ["redirect_uri"] = _options.RedirectUri
+            [Parameters.GrantType] = GrantTypes.AuthorizationCode,
+            [Parameters.ClientId] = _options.ClientId,
+            [Parameters.Code] = code,
+            [Parameters.RedirectUri] = _options.RedirectUri
         };
 
         if (_options.UsePkce)
@@ -735,7 +737,7 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
                 throw new InvalidOperationException("PKCE is enabled but codeVerifier is missing.");
             }
 
-            form["code_verifier"] = codeVerifier;
+            form[Parameters.CodeVerifier] = codeVerifier;
         }
 
         return await PostTokenRequestAsync(tokenEndpoint, form, ct);
@@ -751,9 +753,9 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
         var form = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["grant_type"] = "refresh_token",
-            ["client_id"] = _options.ClientId,
-            ["refresh_token"] = refreshToken
+            [Parameters.GrantType] = GrantTypes.RefreshToken,
+            [Parameters.ClientId] = _options.ClientId,
+            [Parameters.RefreshToken] = refreshToken
         };
 
         return await PostTokenRequestAsync(discovery.TokenEndpoint, form, ct);
@@ -794,7 +796,7 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
                 if (_options.UseDPoP
                     && attempt == 0
-                    && string.Equals(error, "use_dpop_nonce", StringComparison.Ordinal)
+                    && string.Equals(error, DPoP.UseDpopNonce, StringComparison.Ordinal)
                     && GetDpopNonce(msg.RequestUri!.ToString()) is not null)
                 {
                     continue;
@@ -909,8 +911,8 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
             SigningCredentials = new SigningCredentials(_dpopKey, SecurityAlgorithms.EcdsaSha256),
             AdditionalHeaderClaims = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                ["typ"] = "dpop+jwt",
-                ["jwk"] = jwk
+                ["typ"] = DPoP.Typ,
+                [DPoP.Jwk] = jwk
             }
         };
 
@@ -934,10 +936,10 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
 
         return new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["kty"] = "EC",
-            ["crv"] = "P-256",
-            ["x"] = Pkce.Base64UrlEncode(parameters.Q.X),
-            ["y"] = Pkce.Base64UrlEncode(parameters.Q.Y)
+            [JwkParams.Kty] = JwkParams.EC,
+            [JwkParams.Crv] = JwkParams.P256,
+            [JwkParams.X] = Pkce.Base64UrlEncode(parameters.Q.X),
+            [JwkParams.Y] = Pkce.Base64UrlEncode(parameters.Q.Y)
         };
     }
 
@@ -992,7 +994,7 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
             RefreshToken = response.RefreshToken,
             IdToken = response.IdToken,
             Scope = response.Scope,
-            TokenType = response.TokenType ?? "Bearer",
+            TokenType = response.TokenType ?? Values.Bearer,
             ExpiresAtUtc = expiresAt
         };
     }
