@@ -1,6 +1,6 @@
 # CoreIdent
 
-**Open-source OAuth 2.0 / OIDC toolkit for .NET 10+**
+**Open-source OAuth 2.1 / OIDC toolkit for .NET 10+**
 
 [![Build Status](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/stimpy77/CoreIdent/actions/workflows/dotnet.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,7 +9,7 @@
 
 ---
 
-CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.0 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
+CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.1 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -28,14 +28,18 @@ app.Run();
 
 ## Features
 
-* **Token endpoint** — `client_credentials`, `refresh_token`, `authorization_code` (PKCE required), `password` (deprecated)
-* **Authorization Code + PKCE** — Full flow with consent UI
+* **OAuth 2.1 compliant** — PKCE enforced, no implicit/hybrid flows, exact redirect URI matching
+* **Token endpoint** — `client_credentials`, `refresh_token`, `authorization_code` (PKCE required)
+* **Authorization Code + PKCE** — Full flow with consent UI and incremental consent
 * **OIDC discovery & JWKS** — Standards-compliant metadata and public key publishing
 * **Token revocation** (RFC 7009) & **introspection** (RFC 7662)
 * **Passwordless authentication** — Email magic links, passkeys/WebAuthn, SMS OTP
+* **External providers** — Google, Microsoft, GitHub, Apple (via `CoreIdent.Providers.*`)
 * **Pluggable storage** — In-memory for dev, EF Core for production
 * **Secure by default** — RS256/ES256 signing, refresh token rotation, theft detection
+* **F# first-class** — Templates, samples, verified API compatibility
 * **CLI tool** — `dotnet coreident init`, key generation, client management
+* **Client libraries** — MAUI, WPF, Console, Blazor with secure token storage
 * **Metrics** — OpenTelemetry-compatible via `System.Diagnostics.Metrics`
 * **Aspire integration** — Health checks, distributed tracing, service defaults
 
@@ -80,6 +84,18 @@ builder.Services.AddEntityFrameworkCoreStores();
 | [Aspire Integration](docs/Aspire_Integration.md) | Health checks, tracing, service defaults |
 | [Project Overview](docs/Project_Overview.md) | Architecture and vision |
 | [Development Plan](docs/DEVPLAN.md) | Roadmap and task checklist |
+
+## Why CoreIdent?
+
+| | CoreIdent | Duende IdentityServer | OpenIddict | Keycloak |
+|---|---|---|---|---|
+| **License** | MIT (free) | Commercial (RPL) | Apache 2.0 | Apache 2.0 |
+| **Deployment** | NuGet package | NuGet package | NuGet package | Separate Java server |
+| **Auth model** | Passwordless-first | Password-first | BYO | Password-first |
+| **DX** | CLI + templates + Aspire | Manual setup | Manual setup | Admin console |
+| **F# support** | First-class | No | No | N/A |
+
+See [docs/Project_Overview.md](docs/Project_Overview.md#why-coreident) for detailed comparisons.
 
 ## Contributing
 

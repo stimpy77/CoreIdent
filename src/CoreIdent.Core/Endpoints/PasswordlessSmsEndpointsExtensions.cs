@@ -177,7 +177,7 @@ public static class PasswordlessSmsEndpointsExtensions
             SubjectId = user.Id,
             ClientId = "passwordless_sms",
             Scopes = [],
-            GrantType = "passwordless_sms"
+            GrantType = GrantTypes.PasswordlessSms
         };
 
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);

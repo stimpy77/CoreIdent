@@ -6,7 +6,7 @@ CoreIdent is a **complete, open-source authentication toolkit for .NET 10+**. It
 
 1. **Embedded Authentication** — Drop-in auth for ASP.NET Core apps with minimal configuration
 2. **External Provider Integration** — Easy connection to third-party OAuth/OIDC providers (Google, Microsoft, etc.)
-3. **Identity Server Capabilities** — Full OAuth 2.0 / OIDC server for apps that need to be identity providers
+3. **Identity Server Capabilities** — Full OAuth 2.1 / OIDC server for apps that need to be identity providers
 4. **Passwordless-First** — Modern authentication (email magic links, passkeys) as primary, passwords as fallback
 
 CoreIdent wraps and extends .NET 10's built-in identity primitives, dramatically simplifying developer experience while remaining fully extensible for complex scenarios.
@@ -42,6 +42,53 @@ CoreIdent wraps and extends .NET 10's built-in identity primitives, dramatically
 
 ---
 
+## Why CoreIdent?
+
+CoreIdent occupies a unique position in the .NET identity landscape. Here's how it compares to alternatives:
+
+### vs. Duende IdentityServer
+
+| Dimension | CoreIdent | Duende IdentityServer |
+|-----------|-----------|----------------------|
+| **License** | MIT — free forever, no production restrictions | RPL — requires paid license for production use |
+| **Architecture** | Minimal API native, .NET 10 only | MVC-based, supports older .NET versions |
+| **Auth model** | Passwordless-first (magic links, passkeys, SMS OTP) | Password-first, passwordless as add-on |
+| **Developer tooling** | CLI tool, `dotnet new` templates, Aspire integration, client libraries | Limited tooling, more manual setup |
+| **Language support** | First-class F# templates and compatibility | C# only |
+| **OpenID certification** | Not yet (planned) | OpenID Foundation certified |
+
+### vs. OpenIddict
+
+| Dimension | CoreIdent | OpenIddict |
+|-----------|-----------|-----------|
+| **Philosophy** | Convention-over-configuration with working defaults | Highly configurable, requires significant setup |
+| **Scope** | Full stack: server + client libraries + CLI + templates | Token server only |
+| **Developer experience** | Out-of-box endpoints, consent UI, resource owner flows | Minimal built-in endpoints, build everything yourself |
+| **Observability** | OpenTelemetry metrics, Aspire dashboard integration | Manual instrumentation |
+
+### vs. Keycloak
+
+| Dimension | CoreIdent | Keycloak |
+|-----------|-----------|---------|
+| **Deployment** | NuGet package — embeds in your ASP.NET app | Separate Java server (JVM + database + admin UI) |
+| **Footprint** | Lightweight, in-process | Heavy, requires dedicated infrastructure |
+| **Integration** | Native .NET DI, middleware, conventions | HTTP adapter configuration, REST API calls |
+| **Customization** | C# code, interface implementations via DI | Java SPIs, themes, admin console |
+| **Scope** | Authentication toolkit, not full IAM platform | Full enterprise IAM with admin console |
+
+### Key differentiators
+
+- **MIT licensed** — No vendor lock-in, no licensing surprises, no production restrictions
+- **Passwordless-first** — Email magic links and passkeys as primary auth methods, passwords as fallback
+- **F# first-class** — Templates, samples, and verified API compatibility for F# developers
+- **.NET 10 native** — Built on latest ASP.NET Core Identity with C# 14 extension members and built-in passkey support
+- **OAuth 2.1 compliant** — PKCE enforced for all flows, no implicit or hybrid grants
+- **Embeddable** — Drop into any ASP.NET Core app as NuGet packages, not a separate server to deploy
+- **Complete client story** — MAUI, WPF, Console, and Blazor client libraries with secure token storage
+- **Developer tooling** — CLI (`dotnet coreident`), `dotnet new` templates, .NET Aspire integration, OpenTelemetry metrics
+
+---
+
 ## Modular Design Philosophy
 
 CoreIdent is built as a **composable ecosystem of packages**, not a monolithic framework:
@@ -61,7 +108,7 @@ CoreIdent is built as a **composable ecosystem of packages**, not a monolithic f
 │ .EFCore       │         │ .Google         │         │ .Passwordless   │  │ .Client         │
 │ .Sqlite       │         │ .Microsoft      │         │ .Passkeys       │  │ .Client.Maui    │
 │ .MongoDB*     │         │ .GitHub         │         │ .MFA            │  │ .Client.Wpf     │
-│ .Redis*       │         │ .Apple*         │         │ .UI.Web         │  │ .Client.Console │
+│ .Redis*       │         │ .Apple          │         │ .UI.Web         │  │ .Client.Console │
 │ .Adapters     │         │ .SAML*          │         │ .AdminApi       │  │ .Client.Blazor  │
 └───────────────┘         └─────────────────┘         └─────────────────┘  └─────────────────┘
                                                       * = community/future
@@ -431,7 +478,7 @@ var accessToken = await authClient.GetAccessTokenAsync();
 │                     └───────────────┬────────────────┘                      │
 └───────────────────────────────────────┴───────────────────────────────────────┘
                                         │
-                              HTTPS / OAuth 2.0
+                              HTTPS / OAuth 2.1
                                         │
 ┌───────────────────────────────────────┴───────────────────────────────────────┐
 │                        SERVER / EMBEDDED AUTH                              │
@@ -527,13 +574,14 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
   - Google (`CoreIdent.Providers.Google`)
   - Microsoft/Entra ID (`CoreIdent.Providers.Microsoft`)
   - GitHub (`CoreIdent.Providers.GitHub`)
+  - Apple (`CoreIdent.Providers.Apple`)
 - Provider configuration via `appsettings.json`
 - Integration tests for each provider (using test accounts/mocks)
 
 ---
 
 ### Phase 3: OAuth/OIDC Server Hardening
-**Goal:** Production-grade OAuth 2.0 / OIDC server capabilities.
+**Goal:** Production-grade OAuth 2.1 / OIDC server capabilities.
 
 **Deliverables:**
 - **Key Rotation** — Automated rotation with grace period for old keys
@@ -548,8 +596,9 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 - **Revocable access for controlled distributed systems** — Introspection-first validation middleware + optional opaque/reference access tokens (for resource servers you control)
 - **Webhook System** — Events for user.created, login, token.issued, consent.granted
 - **MCP-Compatible Authorization Server** — Extend OAuth 2.1 server for Model Context Protocol (MCP) AI agent authorization: metadata discovery, scoped consent for agent/tool access, audience-restricted tokens, and agent session lifecycle
+- **mTLS Client Authentication** (RFC 8705) — Certificate-bound access tokens and mutual TLS client authentication
 - OIDC Conformance test suite integration
-- Rate limiting and abuse prevention
+- **Rate Limiting and Abuse Prevention** — First-class rate limiting infrastructure with per-endpoint, per-client, and per-user policies
 
 ---
 
@@ -586,7 +635,7 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 - **Fine-grained authorization integration** — Clean hooks for OpenFGA, Cerbos, SpiceDB, etc., plus a built-in RBAC convenience layer for simpler needs
 - Audit logging infrastructure
 - Anomaly detection hooks
-- Community provider packages (Apple, Twitter, LinkedIn, etc.)
+- Community provider packages (Twitter, LinkedIn, etc.)
 - **SCIM support** (RFC 7643/7644) — User provisioning for enterprise
 - **Verifiable Credentials** — W3C VC integration points
 - **SPIFFE/SPIRE integration** — Workload identity for service mesh / zero-trust
@@ -602,7 +651,8 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 - **API Gateway Integration Patterns**
   - YARP integration examples
   - Token exchange for downstream services
-- **Blazor Server Integration** (`CoreIdent.Client.BlazorServer`)
+- **Blazor Web App Integration** (`CoreIdent.Client.BlazorWeb`)
+  - Unified Blazor Web App model support (Server, WASM, and Auto render modes)
   - Circuit-aware token management
   - Server-side session handling
 
@@ -634,6 +684,7 @@ The following were in the original roadmap but are **removed** or **deferred ind
 | **CIBA for AI Actions** | Specialized; defer until clear demand (note: MCP Auth in Phase 3 addresses AI agent authorization via standard OAuth flows, not the niche CIBA backchannel protocol) |
 | **Token Vault / Secrets Management** | Out of scope; use dedicated tools (Azure Key Vault, etc.) |
 | **Feature Flags / Rollout Control** | Out of scope; not an identity concern. Use dedicated tools (LaunchDarkly, Unleash, Flagsmith, etc.) |
+| **Resource Owner Password Credentials (ROPC)** | Deprecated in OAuth 2.1 (RFC 9725). Extracted to `CoreIdent.Legacy.PasswordGrant` for migration support. |
 
 ---
 

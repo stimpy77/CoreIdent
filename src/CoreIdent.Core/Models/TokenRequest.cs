@@ -46,13 +46,17 @@ public record TokenRequest
     public string? CodeVerifier { get; init; }
 
     /// <summary>
-    /// Username (for password grant - deprecated but supported).
+    /// Username (for password grant). Deprecated in OAuth 2.1.
+    /// Use <c>CoreIdent.Legacy.PasswordGrant</c> package if you need ROPC support.
     /// </summary>
+    [Obsolete("Password grant (ROPC) is deprecated in OAuth 2.1. Use CoreIdent.Legacy.PasswordGrant package for migration support.")]
     public string? Username { get; init; }
 
     /// <summary>
-    /// Password (for password grant - deprecated but supported).
+    /// Password (for password grant). Deprecated in OAuth 2.1.
+    /// Use <c>CoreIdent.Legacy.PasswordGrant</c> package if you need ROPC support.
     /// </summary>
+    [Obsolete("Password grant (ROPC) is deprecated in OAuth 2.1. Use CoreIdent.Legacy.PasswordGrant package for migration support.")]
     public string? Password { get; init; }
 }
 
@@ -77,12 +81,43 @@ public static class GrantTypes
     public const string AuthorizationCode = "authorization_code";
 
     /// <summary>
-    /// The <c>password</c> grant type (deprecated).
+    /// The <c>password</c> grant type. Deprecated in OAuth 2.1 (RFC 9725).
+    /// Use <c>CoreIdent.Legacy.PasswordGrant</c> package for migration support.
     /// </summary>
+    [Obsolete("Password grant (ROPC) is deprecated in OAuth 2.1. Use CoreIdent.Legacy.PasswordGrant package for migration support.")]
     public const string Password = "password";
 
     /// <summary>
     /// The device authorization grant type.
     /// </summary>
     public const string DeviceCode = "urn:ietf:params:oauth:grant-type:device_code";
+
+    // ── CoreIdent-specific claim context labels ──
+    // Used in ClaimsContext.GrantType to identify the authentication flow
+    // that triggered token issuance. These are NOT OAuth grant types.
+
+    /// <summary>
+    /// Claims context for the resource owner login endpoint (<c>/auth/login</c>).
+    /// </summary>
+    public const string ResourceOwnerLogin = "resource_owner_login";
+
+    /// <summary>
+    /// Claims context for passwordless email magic link authentication.
+    /// </summary>
+    public const string PasswordlessEmail = "passwordless_email";
+
+    /// <summary>
+    /// Claims context for passwordless SMS OTP authentication.
+    /// </summary>
+    public const string PasswordlessSms = "passwordless_sms";
+
+    /// <summary>
+    /// Claims context for passkey/WebAuthn authentication.
+    /// </summary>
+    public const string Passkey = "passkey";
+
+    /// <summary>
+    /// Claims context for OIDC UserInfo endpoint claim enrichment.
+    /// </summary>
+    public const string UserInfo = "userinfo";
 }

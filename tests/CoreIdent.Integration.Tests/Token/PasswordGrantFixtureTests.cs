@@ -64,7 +64,7 @@ public sealed class PasswordGrantFixtureTests : CoreIdentTestFixture
         var loggerProvider = Services.GetRequiredService<TestLoggerProvider>();
         loggerProvider.Entries.Any(e =>
                 e.Level == LogLevel.Warning &&
-                e.Message.Contains("Password grant is deprecated in OAuth 2.1", StringComparison.Ordinal))
+                e.Message.Contains("deprecated in OAuth 2.1", StringComparison.Ordinal))
             .ShouldBeTrue("Deprecation warning should be logged when password grant is used.");
     }
 

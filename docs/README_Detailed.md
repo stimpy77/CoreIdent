@@ -26,7 +26,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 # CoreIdent
 
-**Open-source OAuth 2.0 / OIDC toolkit for .NET 10+**
+**Open-source OAuth 2.1 / OIDC toolkit for .NET 10+**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
@@ -35,7 +35,7 @@ The root `README.md` is intended to be a concise, friendly entry point; use this
 
 ## What is CoreIdent?
 
-CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.0 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
+CoreIdent is a **complete, open-source authentication toolkit** for .NET 10+. Add secure OAuth 2.1 / OpenID Connect to your app in minutes—with full code-level control and no vendor lock-in.
 
 ## Embedded Auth vs Membership (Guidance Placeholder)
 
@@ -63,7 +63,7 @@ This section is a placeholder for DEVPLAN 1.13.6.
 
 ### Implemented Features
 
-- **OAuth 2.0 / OIDC** — Token endpoint, authorization code + PKCE, discovery, JWKS, revocation (RFC 7009), introspection (RFC 7662)
+- **OAuth 2.1 / OIDC** — Token endpoint, authorization code + PKCE, discovery, JWKS, revocation (RFC 7009), introspection (RFC 7662)
 - **Passwordless authentication** — Email magic links, passkeys/WebAuthn, SMS OTP
 - **Asymmetric keys** (RS256/ES256) for production-ready token signing
 - **Authorization Code + PKCE** with consent UI
@@ -259,7 +259,7 @@ You are responsible for applying EF Core migrations / ensuring the schema is cre
 
 ## Token Endpoint (0.4)
 
-CoreIdent exposes an OAuth 2.0 token endpoint at `POST /auth/token` (configurable via `CoreIdentRouteOptions.TokenPath`).
+CoreIdent exposes an OAuth 2.1 token endpoint at `POST /auth/token` (configurable via `CoreIdentRouteOptions.TokenPath`).
 
 ### Supported Grant Types
 
@@ -268,16 +268,36 @@ CoreIdent exposes an OAuth 2.0 token endpoint at `POST /auth/token` (configurabl
 | `client_credentials` | Machine-to-machine authentication using client ID and secret |
 | `refresh_token` | Exchange a refresh token for new access and refresh tokens |
 | `authorization_code` | Authorization Code flow (PKCE required) |
-| `password` | **Deprecated** resource owner password credentials (ROPC). Supported for legacy/mobile scenarios; logs a warning on use. |
+| Custom (via `IGrantTypeHandler`) | Extensible grant types registered via DI (see below) |
 
 > **Note:** Authorization Code flow requires the `/auth/authorize` endpoint and an authenticated user (your host app must configure authentication).
 
-### Password Grant (ROPC) (Deprecated)
+### Extensible Grant Types (`IGrantTypeHandler`)
 
-CoreIdent supports `grant_type=password` for **legacy** scenarios.
+The token endpoint supports custom grant types via the `IGrantTypeHandler` interface. Built-in grants (`client_credentials`, `refresh_token`, `authorization_code`) are handled directly; registered handlers are consulted for all other grant types.
 
-- **Deprecation:** This grant is deprecated in OAuth 2.1. CoreIdent will log a warning: `Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE.`
-- **Recommendation:** Migrate to **authorization code + PKCE**.
+```csharp
+public interface IGrantTypeHandler
+{
+    string GrantType { get; }
+    Task<IResult> HandleAsync(CoreIdentClient client, TokenRequest request,
+        HttpContext httpContext, CancellationToken ct);
+}
+
+// Register in DI:
+services.AddSingleton<IGrantTypeHandler, MyCustomGrantHandler>();
+```
+
+Registered handlers are automatically advertised in the discovery document's `grant_types_supported`.
+
+### Password Grant (ROPC) — Extracted to Legacy Package
+
+The password grant (`grant_type=password`) is **deprecated in OAuth 2.1 (RFC 9725)** and has been removed from CoreIdent core. For migration support, install the `CoreIdent.Legacy.PasswordGrant` package:
+
+```csharp
+// Install: dotnet add package CoreIdent.Legacy.PasswordGrant
+services.AddPasswordGrant(); // Registers IGrantTypeHandler for "password"
+```
 
 ```http
 POST /auth/token
@@ -290,6 +310,8 @@ grant_type=password&username=user%40example.com&password=Test123!&scope=openid%2
 Notes:
 
 - A client must include `"password"` in `AllowedGrantTypes`.
+- A deprecation warning is logged on every password grant request.
+- **Recommendation:** Migrate to **authorization code + PKCE**.
 - A refresh token is only issued when:
   - the client has `AllowOfflineAccess = true`, and
   - the granted scopes include `offline_access`.
@@ -531,7 +553,7 @@ To omit one or more endpoints:
 - Do not call `MapCoreIdentEndpoints()`.
 - Instead, map only the endpoints you want using the granular extension methods (e.g., `MapCoreIdentTokenEndpoint(...)`, `MapCoreIdentTokenManagementEndpoints(...)`, `MapCoreIdentResourceOwnerEndpoints(...)`, etc.).
 
-Clients are OAuth 2.0 applications that can request tokens. Configure clients using `IClientStore`.
+Clients are OAuth 2.1 applications that can request tokens. Configure clients using `IClientStore`.
 
 ### Client Model
 

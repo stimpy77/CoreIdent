@@ -40,6 +40,7 @@ public static class DiscoveryEndpointsExtensions
             IEnumerable<EndpointDataSource> endpointDataSources,
             ISigningKeyProvider signingKeyProvider,
             IScopeStore scopeStore,
+            IEnumerable<IGrantTypeHandler> grantTypeHandlers,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -97,7 +98,14 @@ public static class DiscoveryEndpointsExtensions
                     grantTypesSupported.Add(GrantTypes.AuthorizationCode);
                 }
 
-                grantTypesSupported.Add(GrantTypes.Password);
+                // Extensible grant types registered via IGrantTypeHandler are advertised dynamically
+                foreach (var handler in grantTypeHandlers)
+                {
+                    if (!grantTypesSupported.Contains(handler.GrantType))
+                    {
+                        grantTypesSupported.Add(handler.GrantType);
+                    }
+                }
             }
 
             IReadOnlyList<string>? responseTypesSupported = authorizeEndpointMapped

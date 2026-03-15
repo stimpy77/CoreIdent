@@ -16,7 +16,8 @@ This document provides detailed technical specifications, architecture decisions
 |-----------|------------|-------|
 | **Runtime** | .NET 10 (LTS) | Target: `net10.0` |
 | **Web Framework** | ASP.NET Core Minimal APIs | Endpoints via `MapCoreIdentEndpoints()` |
-| **Token Format** | JWT (RFC 7519) | Access tokens, ID tokens |
+| **Token Format** | JWT (RFC 7519, RFC 9068) | Access tokens (AT+JWT profile), ID tokens |
+| **Protocol** | OAuth 2.1 (RFC 9725), OpenID Connect | PKCE enforced, no implicit/hybrid flows |
 | **Signing** | RS256 (default), ES256, HS256 (dev only) | Asymmetric keys for production |
 | **Storage** | EF Core (pluggable), In-Memory (dev) | SQL Server, PostgreSQL, SQLite |
 | **Testing** | xUnit, Shouldly, Moq | WebApplicationFactory for integration |
@@ -735,6 +736,112 @@ app.Run();
 
 ---
 
+## Phase 3: OAuth/OIDC Server Hardening — Technical Specs
+
+### mTLS Client Authentication (RFC 8705)
+
+**Goal:** Support mutual TLS as a client authentication method and enable certificate-bound access tokens.
+
+#### Client Authentication via mTLS
+
+```csharp
+// Token endpoint auth method: tls_client_auth
+// Client presents X.509 certificate during TLS handshake
+// Server validates: certificate chain, CN/SAN matches registered client metadata
+
+public class MtlsClientAuthOptions
+{
+    public bool AllowSelfSignedCertificates { get; set; } = false;
+    public X509RevocationMode RevocationMode { get; set; } = X509RevocationMode.Online;
+}
+```
+
+#### Certificate-Bound Access Tokens
+
+```json
+// Access token includes confirmation claim
+{
+  "cnf": {
+    "x5t#S256": "<base64url-encoded SHA-256 thumbprint of client certificate>"
+  }
+}
+```
+
+Resource servers validate that the certificate presented matches the `cnf` claim in the access token.
+
+#### Discovery Metadata Additions
+
+```json
+{
+  "tls_client_certificate_bound_access_tokens": true,
+  "token_endpoint_auth_methods_supported": [
+    "client_secret_basic",
+    "client_secret_post",
+    "tls_client_auth",
+    "self_signed_tls_client_auth"
+  ]
+}
+```
+
+---
+
+### Back-Channel & Front-Channel Logout
+
+**Goal:** Standards-compliant logout notification to relying parties.
+
+#### End Session Endpoint (`GET /auth/endsession`)
+
+Parameters: `id_token_hint`, `post_logout_redirect_uri`, `state`, `client_id`
+
+```csharp
+// Validates post_logout_redirect_uri against client's PostLogoutRedirectUris
+// Clears auth session (CoreIdentSessionOptions cookie)
+// Revokes associated tokens via IRefreshTokenStore / ITokenRevocationStore
+// Triggers back-channel and front-channel notifications
+```
+
+#### Back-Channel Logout Token
+
+```json
+{
+  "iss": "https://issuer.example.com",
+  "sub": "user-123",
+  "aud": "client-456",
+  "iat": 1234567890,
+  "jti": "unique-token-id",
+  "events": {
+    "http://schemas.openid.net/event/backchannel-logout": {}
+  },
+  "sid": "session-id"
+}
+```
+
+Delivered via HTTP POST to registered `backchannel_logout_uri` with `Content-Type: application/x-www-form-urlencoded` and `logout_token` parameter.
+
+#### Client Model Additions
+
+```csharp
+// Added to CoreIdentClient
+public string? BackchannelLogoutUri { get; set; }
+public bool BackchannelLogoutSessionRequired { get; set; } = false;
+public string? FrontchannelLogoutUri { get; set; }
+public bool FrontchannelLogoutSessionRequired { get; set; } = false;
+```
+
+#### Discovery Metadata Additions
+
+```json
+{
+  "end_session_endpoint": "https://issuer.example.com/auth/endsession",
+  "backchannel_logout_supported": true,
+  "backchannel_logout_session_supported": true,
+  "frontchannel_logout_supported": true,
+  "frontchannel_logout_session_supported": true
+}
+```
+
+---
+
 ## Patterns to Preserve
 
 ### Good Patterns (Keep)
@@ -749,19 +856,24 @@ app.Run();
 
 ### Patterns to Improve
 
-1. **Endpoint organization** — Current extension methods are large; split by feature
-2. **Error responses** — Standardize on RFC 7807 Problem Details
-3. **Logging** — Add structured logging with correlation IDs
-4. **Configuration** — Support both fluent API and `appsettings.json`
+1. **Endpoint organization** — Current extension methods are large; split by feature *(partially addressed in Phase 1)*
+2. **Error responses** — ~~Standardize on RFC 7807 Problem Details~~ *(done in Feature 1.13.3)*
+3. **Logging** — ~~Add structured logging with correlation IDs~~ *(done in Feature 1.13.3)*
+4. **Configuration** — Support both fluent API and `appsettings.json` *(partially addressed)*
+5. **Grant type extensibility** — Token endpoint uses hardcoded switch; migrate to `IGrantTypeHandler` registry *(planned in Feature 1.22)*
+6. **Rate limiting** — Promote from per-endpoint hardcoding to first-class `IRateLimiter` abstraction *(planned in Feature 2.7)*
 
 ---
 
 ## Compatibility Notes
 
+- **OAuth 2.1 (RFC 9725)** — CoreIdent enforces PKCE for all authorization code flows, does not support implicit or hybrid grants, and requires exact redirect URI matching.
 - Prefer RS256/ES256 for production via `AddSigningKey()`.
 - HS256 is supported for development/testing only.
 - Refresh token stores support revocation by token family.
 - Test infrastructure uses the shared fixture base classes under `tests/`.
+- **ROPC (Password Grant)** — Removed from core. Available via `CoreIdent.Legacy.PasswordGrant` package for migration scenarios.
+- **Access Tokens** — Conform to RFC 9068 JWT Access Token Profile (`typ: at+jwt`, includes `auth_time`, `acr` when available).
 
 ---
 
@@ -840,12 +952,90 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 
 ---
 
+## Planned Interfaces (Post-1.0)
+
+### `IGrantTypeHandler` — Extensible Grant Type Dispatch
+
+Enables packages (including `CoreIdent.Legacy.PasswordGrant`) to register custom OAuth grant types without modifying the core token endpoint.
+
+```csharp
+public interface IGrantTypeHandler
+{
+    string GrantType { get; }
+    Task<IResult> HandleAsync(CoreIdentClient client, TokenRequest request,
+        HttpContext httpContext, CancellationToken ct);
+}
+```
+
+Registration: `services.AddSingleton<IGrantTypeHandler, MyCustomGrantHandler>();`
+The token endpoint resolves `IEnumerable<IGrantTypeHandler>` and dispatches after checking built-in grants.
+
+---
+
+### `IRateLimiter` — Rate Limiting Abstraction
+
+First-class rate limiting for all CoreIdent endpoints. Integrates with ASP.NET Core's built-in `Microsoft.AspNetCore.RateLimiting` middleware.
+
+```csharp
+public interface IRateLimiter
+{
+    Task<RateLimitResult> CheckAsync(string key, string policy, CancellationToken ct = default);
+}
+
+public record RateLimitResult(bool IsAllowed, TimeSpan? RetryAfter = null);
+```
+
+Policies: per-client, per-IP, per-endpoint. Replaces the hardcoded passwordless per-recipient throttling.
+
+---
+
+### `CoreIdentSessionOptions` — Auth Session Configuration
+
+Configures cookie-based authentication sessions for the authorization server's own login flow.
+
+```csharp
+public class CoreIdentSessionOptions
+{
+    public string CookieName { get; set; } = ".CoreIdent.Session";
+    public TimeSpan SessionDuration { get; set; } = TimeSpan.FromHours(8);
+    public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromMinutes(30);
+    public bool SlidingExpiration { get; set; } = true;
+    public bool AllowRememberMe { get; set; } = true;
+    public TimeSpan RememberMeDuration { get; set; } = TimeSpan.FromDays(30);
+}
+```
+
+Registration: `services.AddCoreIdentAuthSession(options => { ... });`
+Stores `auth_time` in authentication properties for `max_age` and RFC 9068 `auth_time` claim support.
+
+---
+
+### Account Recovery Endpoints
+
+Password reset / account recovery leveraging existing `IPasswordlessTokenStore` and `IEmailSender`.
+
+```csharp
+// POST /auth/account/recover
+public record AccountRecoverRequest(string Email);
+// Always returns success (don't leak email existence)
+
+// POST /auth/account/reset-password
+public record ResetPasswordRequest(string Token, string NewPassword);
+// Validates token, hashes new password, updates user
+```
+
+Rate limited per email address using the same mechanism as passwordless flows.
+
+---
+
 ## Open Questions
 
 1. **Key storage for generated keys** — Current behavior is to generate an ephemeral key at startup (with a warning) if none is configured. Persisted key storage and rotation are deferred.
 2. **Multi-tenancy** — Deferred; current scope is a single issuer per host.
-3. **Blazor-specific support** — Deferred to Phase 1.5 client libraries / examples.
-4. **Rate limiting** — Passwordless endpoints have built-in per-recipient throttling (`MaxAttemptsPerHour`). Broader request rate limiting is deferred to host middleware.
+3. **Blazor support** — Phase 1.5 client library planned as `CoreIdent.Client.BlazorWeb` targeting the unified Blazor Web App model (InteractiveServer, InteractiveWebAssembly, InteractiveAuto render modes).
+4. **Rate limiting** — Now planned as Feature 2.7 with first-class `IRateLimiter` interface. Passwordless endpoints have built-in per-recipient throttling as interim.
+5. **Session storage approach** — `AddCoreIdentAuthSession()` uses ASP.NET Core cookie authentication. Whether to also support ASP.NET Core distributed session for server-side session state is TBD.
+6. **ROPC extraction** — Password grant extracted to `CoreIdent.Legacy.PasswordGrant` via `IGrantTypeHandler` registry. Handler resolution order: built-in grants first, then registered handlers.
 
 ---
 
@@ -870,14 +1060,20 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 
 ### OAuth/OIDC RFCs
 
+- [RFC 6749 - OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749)
 - [RFC 7009 - Token Revocation](https://tools.ietf.org/html/rfc7009)
 - [RFC 7662 - Token Introspection](https://tools.ietf.org/html/rfc7662)
 - [RFC 7517 - JSON Web Key (JWK)](https://tools.ietf.org/html/rfc7517)
 - [RFC 7591 - Dynamic Client Registration](https://tools.ietf.org/html/rfc7591)
+- [RFC 8414 - OAuth 2.0 Authorization Server Metadata](https://tools.ietf.org/html/rfc8414)
+- [RFC 8417 - Security Event Token (SET)](https://tools.ietf.org/html/rfc8417)
 - [RFC 8628 - Device Authorization Grant](https://tools.ietf.org/html/rfc8628)
+- [RFC 8705 - OAuth 2.0 Mutual-TLS Client Authentication](https://tools.ietf.org/html/rfc8705)
+- [RFC 9068 - JWT Profile for OAuth 2.0 Access Tokens](https://tools.ietf.org/html/rfc9068)
 - [RFC 9126 - Pushed Authorization Requests (PAR)](https://tools.ietf.org/html/rfc9126)
-- [RFC 9449 - DPoP (Demonstrating Proof of Possession)](https://tools.ietf.org/html/rfc9449)
 - [RFC 9396 - Rich Authorization Requests (RAR)](https://tools.ietf.org/html/rfc9396)
+- [RFC 9449 - DPoP (Demonstrating Proof of Possession)](https://tools.ietf.org/html/rfc9449)
+- [RFC 9725 - OAuth 2.1 Authorization Framework](https://tools.ietf.org/html/rfc9725)
 
 ### WebAuthn/Passkeys
 

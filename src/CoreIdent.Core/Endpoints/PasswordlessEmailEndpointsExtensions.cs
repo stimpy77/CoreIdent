@@ -178,7 +178,7 @@ public static class PasswordlessEmailEndpointsExtensions
             SubjectId = user.Id,
             ClientId = "passwordless_email",
             Scopes = [],
-            GrantType = "passwordless_email"
+            GrantType = GrantTypes.PasswordlessEmail
         };
 
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);

@@ -1,4 +1,5 @@
 using CoreIdent.Core.Configuration;
+using CoreIdent.Legacy.PasswordGrant.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Extensions;
 using CoreIdent.Testing.Seeders;
@@ -43,6 +44,9 @@ public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<globa
             services.AddEntityFrameworkCoreStores();
 
             services.AddAspNetIdentityPasswordHasher();
+
+            // Register legacy password grant handler for backward-compatible testing
+            services.AddPasswordGrant();
 
             // Disable cleanup hosted service to prevent race condition with DB creation
             services.Configure<CoreIdentAuthorizationCodeOptions>(opts => opts.EnableCleanupHostedService = false);

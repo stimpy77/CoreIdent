@@ -102,5 +102,37 @@ public sealed class InMemoryUserGrantStore : IUserGrantStore
         return scopes.All(s => granted.Contains(s));
     }
 
+    /// <inheritdoc />
+    public Task MergeScopesAsync(string subjectId, string clientId, IEnumerable<string> newScopes, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentNullException.ThrowIfNull(newScopes);
+
+        // Materialize to avoid multiple enumeration in AddOrUpdate's updateValueFactory
+        var scopesList = newScopes.ToList();
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        _grants.AddOrUpdate(
+            Key(subjectId, clientId),
+            addValueFactory: _ => new CoreIdentUserGrant
+            {
+                SubjectId = subjectId,
+                ClientId = clientId,
+                Scopes = scopesList,
+                CreatedAt = now
+            },
+            updateValueFactory: (_, current) => new CoreIdentUserGrant
+            {
+                SubjectId = subjectId,
+                ClientId = clientId,
+                Scopes = current.Scopes.Union(scopesList, StringComparer.Ordinal).ToList(),
+                CreatedAt = current.CreatedAt,
+                ExpiresAt = current.ExpiresAt
+            });
+
+        return Task.CompletedTask;
+    }
+
     private static string Key(string subjectId, string clientId) => $"{subjectId}::{clientId}";
 }

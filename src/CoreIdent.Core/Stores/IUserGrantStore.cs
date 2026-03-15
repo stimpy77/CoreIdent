@@ -40,4 +40,34 @@ public interface IUserGrantStore
     /// <param name="ct">The cancellation token.</param>
     /// <returns><see langword="true"/> if consent exists; otherwise <see langword="false"/>.</returns>
     Task<bool> HasUserGrantedConsentAsync(string subjectId, string clientId, IEnumerable<string> scopes, CancellationToken ct = default);
+
+    /// <summary>
+    /// Merges new scopes into an existing grant (incremental consent).
+    /// If no grant exists, creates one with the provided scopes.
+    /// The default implementation calls <see cref="FindAsync"/> and <see cref="SaveAsync"/>.
+    /// </summary>
+    /// <param name="subjectId">The subject identifier (user ID).</param>
+    /// <param name="clientId">The client identifier.</param>
+    /// <param name="newScopes">The scopes to add to the existing grant.</param>
+    /// <param name="ct">The cancellation token.</param>
+    async Task MergeScopesAsync(string subjectId, string clientId, IEnumerable<string> newScopes, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentNullException.ThrowIfNull(newScopes);
+
+        var existing = await FindAsync(subjectId, clientId, ct);
+        var merged = existing is not null
+            ? existing.Scopes.Union(newScopes, StringComparer.Ordinal).ToList()
+            : newScopes.ToList();
+
+        await SaveAsync(new CoreIdentUserGrant
+        {
+            SubjectId = subjectId,
+            ClientId = clientId,
+            Scopes = merged,
+            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow,
+            ExpiresAt = existing?.ExpiresAt
+        }, ct);
+    }
 }

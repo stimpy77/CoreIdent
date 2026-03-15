@@ -116,6 +116,44 @@ public sealed class EfUserGrantStore : IUserGrantStore
         return scopes.All(s => granted.Contains(s));
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// This implementation uses a read-compute-write pattern. Under high concurrency for the same
+    /// subject+client pair, a lost update is possible. For production systems with high consent
+    /// concurrency, consider adding a rowversion/concurrency token to <c>UserGrantEntity</c>
+    /// and handling <c>DbUpdateConcurrencyException</c> with a retry.
+    /// </remarks>
+    public async Task MergeScopesAsync(string subjectId, string clientId, IEnumerable<string> newScopes, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentNullException.ThrowIfNull(newScopes);
+
+        var existing = await _context.UserGrants
+            .FirstOrDefaultAsync(x => x.SubjectId == subjectId && x.ClientId == clientId, ct);
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        if (existing is null)
+        {
+            _context.UserGrants.Add(new UserGrantEntity
+            {
+                SubjectId = subjectId,
+                ClientId = clientId,
+                ScopesJson = JsonSerializer.Serialize(newScopes.ToList()),
+                CreatedAt = now
+            });
+        }
+        else
+        {
+            var existingScopes = JsonSerializer.Deserialize<List<string>>(existing.ScopesJson) ?? [];
+            var merged = existingScopes.Union(newScopes, StringComparer.Ordinal).ToList();
+            existing.ScopesJson = JsonSerializer.Serialize(merged);
+        }
+
+        await _context.SaveChangesAsync(ct);
+    }
+
     private static CoreIdentUserGrant ToModel(UserGrantEntity entity) => new()
     {
         SubjectId = entity.SubjectId,

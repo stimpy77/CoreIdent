@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using CoreIdent.Core.Configuration;
+using CoreIdent.Legacy.PasswordGrant.Extensions;
 using CoreIdent.Storage.EntityFrameworkCore;
 using CoreIdent.Storage.EntityFrameworkCore.Models;
 using CoreIdent.Testing.Seeders;
@@ -47,6 +48,9 @@ public sealed class KestrelTestHostFixture : IAsyncLifetime, IAsyncDisposable
             {
                 // Disable cleanup hosted service to prevent race condition with DB creation
                 services.Configure<CoreIdentAuthorizationCodeOptions>(opts => opts.EnableCleanupHostedService = false);
+
+                // Register legacy password grant handler for backward-compatible E2E testing
+                services.AddPasswordGrant();
             },
             configureApp: app =>
             {

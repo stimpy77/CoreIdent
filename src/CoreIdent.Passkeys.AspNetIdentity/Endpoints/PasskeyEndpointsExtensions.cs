@@ -212,7 +212,7 @@ public static class PasskeyEndpointsExtensions
             SubjectId = user.Id,
             ClientId = passkeyClientId,
             Scopes = [],
-            GrantType = "passkey",
+            GrantType = GrantTypes.Passkey,
         };
 
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);

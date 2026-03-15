@@ -72,6 +72,7 @@ public static class TokenEndpointExtensions
         IOptions<CoreIdentOptions> coreOptions,
         ILoggerFactory loggerFactory,
         TimeProvider timeProvider,
+        IEnumerable<IGrantTypeHandler> grantTypeHandlers,
         CancellationToken ct)
     {
         var logger = loggerFactory.CreateLogger("CoreIdent.TokenEndpoint");
@@ -137,140 +138,28 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.UnauthorizedClient, $"Client is not authorized for grant type '{tokenRequest.GrantType}'.");
         }
 
-        return tokenRequest.GrantType switch
+        switch (tokenRequest.GrantType)
         {
-            GrantTypes.ClientCredentials => await HandleClientCredentialsAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
-            GrantTypes.RefreshToken => await HandleRefreshTokenAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
-            GrantTypes.AuthorizationCode => await HandleAuthorizationCodeAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct),
-            GrantTypes.Password => await HandlePasswordGrantAsync(
-                client, tokenRequest, tokenService, refreshTokenStore, userStore, passwordHasher, customClaimsProvider, metrics, options, timeProvider, logger, ct),
-            _ => TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.")
-        };
-    }
+            case GrantTypes.ClientCredentials:
+                return await HandleClientCredentialsAsync(
+                    client, tokenRequest, tokenService, refreshTokenStore, customClaimsProvider, metrics, options, timeProvider, logger, ct);
+            case GrantTypes.RefreshToken:
+                return await HandleRefreshTokenAsync(
+                    client, tokenRequest, tokenService, refreshTokenStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct);
+            case GrantTypes.AuthorizationCode:
+                return await HandleAuthorizationCodeAsync(
+                    client, tokenRequest, tokenService, refreshTokenStore, authorizationCodeStore, userStore, customClaimsProvider, metrics, options, timeProvider, logger, ct);
+            default:
+                // Check registered extensible grant type handlers (e.g., CoreIdent.Legacy.PasswordGrant)
+                var handler = grantTypeHandlers.FirstOrDefault(h =>
+                    string.Equals(h.GrantType, tokenRequest.GrantType, StringComparison.Ordinal));
+                if (handler is not null)
+                {
+                    return await handler.HandleAsync(client, tokenRequest, request.HttpContext, ct);
+                }
 
-    private static async Task<IResult> HandlePasswordGrantAsync(
-        CoreIdentClient client,
-        TokenRequest tokenRequest,
-        ITokenService tokenService,
-        IRefreshTokenStore refreshTokenStore,
-        IUserStore userStore,
-        IPasswordHasher passwordHasher,
-        ICustomClaimsProvider customClaimsProvider,
-        ICoreIdentMetrics metrics,
-        CoreIdentOptions options,
-        TimeProvider timeProvider,
-        ILogger logger,
-        CancellationToken ct)
-    {
-        var issuanceStart = Stopwatch.GetTimestamp();
-        logger.LogWarning("Password grant is deprecated in OAuth 2.1. Consider using authorization code flow with PKCE.");
-
-        if (string.IsNullOrWhiteSpace(tokenRequest.Username))
-        {
-            return TokenError(TokenErrors.InvalidRequest, "The username parameter is required.");
+                return TokenError(TokenErrors.UnsupportedGrantType, $"Grant type '{tokenRequest.GrantType}' is not supported.");
         }
-
-        if (string.IsNullOrWhiteSpace(tokenRequest.Password))
-        {
-            return TokenError(TokenErrors.InvalidRequest, "The password parameter is required.");
-        }
-
-        var user = await userStore.FindByUsernameAsync(tokenRequest.Username, ct);
-        if (user is null)
-        {
-            return TokenError(TokenErrors.InvalidGrant, "Invalid resource owner credentials.");
-        }
-
-        if (string.IsNullOrWhiteSpace(user.PasswordHash) || !passwordHasher.VerifyHashedPassword(user, user.PasswordHash, tokenRequest.Password))
-        {
-            return TokenError(TokenErrors.InvalidGrant, "Invalid resource owner credentials.");
-        }
-
-        var requestedScopes = ParseScopes(tokenRequest.Scope);
-        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes);
-
-        if (requestedScopes.Count > 0 && grantedScopes.Count == 0)
-        {
-            return TokenError(TokenErrors.InvalidScope, "None of the requested scopes are allowed for this client.");
-        }
-
-        var accessTokenLifetime = TimeSpan.FromSeconds(client.AccessTokenLifetimeSeconds);
-        var accessTokenExpiresAt = timeProvider.GetUtcNow().Add(accessTokenLifetime);
-
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
-            new("client_id", client.ClientId)
-        };
-
-        if (grantedScopes.Count > 0)
-        {
-            claims.Add(new Claim("scope", string.Join(" ", grantedScopes)));
-        }
-
-        var userClaims = await userStore.GetClaimsAsync(user.Id, ct);
-        claims.AddRange(userClaims);
-
-        var claimsContext = new ClaimsContext
-        {
-            SubjectId = user.Id,
-            ClientId = client.ClientId,
-            Scopes = grantedScopes,
-            GrantType = GrantTypes.Password
-        };
-
-        var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);
-        claims.AddRange(customClaims);
-
-        var accessToken = await tokenService.CreateJwtAsync(
-            options.Issuer!,
-            options.Audience!,
-            claims,
-            accessTokenExpiresAt,
-            ct);
-
-        string? refreshTokenHandle = null;
-        if (client.AllowOfflineAccess && grantedScopes.Contains(StandardScopes.OfflineAccess, StringComparer.Ordinal))
-        {
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-            var refreshTokenLifetime = TimeSpan.FromSeconds(client.RefreshTokenLifetimeSeconds);
-            refreshTokenHandle = GenerateRefreshTokenHandle();
-
-            var refreshToken = new CoreIdentRefreshToken
-            {
-                Handle = refreshTokenHandle,
-                SubjectId = user.Id,
-                ClientId = client.ClientId,
-                FamilyId = Guid.NewGuid().ToString("N"),
-                Scopes = grantedScopes,
-                CreatedAt = now,
-                ExpiresAt = now.Add(refreshTokenLifetime)
-            };
-
-            await refreshTokenStore.StoreAsync(refreshToken, ct);
-        }
-
-        logger.LogInformation("Issued tokens for subject {SubjectId} via password grant", user.Id);
-
-        var elapsedMs = Stopwatch.GetElapsedTime(issuanceStart).TotalMilliseconds;
-        metrics.TokenIssued("access_token", GrantTypes.Password, elapsedMs);
-
-        if (!string.IsNullOrWhiteSpace(refreshTokenHandle))
-        {
-            metrics.TokenIssued("refresh_token", GrantTypes.Password, elapsedMs);
-        }
-
-        return Results.Ok(new TokenResponse
-        {
-            AccessToken = accessToken,
-            TokenType = "Bearer",
-            ExpiresIn = (int)accessTokenLifetime.TotalSeconds,
-            RefreshToken = refreshTokenHandle,
-            Scope = grantedScopes.Count > 0 ? string.Join(" ", grantedScopes) : null
-        });
     }
 
     private static async Task<IResult> HandleAuthorizationCodeAsync(
@@ -689,8 +578,10 @@ public static class TokenEndpointExtensions
             Code = form["code"].ToString(),
             RedirectUri = form["redirect_uri"].ToString(),
             CodeVerifier = form["code_verifier"].ToString(),
+#pragma warning disable CS0618 // Parse all form fields for extensible grant handlers
             Username = form["username"].ToString(),
             Password = form["password"].ToString()
+#pragma warning restore CS0618
         };
     }
 
@@ -748,7 +639,7 @@ public static class TokenEndpointExtensions
             return allowedScopes.ToList();
         }
 
-        return requestedScopes.Where(s => allowedScopes.Contains(s)).ToList();
+        return requestedScopes.Where(s => allowedScopes.Contains(s, StringComparer.Ordinal)).ToList();
     }
 
     private static string GenerateRefreshTokenHandle()

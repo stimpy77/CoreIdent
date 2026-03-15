@@ -197,7 +197,7 @@ public static class ResourceOwnerEndpointsExtensions
             SubjectId = user.Id,
             ClientId = resourceOwnerClientId,
             Scopes = [],
-            GrantType = GrantTypes.Password
+            GrantType = GrantTypes.ResourceOwnerLogin
         };
 
         var customClaims = await customClaimsProvider.GetAccessTokenClaimsAsync(claimsContext, ct);

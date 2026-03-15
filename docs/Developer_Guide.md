@@ -49,6 +49,34 @@ CoreIdent is not trying to be “everything at once” yet. The focus is **secur
 
 ---
 
+## OAuth 2.1 Compliance
+
+CoreIdent targets full compliance with **OAuth 2.1 (RFC 9725)**, which consolidates and strengthens OAuth 2.0 best practices. This means:
+
+### What CoreIdent enforces
+
+- **PKCE required** — All authorization code flows must include `code_challenge` and `code_challenge_method=S256`. This applies to both public and confidential clients.
+- **No implicit grant** — The `response_type=token` flow is not supported. Use authorization code + PKCE instead.
+- **No hybrid flow** — OIDC hybrid response types (`code token`, `code id_token token`) are not supported.
+- **Exact redirect URI matching** — Redirect URIs must exactly match a registered URI. No wildcard or partial matching.
+- **Refresh token rotation** — Refresh tokens are single-use with automatic rotation and theft detection via family tracking.
+
+### What this means for clients
+
+- All clients (including server-side/confidential) must implement PKCE
+- Use `response_type=code` exclusively
+- Register exact redirect URIs (no wildcards, no path prefixes)
+- Handle refresh token rotation (each refresh returns a new token)
+- JavaScript/SPA clients should use the authorization code flow with PKCE, not implicit
+
+### Migration from OAuth 2.0 patterns
+
+If migrating from a system that uses implicit flow or ROPC (password grant):
+- **Implicit flow** → Use authorization code + PKCE. See the [JS/TS Client Compatibility](#using-coreident-with-javascripttypescript-clients) section.
+- **ROPC / Password grant** → Use authorization code + PKCE, or install `CoreIdent.Legacy.PasswordGrant` for migration support. ROPC is deprecated in OAuth 2.1.
+
+---
+
 ## Third-party extensibility opportunities
 
 CoreIdent is designed so third parties can build “flavors” (membership systems, admin surfaces, hosted identity offerings, etc.) **without forking** `CoreIdent.Core`.
@@ -442,6 +470,143 @@ dotnet new coreident-api-fsharp -n MyCoreIdentApiFSharpNoEf --useEfCore false
 ```
 
 Each template includes a sample `appsettings.json` with required `CoreIdent` configuration (issuer, audience, dev signing key) and, when applicable, a SQLite connection string.
+
+---
+
+## CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) must be configured when JavaScript clients (SPAs, Blazor WASM) access CoreIdent endpoints from a different origin.
+
+### Quick setup with `AddCoreIdentCors()`
+
+CoreIdent provides a convenience method that auto-configures CORS from registered client redirect URIs:
+
+```csharp
+builder.Services.AddCoreIdentCors(); // Extracts origins from client redirect URIs
+
+var app = builder.Build();
+app.UseCoreIdentCors(); // Must be before MapCoreIdentEndpoints()
+app.MapCoreIdentEndpoints();
+```
+
+### Manual configuration
+
+For full control, use ASP.NET Core's built-in CORS:
+
+```csharp
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CoreIdentPolicy", policy =>
+    {
+        policy.WithOrigins("https://myapp.example.com")
+              .AllowAnyHeader()
+              .WithMethods("GET", "POST")
+              .AllowCredentials();
+    });
+});
+
+app.UseCors("CoreIdentPolicy");
+```
+
+### Endpoints that require CORS
+
+| Endpoint | When CORS is needed |
+|----------|-------------------|
+| `POST /auth/token` | Always (token requests from browser) |
+| `GET /auth/userinfo` | Always (user info from SPA) |
+| `POST /auth/revoke` | When revoking from browser |
+| `GET /.well-known/openid-configuration` | Discovery from browser |
+| `GET /.well-known/jwks.json` | Key fetching from browser |
+
+> **Note:** The authorization endpoint (`/auth/authorize`) uses redirects, not CORS. CORS is not needed for redirect-based flows.
+
+---
+
+## Using CoreIdent with JavaScript/TypeScript Clients
+
+CoreIdent is a standard-compliant OAuth 2.1 / OpenID Connect server. Any OIDC-compliant JavaScript client library works with it. We recommend [oidc-client-ts](https://github.com/authts/oidc-client-ts) for most use cases.
+
+### oidc-client-ts Configuration
+
+```typescript
+import { UserManager } from 'oidc-client-ts';
+
+const userManager = new UserManager({
+  authority: 'https://your-coreident-server.com',
+  client_id: 'your-spa-client-id',
+  redirect_uri: 'https://your-app.com/callback',
+  post_logout_redirect_uri: 'https://your-app.com/',
+  response_type: 'code',
+  scope: 'openid profile email',
+  automaticSilentRenew: true,
+});
+
+// Login
+await userManager.signinRedirect();
+
+// Handle callback
+const user = await userManager.signinRedirectCallback();
+console.log('Logged in:', user.profile.email);
+
+// Get access token (auto-refreshed)
+const user = await userManager.getUser();
+const token = user?.access_token;
+
+// Logout
+await userManager.signoutRedirect();
+```
+
+### Vanilla JavaScript (Authorization Code + PKCE)
+
+```javascript
+// Generate PKCE challenge
+async function generatePKCE() {
+  const verifier = crypto.randomUUID() + crypto.randomUUID();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return { verifier, challenge };
+}
+
+// Start login
+const { verifier, challenge } = await generatePKCE();
+const state = crypto.randomUUID();
+sessionStorage.setItem('pkce_verifier', verifier);
+sessionStorage.setItem('oauth_state', state);
+
+const authUrl = new URL('https://your-coreident-server.com/auth/authorize');
+authUrl.searchParams.set('client_id', 'your-spa-client-id');
+authUrl.searchParams.set('redirect_uri', 'https://your-app.com/callback');
+authUrl.searchParams.set('response_type', 'code');
+authUrl.searchParams.set('scope', 'openid profile email');
+authUrl.searchParams.set('state', state);
+authUrl.searchParams.set('code_challenge', challenge);
+authUrl.searchParams.set('code_challenge_method', 'S256');
+
+window.location.href = authUrl.toString();
+```
+
+### CORS requirements
+
+Ensure CORS is configured for your JavaScript client's origin. See [CORS Configuration](#cors-configuration).
+
+### Client registration
+
+Register your SPA as a **public client** (no client secret):
+
+```json
+{
+  "clientId": "your-spa-client-id",
+  "clientType": "Public",
+  "redirectUris": ["https://your-app.com/callback"],
+  "postLogoutRedirectUris": ["https://your-app.com/"],
+  "allowedScopes": ["openid", "profile", "email"],
+  "allowedGrantTypes": ["authorization_code"],
+  "requirePkce": true
+}
+```
 
 ---
 
@@ -1110,6 +1275,39 @@ To use a real provider, register your own `ISmsProvider` implementation:
 ```csharp
 builder.Services.AddSingleton<ISmsProvider, MySmsProvider>();
 ```
+
+---
+
+## Account Recovery / Password Reset
+
+CoreIdent provides built-in password reset functionality for apps that use password-based authentication.
+
+### Flow
+
+1. User requests reset: `POST /auth/account/recover` with email address
+2. CoreIdent generates a secure token, stores it hashed, and sends a reset link via `IEmailSender`
+3. User clicks link: `GET /auth/account/reset-password?token=xxx` displays a reset form
+4. User submits new password: `POST /auth/account/reset-password` with token and new password
+5. CoreIdent validates the token, hashes the new password, and updates the user
+
+### Configuration
+
+```csharp
+builder.Services.AddCoreIdent(options => { ... })
+    .AddPasswordReset(reset =>
+    {
+        reset.TokenLifetime = TimeSpan.FromMinutes(30);
+        reset.MaxAttemptsPerHour = 3;
+        reset.EmailSubject = "Reset your password";
+    });
+```
+
+### Security notes
+
+- The recover endpoint always returns success regardless of whether the email exists (prevents email enumeration)
+- Reset tokens are single-use and time-limited
+- Rate limiting is applied per email address
+- The reset form can be replaced by providing a custom handler
 
 ---
 

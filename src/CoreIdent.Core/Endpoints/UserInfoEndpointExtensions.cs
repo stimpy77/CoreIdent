@@ -109,7 +109,7 @@ public static class UserInfoEndpointExtensions
             SubjectId = subjectId,
             ClientId = clientId,
             Scopes = scopes,
-            GrantType = "userinfo"
+            GrantType = GrantTypes.UserInfo
         };
 
         var customClaims = await customClaimsProvider.GetIdTokenClaimsAsync(claimsContext, ct);

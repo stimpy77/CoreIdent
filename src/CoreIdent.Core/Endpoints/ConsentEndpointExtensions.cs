@@ -156,13 +156,9 @@ public static class ConsentEndpointExtensions
 
         var scopes = ParseScopes(scope);
 
-        await userGrantStore.SaveAsync(new CoreIdentUserGrant
-        {
-            SubjectId = subjectId,
-            ClientId = clientId,
-            Scopes = scopes,
-            CreatedAt = timeProvider.GetUtcNow().UtcDateTime
-        }, ct);
+        // Use MergeScopesAsync for incremental consent — new scopes are added
+        // to any existing grant rather than overwriting it.
+        await userGrantStore.MergeScopesAsync(subjectId, clientId, scopes, ct);
 
         var authorizePath = routeOptions.Value.CombineWithBase(routeOptions.Value.AuthorizePath);
 
