@@ -112,6 +112,8 @@ public static class UserInfoEndpointExtensions
             GrantType = GrantTypes.UserInfo
         };
 
+        // OIDC Core §5.3: UserInfo returns the same class of claims as the ID token
+        // (user-facing profile claims), not access token claims (service-level).
         var customClaims = await customClaimsProvider.GetIdTokenClaimsAsync(claimsContext, ct);
 
         var allowed = GetAllowedUserInfoClaimNames(scopes);
