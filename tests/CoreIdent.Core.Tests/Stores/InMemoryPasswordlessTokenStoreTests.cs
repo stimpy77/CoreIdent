@@ -185,6 +185,44 @@ public sealed class InMemoryPasswordlessTokenStoreTests
         otp.All(char.IsDigit).ShouldBeTrue("otp should be numeric");
     }
 
+    [Fact]
+    public async Task ValidateAndConsumeAsync_burns_token_after_max_failed_attempts()
+    {
+        var time = new MutableTimeProvider(new DateTimeOffset(2025, 12, 12, 0, 0, 0, TimeSpan.Zero));
+
+        var emailOptions = Options.Create(new PasswordlessEmailOptions
+        {
+            MaxAttemptsPerHour = 100,
+            TokenLifetime = TimeSpan.FromMinutes(15)
+        });
+
+        var smsOptions = Options.Create(new PasswordlessSmsOptions
+        {
+            MaxAttemptsPerHour = 100,
+            OtpLifetime = TimeSpan.FromMinutes(5),
+            MaxVerifyAttempts = 3
+        });
+
+        var store = new InMemoryPasswordlessTokenStore(time, emailOptions, smsOptions);
+
+        var otp = await store.CreateTokenAsync(new PasswordlessToken
+        {
+            Recipient = "+15551234567",
+            TokenType = PasswordlessTokenTypes.SmsOtp
+        });
+
+        // Submit wrong OTPs — 3 failures should burn the real token
+        for (var i = 0; i < 3; i++)
+        {
+            var result = await store.ValidateAndConsumeAsync("000000", PasswordlessTokenTypes.SmsOtp, "+15551234567");
+            result.ShouldBeNull($"Wrong OTP attempt {i + 1} should return null.");
+        }
+
+        // Now submit the correct OTP — should fail because the token was burned
+        var final = await store.ValidateAndConsumeAsync(otp, PasswordlessTokenTypes.SmsOtp, "+15551234567");
+        final.ShouldBeNull("Correct OTP should fail after max failed attempts because the token was burned.");
+    }
+
     private static string ComputeSha256HexLower(string input)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(input);

@@ -15,6 +15,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
 {
     private readonly ConcurrentDictionary<string, PasswordlessToken> _tokensByHash = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _attemptsByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _failedVerifyAttempts = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly TimeProvider _timeProvider;
     private readonly IOptions<PasswordlessEmailOptions> _emailOptions;
@@ -97,6 +98,8 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
         var tokenHash = ComputeTokenHash(token);
         if (!_tokensByHash.TryGetValue(tokenHash, out var stored))
         {
+            // Wrong token value — track failed attempt and burn if threshold exceeded
+            RecordFailedVerifyAttempt(tokenType, recipient);
             return Task.FromResult<PasswordlessToken?>(null);
         }
 
@@ -128,7 +131,52 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
             stored.Consumed = true;
         }
 
+        // Successful validation — clear any failed attempt counter
+        if (!string.IsNullOrWhiteSpace(tokenType) && !string.IsNullOrWhiteSpace(recipient))
+        {
+            _failedVerifyAttempts.TryRemove($"{tokenType}:{recipient.Trim()}", out _);
+        }
+
         return Task.FromResult<PasswordlessToken?>(stored);
+    }
+
+    private void RecordFailedVerifyAttempt(string? tokenType, string? recipient)
+    {
+        if (string.IsNullOrWhiteSpace(tokenType) || string.IsNullOrWhiteSpace(recipient))
+        {
+            return;
+        }
+
+        var key = $"{tokenType}:{recipient.Trim()}";
+        var maxAttempts = GetMaxVerifyAttempts(tokenType);
+
+        var count = _failedVerifyAttempts.AddOrUpdate(key, 1, (_, prev) => prev + 1);
+        if (count >= maxAttempts)
+        {
+            // Burn the real token: find by tokenType + recipient and mark consumed
+            foreach (var kvp in _tokensByHash)
+            {
+                var t = kvp.Value;
+                if (string.Equals(t.TokenType, tokenType, StringComparison.Ordinal)
+                    && string.Equals(t.Recipient, recipient.Trim(), StringComparison.OrdinalIgnoreCase)
+                    && !t.Consumed)
+                {
+                    lock (t)
+                    {
+                        t.Consumed = true;
+                    }
+                }
+            }
+
+            _failedVerifyAttempts.TryRemove(key, out _);
+        }
+    }
+
+    private int GetMaxVerifyAttempts(string tokenType)
+    {
+        return string.Equals(tokenType, PasswordlessTokenTypes.SmsOtp, StringComparison.Ordinal)
+            ? _smsOptions.Value.MaxVerifyAttempts
+            : _emailOptions.Value.MaxVerifyAttempts;
     }
 
     /// <inheritdoc />

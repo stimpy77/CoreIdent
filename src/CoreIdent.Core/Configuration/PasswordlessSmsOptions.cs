@@ -14,4 +14,10 @@ public sealed class PasswordlessSmsOptions
     /// Maximum allowed verification attempts per recipient per hour.
     /// </summary>
     public int MaxAttemptsPerHour { get; set; } = 5;
+
+    /// <summary>
+    /// Maximum failed verify attempts before the OTP is burned.
+    /// Protects 6-digit OTPs from brute-force enumeration.
+    /// </summary>
+    public int MaxVerifyAttempts { get; set; } = 5;
 }

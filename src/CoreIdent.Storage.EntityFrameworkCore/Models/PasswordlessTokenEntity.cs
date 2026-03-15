@@ -42,6 +42,11 @@ public sealed class PasswordlessTokenEntity
     public DateTime? ConsumedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of failed verification attempts against this token.
+    /// </summary>
+    public int VerifyAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the associated user identifier, if available.
     /// </summary>
     public string? UserId { get; set; }

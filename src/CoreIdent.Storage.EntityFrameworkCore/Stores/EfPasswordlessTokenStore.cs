@@ -119,6 +119,8 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
 
         if (entity is null)
         {
+            // Wrong token value — track failed attempt and burn if threshold exceeded
+            await RecordFailedVerifyAttemptAsync(tokenType, recipient, ct);
             return null;
         }
 
@@ -160,6 +162,48 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
             Consumed = true,
             UserId = entity.UserId
         };
+    }
+
+    private async Task RecordFailedVerifyAttemptAsync(string? tokenType, string? recipient, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(tokenType) || string.IsNullOrWhiteSpace(recipient))
+        {
+            return;
+        }
+
+        var normalizedType = NormalizeTokenType(tokenType);
+        var trimmedRecipient = recipient.Trim();
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var maxAttempts = GetMaxVerifyAttempts(normalizedType);
+
+        // Find the active (unconsumed, unexpired) token for this type + recipient
+        var activeToken = await _context.PasswordlessTokens
+            .FirstOrDefaultAsync(t =>
+                t.TokenType == normalizedType
+                && t.Recipient == trimmedRecipient
+                && t.ConsumedAt == null
+                && t.ExpiresAt > now, ct);
+
+        if (activeToken is null)
+        {
+            return;
+        }
+
+        activeToken.VerifyAttempts++;
+
+        if (activeToken.VerifyAttempts >= maxAttempts)
+        {
+            activeToken.ConsumedAt = now;
+        }
+
+        await _context.SaveChangesAsync(ct);
+    }
+
+    private int GetMaxVerifyAttempts(string tokenType)
+    {
+        return string.Equals(tokenType, PasswordlessTokenTypes.SmsOtp, StringComparison.Ordinal)
+            ? _smsOptions.Value.MaxVerifyAttempts
+            : _emailOptions.Value.MaxVerifyAttempts;
     }
 
     /// <inheritdoc />

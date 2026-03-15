@@ -34,4 +34,10 @@ public class PasswordlessEmailOptions
     /// Optional URL to redirect to after successful verification.
     /// </summary>
     public string? SuccessRedirectUrl { get; set; }
+
+    /// <summary>
+    /// Maximum failed verify attempts before the token is burned.
+    /// Email tokens are high-entropy so this is a defense-in-depth measure.
+    /// </summary>
+    public int MaxVerifyAttempts { get; set; } = 5;
 }
