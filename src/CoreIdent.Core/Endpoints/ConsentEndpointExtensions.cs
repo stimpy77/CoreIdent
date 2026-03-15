@@ -95,6 +95,7 @@ public static class ConsentEndpointExtensions
 
     private static async Task<IResult> HandlePostConsent(
         HttpContext httpContext,
+        IClientStore clientStore,
         IUserGrantStore userGrantStore,
         IOptions<CoreIdentRouteOptions> routeOptions,
         TimeProvider timeProvider,
@@ -136,6 +137,24 @@ public static class ConsentEndpointExtensions
             return Results.BadRequest(new { error = "invalid_request", error_description = "redirect_uri must be absolute." });
         }
 
+        // Validate client exists, is enabled, and redirect_uri is registered.
+        var client = await clientStore.FindByClientIdAsync(clientId, ct);
+        if (client is null || !client.Enabled)
+        {
+            return Results.BadRequest(new { error = "invalid_client", error_description = "Unknown or disabled client." });
+        }
+
+        // Compare redirect_uri by base path (ignoring query string) since the authorization
+        // endpoint may append state/params. The registered URI is the base origin+path.
+        var redirectBase = Uri.TryCreate(redirectUri, UriKind.Absolute, out var redirectParsed)
+            ? redirectParsed.GetLeftPart(UriPartial.Path)
+            : redirectUri;
+        if (!client.RedirectUris.Any(r => string.Equals(r, redirectBase, StringComparison.Ordinal)
+            || string.Equals(r, redirectUri, StringComparison.Ordinal)))
+        {
+            return Results.BadRequest(new { error = "invalid_request", error_description = "redirect_uri is not registered for this client." });
+        }
+
         var subjectId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? httpContext.User.FindFirstValue("sub");
         if (string.IsNullOrWhiteSpace(subjectId))
         {
@@ -155,6 +174,10 @@ public static class ConsentEndpointExtensions
         }
 
         var scopes = ParseScopes(scope);
+
+        // Filter scopes to only those the client is allowed to request.
+        var allowedScopes = client.AllowedScopes.ToHashSet(StringComparer.Ordinal);
+        scopes = scopes.Where(s => allowedScopes.Contains(s)).ToList();
 
         // Use MergeScopesAsync for incremental consent — new scopes are added
         // to any existing grant rather than overwriting it.

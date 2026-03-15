@@ -67,7 +67,8 @@ public sealed class AspNetIdentityPasskeyService : IPasskeyService
         var attestationResult = await _signInManager.PerformPasskeyAttestationAsync(credentialJson);
         if (!attestationResult.Succeeded)
         {
-            throw new InvalidOperationException(attestationResult.Failure.Message);
+            throw new InvalidOperationException(
+                attestationResult.Failure?.Message ?? "Passkey attestation failed");
         }
 
         var addResult = await _userManager.AddOrUpdatePasskeyAsync(user, attestationResult.Passkey);

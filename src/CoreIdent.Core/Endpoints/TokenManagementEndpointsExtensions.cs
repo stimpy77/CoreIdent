@@ -169,8 +169,9 @@ public static class TokenManagementEndpointsExtensions
             }
             catch (Exception ex)
             {
+                // RFC 7009 §2.1: always return 200; revocation is best-effort.
                 logger.LogError(ex, "Error processing token revocation request.");
-                return Results.Json(new { error = "server_error", error_description = "An error occurred processing the request." }, statusCode: StatusCodes.Status500InternalServerError);
+                return Results.Ok();
             }
         })
             .Produces(StatusCodes.Status200OK)

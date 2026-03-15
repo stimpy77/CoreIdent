@@ -105,12 +105,16 @@ public sealed class InMemoryRefreshTokenStore : IRefreshTokenStore
 
         if (_tokens.TryGetValue(handle, out var token))
         {
-            if (token.ConsumedAt.HasValue)
+            lock (token)
             {
-                return Task.FromResult(false);
+                if (token.ConsumedAt.HasValue)
+                {
+                    return Task.FromResult(false);
+                }
+
+                token.ConsumedAt = _timeProvider.GetUtcNow().UtcDateTime;
             }
 
-            token.ConsumedAt = _timeProvider.GetUtcNow().UtcDateTime;
             return Task.FromResult(true);
         }
 

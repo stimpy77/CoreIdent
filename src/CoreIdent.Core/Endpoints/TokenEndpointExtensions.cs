@@ -221,7 +221,8 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidRequest, "The redirect_uri does not match the authorization code.");
         }
 
-        if (client.RequirePkce)
+        // Always verify PKCE if the code carries a challenge (defense in depth).
+        if (!string.IsNullOrWhiteSpace(code.CodeChallenge))
         {
             if (!string.Equals(code.CodeChallengeMethod, "S256", StringComparison.Ordinal))
             {
@@ -656,8 +657,9 @@ public static class TokenEndpointExtensions
             var computed = Base64UrlEncode(hashed);
             return string.Equals(computed, expectedCodeChallenge, StringComparison.Ordinal);
         }
-        catch
+        catch (Exception)
         {
+            // Log at the call site if needed; do not log the code_verifier value.
             return false;
         }
     }

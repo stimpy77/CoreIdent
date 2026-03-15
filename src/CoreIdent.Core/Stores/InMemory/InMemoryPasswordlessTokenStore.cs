@@ -118,12 +118,16 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
             return Task.FromResult<PasswordlessToken?>(null);
         }
 
-        if (stored.Consumed)
+        lock (stored)
         {
-            return Task.FromResult<PasswordlessToken?>(null);
+            if (stored.Consumed)
+            {
+                return Task.FromResult<PasswordlessToken?>(null);
+            }
+
+            stored.Consumed = true;
         }
 
-        stored.Consumed = true;
         return Task.FromResult<PasswordlessToken?>(stored);
     }
 

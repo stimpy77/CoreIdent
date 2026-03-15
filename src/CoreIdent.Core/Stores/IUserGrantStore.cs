@@ -46,6 +46,12 @@ public interface IUserGrantStore
     /// If no grant exists, creates one with the provided scopes.
     /// The default implementation calls <see cref="FindAsync"/> and <see cref="SaveAsync"/>.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Warning:</strong> The default implementation uses a read-then-write pattern that
+    /// is not safe under concurrent consent requests for the same subject+client pair. Production
+    /// store implementations should override this method with an atomic merge (e.g., using a
+    /// concurrency token and retry loop, or a database-level upsert).</para>
+    /// </remarks>
     /// <param name="subjectId">The subject identifier (user ID).</param>
     /// <param name="clientId">The client identifier.</param>
     /// <param name="newScopes">The scopes to add to the existing grant.</param>
@@ -66,7 +72,7 @@ public interface IUserGrantStore
             SubjectId = subjectId,
             ClientId = clientId,
             Scopes = merged,
-            CreatedAt = existing?.CreatedAt ?? DateTime.UtcNow,
+            CreatedAt = existing?.CreatedAt ?? DateTimeOffset.UtcNow.UtcDateTime,
             ExpiresAt = existing?.ExpiresAt
         }, ct);
     }

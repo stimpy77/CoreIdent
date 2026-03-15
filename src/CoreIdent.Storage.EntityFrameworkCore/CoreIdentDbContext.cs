@@ -160,6 +160,10 @@ public class CoreIdentDbContext : DbContext
             entity.Property(x => x.ScopesJson)
                 .IsRequired();
 
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
             entity.HasIndex(x => x.ClientId);
             entity.HasIndex(x => x.SubjectId);
             entity.HasIndex(x => x.ExpiresAt);

@@ -250,8 +250,11 @@ public static class ResourceOwnerEndpointsExtensions
         }
 
         var redirectUri = request.Query["redirect_uri"].ToString();
-        if (!string.IsNullOrWhiteSpace(redirectUri))
+        if (!string.IsNullOrWhiteSpace(redirectUri) &&
+            Uri.TryCreate(redirectUri, UriKind.RelativeOrAbsolute, out var parsedUri) &&
+            !parsedUri.IsAbsoluteUri)
         {
+            // Only allow relative paths to prevent open-redirect attacks.
             return Results.Redirect(redirectUri);
         }
 
@@ -380,7 +383,7 @@ public static class ResourceOwnerEndpointsExtensions
             return false;
         }
 
-        return password.Trim().Length >= 6;
+        return password.Length >= 6;
     }
 
     private static IResult CreateErrorResult(HttpRequest request, int statusCode, string message)

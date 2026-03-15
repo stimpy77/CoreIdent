@@ -221,5 +221,5 @@ public class ExternalLogin
     /// <summary>
     /// When this login was linked.
     /// </summary>
-    public DateTime LinkedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset LinkedAt { get; set; } = DateTimeOffset.UtcNow;
 }

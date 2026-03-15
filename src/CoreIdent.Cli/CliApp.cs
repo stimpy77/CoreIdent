@@ -158,8 +158,7 @@ public static class CliApp
         Console.WriteLine("Updated project file with CoreIdent package references.");
 
         Console.WriteLine();
-        Console.WriteLine("Dev symmetric signing key (do not use in production):");
-        Console.WriteLine(symmetricKey);
+        Console.WriteLine("Dev symmetric signing key written to appsettings.json (do not use in production).");
 
         return 0;
     }
@@ -294,6 +293,7 @@ public static class CliApp
         if (clientSecret is not null)
         {
             Console.WriteLine($"client_secret: {clientSecret}");
+            Console.WriteLine("  ** Copy this secret now — it will not be shown again. **");
         }
 
         Console.WriteLine();
@@ -312,7 +312,7 @@ public static class CliApp
         Console.WriteLine("};");
         if (clientSecret is not null)
         {
-            Console.WriteLine($"client.ClientSecretHash = hasher.HashSecret(\"{clientSecret}\");");
+            Console.WriteLine("client.ClientSecretHash = hasher.HashSecret(/* PASTE_SECRET_HERE */);");
         }
         Console.WriteLine("await clientStore.CreateAsync(client);");
 

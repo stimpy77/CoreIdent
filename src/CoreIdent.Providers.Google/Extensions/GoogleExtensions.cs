@@ -20,7 +20,6 @@ public static class GoogleExtensions
         Action<GoogleProviderOptions> configure)
     {
         services.Configure(configure);
-        services.AddScoped<GoogleAuthProvider>();
         services.AddScoped<IExternalAuthProvider, GoogleAuthProvider>();
         return services;
     }

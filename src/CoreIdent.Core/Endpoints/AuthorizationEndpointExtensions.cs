@@ -214,7 +214,7 @@ public static class AuthorizationEndpointExtensions
             {
                 ["error"] = error,
                 ["error_description"] = description,
-                ["state"] = state ?? string.Empty
+                ["state"] = state ?? ""
             });
 
             return Results.Redirect(location);
@@ -267,7 +267,10 @@ public static class AuthorizationEndpointExtensions
 
         foreach (var (k, v) in parameters)
         {
-            query[k] = v;
+            if (!string.IsNullOrWhiteSpace(v))
+            {
+                query[k] = v;
+            }
         }
 
         var q = string.Join("&", query.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));

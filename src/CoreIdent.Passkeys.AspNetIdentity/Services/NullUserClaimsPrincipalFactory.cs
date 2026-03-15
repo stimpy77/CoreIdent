@@ -17,7 +17,7 @@ public sealed class NullUserClaimsPrincipalFactory : IUserClaimsPrincipalFactory
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var identity = new ClaimsIdentity();
+        var identity = new ClaimsIdentity("Passkey");
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id));
         identity.AddClaim(new Claim(ClaimTypes.Name, user.UserName));
 

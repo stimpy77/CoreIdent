@@ -69,18 +69,22 @@ public sealed class InMemoryAuthorizationCodeStore : IAuthorizationCodeStore
             return Task.FromResult(false);
         }
 
-        if (code.ConsumedAt.HasValue)
+        lock (code)
         {
-            return Task.FromResult(false);
+            if (code.ConsumedAt.HasValue)
+            {
+                return Task.FromResult(false);
+            }
+
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            if (code.ExpiresAt <= now)
+            {
+                return Task.FromResult(false);
+            }
+
+            code.ConsumedAt = now;
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        if (code.ExpiresAt <= now)
-        {
-            return Task.FromResult(false);
-        }
-
-        code.ConsumedAt = now;
         return Task.FromResult(true);
     }
 

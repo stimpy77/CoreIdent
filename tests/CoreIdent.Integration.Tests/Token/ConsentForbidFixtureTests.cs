@@ -1,6 +1,8 @@
 using System.Net;
+using CoreIdent.Core.Models;
 using CoreIdent.Integration.Tests.Infrastructure;
 using CoreIdent.Testing.Fixtures;
+using CoreIdent.Testing.Seeders;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,13 +34,21 @@ public sealed class ConsentForbidFixtureTests : CoreIdentTestFixture
     [Fact]
     public async Task Consent_post_returns_403_when_subject_id_is_missing()
     {
+        await CreateClientAsync(c =>
+            c.WithClientId(StandardClients.PublicClientId)
+                .AsPublicClient()
+                .WithGrantTypes(GrantTypes.AuthorizationCode)
+                .WithScopes(CoreIdent.Core.Models.StandardScopes.OpenId)
+                .WithRedirectUris(StandardClients.DefaultRedirectUri)
+                .RequirePkce(true));
+
         using var consentPost = new HttpRequestMessage(HttpMethod.Post, "/auth/consent")
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["decision"] = "allow",
-                ["client_id"] = "client",
-                ["redirect_uri"] = "https://client.example/cb",
+                ["client_id"] = StandardClients.PublicClientId,
+                ["redirect_uri"] = StandardClients.DefaultRedirectUri,
                 ["response_type"] = "code",
                 ["scope"] = "openid",
                 ["state"] = "st",

@@ -13,9 +13,10 @@ public static class Pkce
     /// </summary>
     public static string CreateCodeVerifier(int sizeBytes = 32)
     {
-        if (sizeBytes <= 0)
+        if (sizeBytes < 32)
         {
-            throw new ArgumentOutOfRangeException(nameof(sizeBytes));
+            throw new ArgumentOutOfRangeException(nameof(sizeBytes),
+                "sizeBytes must be at least 32 (produces a 43-char verifier, the RFC 7636 minimum).");
         }
 
         var bytes = RandomNumberGenerator.GetBytes(sizeBytes);

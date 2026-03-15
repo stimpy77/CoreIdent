@@ -68,7 +68,13 @@ public sealed class InMemoryPasskeyCredentialStore : IPasskeyCredentialStore
         ArgumentNullException.ThrowIfNull(credentialId);
 
         var key = Convert.ToBase64String(credentialId);
-        _byKey.TryRemove(key, out _);
+
+        // Only delete if the credential belongs to the specified user.
+        if (_byKey.TryGetValue(key, out var existing) &&
+            string.Equals(existing.UserId, userId, StringComparison.Ordinal))
+        {
+            _byKey.TryRemove(key, out _);
+        }
 
         return Task.CompletedTask;
     }

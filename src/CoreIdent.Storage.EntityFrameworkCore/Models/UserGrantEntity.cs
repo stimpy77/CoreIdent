@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CoreIdent.Storage.EntityFrameworkCore.Models;
 
 /// <summary>
@@ -29,4 +31,10 @@ public sealed class UserGrantEntity
     /// Gets or sets the optional UTC expiration time for the grant.
     /// </summary>
     public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Concurrency token to prevent lost updates during scope merges.
+    /// </summary>
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
 }

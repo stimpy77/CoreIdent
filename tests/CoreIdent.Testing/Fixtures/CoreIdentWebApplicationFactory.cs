@@ -17,7 +17,7 @@ namespace CoreIdent.Testing.Fixtures;
 public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<global::Program>
 {
     private SqliteConnection? _connection;
-    private bool _seeded;
+
 
     public Action<IServiceCollection>? ConfigureTestServices { get; set; }
 
@@ -65,10 +65,11 @@ public sealed class CoreIdentWebApplicationFactory : WebApplicationFactory<globa
     /// <summary>
     /// Ensures the database is created and seeded. Call after creating the client.
     /// </summary>
+    private int _seedGuard;
+
     public void EnsureSeeded()
     {
-        if (_seeded) return;
-        _seeded = true;
+        if (Interlocked.CompareExchange(ref _seedGuard, 1, 0) != 0) return;
 
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CoreIdentDbContext>();

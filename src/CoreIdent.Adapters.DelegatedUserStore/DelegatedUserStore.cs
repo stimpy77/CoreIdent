@@ -73,17 +73,17 @@ public sealed class DelegatedUserStore : IUserStore
     {
         if (string.IsNullOrWhiteSpace(subjectId))
         {
-            return Array.Empty<Claim>();
+            return [];
         }
 
         var claimsProvider = _options.Value.GetClaimsAsync;
         if (claimsProvider is null)
         {
-            return Array.Empty<Claim>();
+            return [];
         }
 
         var claims = await claimsProvider(subjectId, ct);
-        return claims ?? Array.Empty<Claim>();
+        return claims ?? [];
     }
 
     /// <inheritdoc />

@@ -57,8 +57,8 @@ public class GoogleAuthProvider : IExternalAuthProvider
         }
 
         var url = $"{_options.AuthorizationEndpoint}?{query}";
-        _logger.LogDebug("Generated Google auth URL: {Url}", url);
-        
+        _logger.LogDebug("Generated Google authorization URL for scopes: {Scopes}", string.Join(" ", scopes));
+
         return Task.FromResult(url);
     }
 

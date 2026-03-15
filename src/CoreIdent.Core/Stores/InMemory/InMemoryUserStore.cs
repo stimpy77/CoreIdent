@@ -82,6 +82,11 @@ public sealed class InMemoryUserStore : IUserStore
 
         user.NormalizedUserName = normalized;
 
+        if (user.CreatedAt == default)
+        {
+            user.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        }
+
         if (!_idByNormalizedUsername.TryAdd(normalized, user.Id))
         {
             throw new InvalidOperationException($"User with username '{user.UserName}' already exists.");
@@ -91,11 +96,6 @@ public sealed class InMemoryUserStore : IUserStore
         {
             _idByNormalizedUsername.TryRemove(normalized, out _);
             throw new InvalidOperationException($"User with id '{user.Id}' already exists.");
-        }
-
-        if (user.CreatedAt == default)
-        {
-            user.CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         return Task.CompletedTask;
@@ -123,16 +123,12 @@ public sealed class InMemoryUserStore : IUserStore
 
         user.NormalizedUserName = normalized;
 
-        // The user instance in _usersById may be the same reference as the caller is mutating.
-        // Determine the previous username mapping from the index itself.
-        var previousNormalized = _idByNormalizedUsername
-            .FirstOrDefault(kvp => string.Equals(kvp.Value, user.Id, StringComparison.Ordinal))
-            .Key;
-
-        if (!string.IsNullOrWhiteSpace(previousNormalized) &&
-            !string.Equals(previousNormalized, normalized, StringComparison.Ordinal))
+        // Read the existing stored user to get the old normalized name before mutating.
+        if (_usersById.TryGetValue(user.Id, out var existing) &&
+            !string.IsNullOrWhiteSpace(existing.NormalizedUserName) &&
+            !string.Equals(existing.NormalizedUserName, normalized, StringComparison.Ordinal))
         {
-            _idByNormalizedUsername.TryRemove(previousNormalized, out _);
+            _idByNormalizedUsername.TryRemove(existing.NormalizedUserName, out _);
         }
 
         _idByNormalizedUsername.AddOrUpdate(

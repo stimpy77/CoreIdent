@@ -48,7 +48,7 @@ public sealed class EfClientStore : IClientStore
             return false;
         }
 
-        if (entity.ClientType == nameof(ClientType.Public))
+        if (Enum.TryParse<ClientType>(entity.ClientType, out var clientType) && clientType == ClientType.Public)
         {
             return true;
         }

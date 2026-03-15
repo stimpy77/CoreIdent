@@ -330,7 +330,7 @@ public sealed class CoreIdentClient : ICoreIdentClient, IDisposable
         // Best-effort: revoke refresh token to prevent further silent logins.
         if (!string.IsNullOrWhiteSpace(tokens.RefreshToken) && !string.IsNullOrWhiteSpace(discovery.RevocationEndpoint))
         {
-            _ = TryRevokeAsync(discovery.RevocationEndpoint, tokens.RefreshToken, tokenTypeHint: "refresh_token", ct);
+            _ = TryRevokeAsync(discovery.RevocationEndpoint, tokens.RefreshToken, tokenTypeHint: "refresh_token", CancellationToken.None);
         }
 
         // Optional: if server advertises end_session_endpoint, attempt browser logout.

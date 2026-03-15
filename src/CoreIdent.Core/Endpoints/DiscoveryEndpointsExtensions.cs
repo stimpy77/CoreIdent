@@ -113,7 +113,7 @@ public static class DiscoveryEndpointsExtensions
                 : null;
 
             IReadOnlyList<string>? tokenEndpointAuthMethodsSupported = tokenEndpointMapped
-                ? ["client_secret_basic", "client_secret_post"]
+                ? ["client_secret_basic", "client_secret_post", "none"]
                 : null;
 
             var scopes = (await scopeStore.GetAllAsync(ct))
@@ -221,12 +221,20 @@ public static class DiscoveryEndpointsExtensions
                                 _ => throw new NotSupportedException($"Unsupported EC curve OID: {parameters.Curve.Oid.Value}")
                             };
 
+                            var ecAlg = crv switch
+                            {
+                                "P-256" => SecurityAlgorithms.EcdsaSha256,
+                                "P-384" => SecurityAlgorithms.EcdsaSha384,
+                                "P-521" => SecurityAlgorithms.EcdsaSha512,
+                                _ => SecurityAlgorithms.EcdsaSha256
+                            };
+
                             jwksKeys.Add(new
                             {
                                 kty = "EC",
                                 kid = keyInfo.KeyId,
                                 use = "sig",
-                                alg = SecurityAlgorithms.EcdsaSha256,
+                                alg = ecAlg,
                                 crv,
                                 x = Base64UrlEncoder.Encode(parameters.Q.X),
                                 y = Base64UrlEncoder.Encode(parameters.Q.Y)

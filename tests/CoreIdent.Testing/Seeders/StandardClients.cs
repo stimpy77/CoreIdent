@@ -10,6 +10,8 @@ public static class StandardClients
 
     public const string ConfidentialClientSecret = "test-secret";
 
+    public const string DefaultRedirectUri = "https://client.example/cb";
+
     public static CoreIdentClient CreatePublicClient() => new()
     {
         ClientId = PublicClientId,
@@ -17,6 +19,7 @@ public static class StandardClients
         ClientType = ClientType.Public,
         AllowedGrantTypes = [GrantTypes.AuthorizationCode],
         AllowedScopes = [CoreIdent.Core.Models.StandardScopes.OpenId, CoreIdent.Core.Models.StandardScopes.Profile],
+        RedirectUris = [DefaultRedirectUri],
         RequirePkce = true,
         Enabled = true,
         CreatedAt = DateTime.UtcNow

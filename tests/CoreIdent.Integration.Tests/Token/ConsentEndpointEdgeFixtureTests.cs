@@ -90,14 +90,23 @@ public sealed class ConsentEndpointEdgeFixtureTests : CoreIdentTestFixture
         var user = await CreateUserAsync();
         await AuthenticateAsAsync(user);
 
-        var redirectUri = "https://client.example/cb?foo=bar";
+        var baseRedirectUri = Testing.Seeders.StandardClients.DefaultRedirectUri;
+        var redirectUri = baseRedirectUri + "?foo=bar";
+
+        await CreateClientAsync(c =>
+            c.WithClientId(Testing.Seeders.StandardClients.PublicClientId)
+                .AsPublicClient()
+                .WithGrantTypes(GrantTypes.AuthorizationCode)
+                .WithScopes(StandardScopes.OpenId)
+                .WithRedirectUris(baseRedirectUri)
+                .RequirePkce(true));
 
         using var consentPost = new HttpRequestMessage(HttpMethod.Post, "/auth/consent")
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["decision"] = "deny",
-                ["client_id"] = "client",
+                ["client_id"] = Testing.Seeders.StandardClients.PublicClientId,
                 ["redirect_uri"] = redirectUri,
                 ["response_type"] = "code",
                 ["scope"] = "openid",
