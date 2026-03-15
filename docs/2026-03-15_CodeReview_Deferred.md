@@ -331,3 +331,19 @@ Yes, per OIDC Core §5.3. The UserInfo endpoint is a standards-compliant alterna
 | 7 | D. Refresh atomicity | Med-High | Interface change, low crash probability |
 | 8 | G. Default scope policy | Low | Policy decision, current behavior is RFC-compliant |
 | — | C. UserInfo claims | None | Already correct, just add a comment |
+
+---
+
+## Resolution Status (2026-03-15)
+
+| Item | Status | Resolution |
+|------|--------|------------|
+| A. Email redirect tokens | **Implemented** | `TokenDeliveryMode` enum added: `QueryString` (default), `Fragment` (opt-in), `AuthorizationCode` (planned — DEVPLAN Feature 1.24). Fragment mode uses `#` delivery, not the OAuth implicit grant. |
+| B. OTP verify lockout | **Implemented** | `MaxVerifyAttempts` added to `PasswordlessSmsOptions` and `PasswordlessEmailOptions` (default 5). Both InMemory and EF stores burn the token after threshold exceeded. |
+| C. UserInfo claims | **Implemented** | Comment added at `UserInfoEndpointExtensions.cs:115` citing OIDC Core §5.3. No code change needed. |
+| D. Refresh token atomicity | **Planned** | Added as DEVPLAN Feature 1.25 — compensating rollback or atomic exchange on `IRefreshTokenStore`. |
+| E. ECDsa/RSA handle leak | **Implemented** | Both `EcdsaSigningKeyProvider` and `RsaSigningKeyProvider` now cache the public validation key in a `Lazy<>` field with disposal. |
+| F. Magic strings | **Implemented** | `OAuthClientConstants.cs` added with nested `Parameters`, `GrantTypes`, `Values`, `DPoP`, `JwkParams` classes. ~30 literals replaced. |
+| G. Default scope policy | **Implemented** | `DefaultScopes` property added to `CoreIdentClient` model (null = all allowed, empty = require explicit, list = those). Updated token endpoint, legacy ROPC, EF mapping, and Developer_Guide.md. |
+| H. Recipient/Email rename | **Implemented** | `Email` renamed to `Recipient` across model, entity, stores, DbContext config, tests, and Technical_Plan.md. No EF migrations exist so this is a clean rename. |
+| I. Google ID token | **Not addressed** | Remains open — requires design work on JWT validation against Google JWKS. Low priority since UserInfo-only is spec-compliant per OIDC Core §5.3. |

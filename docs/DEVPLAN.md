@@ -479,6 +479,31 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 1.24: AuthorizationCode Delivery Mode for Passwordless Email
+
+*   **Component:** Token Delivery (Tier 3 of deferred item A)
+    - [ ] (L2) Implement `TokenDeliveryMode.AuthorizationCode` in `PasswordlessEmailEndpointsExtensions.cs`
+        - Verify endpoint issues a short-lived authorization code instead of tokens directly
+        - Client exchanges the code at the token endpoint for access + refresh tokens
+        - Follows the same pattern as OAuth 2.1 authorization code exchange
+    - [ ] (L2) Add `IAuthorizationCodeStore` integration for code issuance and exchange
+*   **Test Case:**
+    - [ ] (L2) Integration test: verify returns code, exchange at token endpoint yields tokens
+
+---
+
+### Feature 1.25: Refresh Token Rotation Atomicity
+
+*   **Component:** Atomic Token Exchange
+    - [ ] (L2) Add compensating rollback to `IRefreshTokenStore` — if new token storage fails after old token consumption, restore the old token
+    - [ ] (L3) Alternative: atomic exchange operation on `IRefreshTokenStore` that consumes old and stores new in a single transaction
+    - [ ] (L2) Update `InMemoryRefreshTokenStore` with atomic exchange
+    - [ ] (L2) Update `EfRefreshTokenStore` with transaction-wrapped exchange
+*   **Test Case:**
+    - [ ] (L2) Simulate storage failure during rotation — verify old token is not consumed
+
+---
+
 ## Phase 1.5: Client Libraries
 
 **Goal:** Enable any .NET application to authenticate against CoreIdent (or any OAuth/OIDC server) with minimal code.
