@@ -63,7 +63,8 @@ public sealed class ResourceOwnerEndpointsEdgeFixtureTests
         var registerResponse = await client.PostAsJsonAsync("/auth/register", new { email, password });
         registerResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var redirectUri = "https://client.example/after";
+        // redirect_uri must be relative to prevent open-redirect attacks
+        var redirectUri = "/after-login";
         var loginResponse = await client.PostAsync(
             $"/auth/login?redirect_uri={Uri.EscapeDataString(redirectUri)}",
             new FormUrlEncodedContent(new Dictionary<string, string>
