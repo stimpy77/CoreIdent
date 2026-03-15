@@ -1118,8 +1118,15 @@ Behavior:
 - Validates and consumes the token (single-use)
 - Creates the user if not found (`IUserStore`)
 - Issues an access token + refresh token
-- If `PasswordlessEmailOptions.SuccessRedirectUrl` is set, redirects there and appends:
-  - `access_token`, `refresh_token`, `token_type=Bearer`, `expires_in`
+- If `PasswordlessEmailOptions.SuccessRedirectUrl` is set, redirects with tokens using the configured `TokenDelivery` mode:
+
+| Mode | Delivery | Notes |
+|---|---|---|
+| `QueryString` (default) | `?access_token=...&...` | Simplest; tokens may appear in server logs and Referer headers |
+| `Fragment` | `#access_token=...&...` | More secure — fragments are never sent to the server, but require client-side JS to extract |
+| `AuthorizationCode` | Planned | Server issues a short-lived code the client exchanges for tokens. See DEVPLAN.md |
+
+**Note:** Fragment delivery is a token delivery mechanism for the passwordless email verify endpoint only. It is **not** the OAuth implicit grant (`response_type=token`). No OAuth authorization endpoint, client_id, or `response_type` is involved.
 
 If the token is invalid, expired, or already consumed, it returns `400 Bad Request`.
 
@@ -1135,8 +1142,11 @@ builder.Services.Configure<PasswordlessEmailOptions>(opts =>
     // Relative by default; combined with CoreIdentRouteOptions.BasePath
     opts.VerifyEndpointUrl = "passwordless/email/verify";
 
-    // Optional redirect that receives tokens in query string
+    // Optional redirect that receives tokens
     opts.SuccessRedirectUrl = "https://client.example/signed-in";
+
+    // Token delivery mode: QueryString (default), Fragment, or AuthorizationCode (planned)
+    opts.TokenDelivery = TokenDeliveryMode.Fragment;
 
     // Optional custom HTML template
     // opts.EmailTemplatePath = "EmailTemplates/passwordless.html";

@@ -208,8 +208,17 @@ public static class PasswordlessEmailEndpointsExtensions
         var successRedirect = emailOptions.Value.SuccessRedirectUrl;
         if (!string.IsNullOrWhiteSpace(successRedirect))
         {
-            var separator = successRedirect.Contains('?', StringComparison.Ordinal) ? '&' : '?';
-            var url = $"{successRedirect}{separator}access_token={Uri.EscapeDataString(accessToken)}&refresh_token={Uri.EscapeDataString(refreshTokenHandle)}&token_type=Bearer&expires_in={(int)options.AccessTokenLifetime.TotalSeconds}";
+            var tokenParams = $"access_token={Uri.EscapeDataString(accessToken)}&refresh_token={Uri.EscapeDataString(refreshTokenHandle)}&token_type=Bearer&expires_in={(int)options.AccessTokenLifetime.TotalSeconds}";
+
+            var url = emailOptions.Value.TokenDelivery switch
+            {
+                TokenDeliveryMode.Fragment => $"{successRedirect}#{tokenParams}",
+                TokenDeliveryMode.AuthorizationCode => throw new NotSupportedException(
+                    "AuthorizationCode delivery mode is planned. See DEVPLAN.md."),
+                // QueryString (default)
+                _ => $"{successRedirect}{(successRedirect.Contains('?', StringComparison.Ordinal) ? '&' : '?')}{tokenParams}"
+            };
+
             return Results.Redirect(url);
         }
 
