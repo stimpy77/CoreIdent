@@ -223,7 +223,6 @@ public sealed class PasswordlessEmailEndpointsEdgeFixtureTests : CoreIdentTestFi
             _lastPasswordlessToken = new PasswordlessToken
             {
                 Id = token.Id,
-                Email = token.Email,
                 Recipient = token.Recipient,
                 TokenType = token.TokenType,
                 TokenHash = ComputeTokenHash(_lastRawToken),

@@ -11,18 +11,10 @@ public class PasswordlessToken
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// Recipient email address.
+    /// The recipient of the passwordless token — an email address (for magic links)
+    /// or phone number (for SMS OTP). Distinguished by <see cref="TokenType"/>.
     /// </summary>
-    public string Email { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Recipient identifier.
-    /// </summary>
-    public string Recipient
-    {
-        get => Email;
-        set => Email = value;
-    }
+    public string Recipient { get; set; } = string.Empty;
 
     /// <summary>
     /// Token type identifier.

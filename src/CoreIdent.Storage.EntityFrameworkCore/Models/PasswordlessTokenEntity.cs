@@ -11,9 +11,10 @@ public sealed class PasswordlessTokenEntity
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the recipient email/phone value.
+    /// The recipient of the passwordless token — an email address (for magic links)
+    /// or phone number (for SMS OTP). Distinguished by <see cref="TokenType"/>.
     /// </summary>
-    public string Email { get; set; } = string.Empty;
+    public string Recipient { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the token type.

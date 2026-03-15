@@ -531,7 +531,7 @@ public interface IPasswordlessTokenStore
 public record PasswordlessToken
 {
     public string Id { get; init; } = Guid.NewGuid().ToString();
-    public string Email { get; init; } = string.Empty;
+    public string Recipient { get; init; } = string.Empty; // Email or phone number, distinguished by TokenType
     public string TokenHash { get; init; } = string.Empty; // Store hashed
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime ExpiresAt { get; init; }

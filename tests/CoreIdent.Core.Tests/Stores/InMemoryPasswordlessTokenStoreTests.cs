@@ -30,8 +30,8 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
-        var t1 = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
-        var t2 = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
+        var t1 = await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
+        var t2 = await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
 
         t1.ShouldNotBeNullOrWhiteSpace();
         t2.ShouldNotBeNullOrWhiteSpace();
@@ -57,7 +57,7 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
-        var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
+        var raw = await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
         var consumed = await store.ValidateAndConsumeAsync(raw);
 
         consumed.ShouldNotBeNull();
@@ -87,17 +87,17 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
-        await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
+        await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
 
         await Should.ThrowAsync<PasswordlessRateLimitExceededException>(
-            () => store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" }),
+            () => store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" }),
             "second token within the hour should exceed rate limit");
 
         // advancing out of the 1 hour window should allow another token
         time.Advance(TimeSpan.FromHours(1).Add(TimeSpan.FromSeconds(1)));
 
         await Should.NotThrowAsync(
-            () => store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" }),
+            () => store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" }),
             "rate limit window should reset after an hour");
     }
 
@@ -120,7 +120,7 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
-        var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
+        var raw = await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
 
         time.Advance(TimeSpan.FromMinutes(11));
 
@@ -146,11 +146,11 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var store = new InMemoryPasswordlessTokenStore(time, options, smsOptions);
 
-        var raw = await store.CreateTokenAsync(new PasswordlessToken { Email = "user@example.com" });
+        var raw = await store.CreateTokenAsync(new PasswordlessToken { Recipient = "user@example.com" });
 
         var first = await store.ValidateAndConsumeAsync(raw);
         first.ShouldNotBeNull("first validation should succeed");
-        first!.Email.ShouldBe("user@example.com");
+        first!.Recipient.ShouldBe("user@example.com");
         first.Consumed.ShouldBeTrue("token should be marked consumed after validation");
 
         (await store.ValidateAndConsumeAsync(raw)).ShouldBeNull("token should be single use");
@@ -177,7 +177,7 @@ public sealed class InMemoryPasswordlessTokenStoreTests
 
         var otp = await store.CreateTokenAsync(new PasswordlessToken
         {
-            Email = "+15551234567",
+            Recipient = "+15551234567",
             TokenType = PasswordlessTokenTypes.SmsOtp
         });
 

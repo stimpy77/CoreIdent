@@ -84,7 +84,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         var entity = new PasswordlessTokenEntity
         {
             Id = string.IsNullOrWhiteSpace(token.Id) ? Guid.NewGuid().ToString("N") : token.Id,
-            Email = recipient,
+            Recipient = recipient,
             TokenType = tokenType,
             TokenHash = tokenHash,
             CreatedAt = token.CreatedAt == default ? now : token.CreatedAt,
@@ -128,7 +128,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(entity.Email, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(entity.Recipient, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
@@ -152,7 +152,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
         return new PasswordlessToken
         {
             Id = entity.Id,
-            Email = entity.Email,
+            Recipient = entity.Recipient,
             TokenType = entity.TokenType,
             TokenHash = entity.TokenHash,
             CreatedAt = entity.CreatedAt,
@@ -183,7 +183,7 @@ public sealed class EfPasswordlessTokenStore : IPasswordlessTokenStore
 
         var count = await _context.PasswordlessTokens
             .AsNoTracking()
-            .Where(t => t.TokenType == tokenType && t.Email == recipient && t.CreatedAt >= windowStart)
+            .Where(t => t.TokenType == tokenType && t.Recipient == recipient && t.CreatedAt >= windowStart)
             .CountAsync(ct);
 
         if (count >= maxAttemptsPerHour)

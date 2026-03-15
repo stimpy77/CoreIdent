@@ -66,7 +66,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
         var stored = new PasswordlessToken
         {
             Id = string.IsNullOrWhiteSpace(token.Id) ? Guid.NewGuid().ToString("N") : token.Id,
-            Email = recipient,
+            Recipient = recipient,
             TokenType = tokenType,
             TokenHash = tokenHash,
             CreatedAt = token.CreatedAt == default ? now.UtcDateTime : token.CreatedAt,
@@ -106,7 +106,7 @@ public sealed class InMemoryPasswordlessTokenStore : IPasswordlessTokenStore
             return Task.FromResult<PasswordlessToken?>(null);
         }
 
-        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(stored.Email, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(recipient) && !string.Equals(stored.Recipient, recipient.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult<PasswordlessToken?>(null);
         }
