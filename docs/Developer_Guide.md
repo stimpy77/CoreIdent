@@ -603,10 +603,21 @@ Register your SPA as a **public client** (no client secret):
   "redirectUris": ["https://your-app.com/callback"],
   "postLogoutRedirectUris": ["https://your-app.com/"],
   "allowedScopes": ["openid", "profile", "email"],
+  "defaultScopes": ["openid", "profile"],
   "allowedGrantTypes": ["authorization_code"],
   "requirePkce": true
 }
 ```
+
+**`defaultScopes` behaviour:**
+
+| `defaultScopes` value | When client omits `scope` parameter |
+|---|---|
+| `null` (omitted) | All `allowedScopes` are granted (backwards-compatible) |
+| `[]` (empty array) | Request is rejected — scope is required |
+| `["openid", "profile"]` | Only the listed scopes are granted |
+
+When the client explicitly requests scopes, `defaultScopes` is ignored and the request is validated against `allowedScopes` as usual.
 
 ---
 

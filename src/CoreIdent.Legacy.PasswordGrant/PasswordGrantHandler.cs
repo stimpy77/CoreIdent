@@ -76,7 +76,7 @@ public sealed class PasswordGrantHandler : IGrantTypeHandler
         }
 
         var requestedScopes = ParseScopes(request.Scope);
-        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes);
+        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes, client.DefaultScopes);
 
         if (requestedScopes.Count > 0 && grantedScopes.Count == 0)
         {
@@ -174,9 +174,9 @@ public sealed class PasswordGrantHandler : IGrantTypeHandler
             ? []
             : scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-    private static List<string> ValidateScopes(List<string> requested, ICollection<string> allowed) =>
+    private static List<string> ValidateScopes(List<string> requested, ICollection<string> allowed, ICollection<string>? defaultScopes) =>
         requested.Count == 0
-            ? allowed.ToList()
+            ? (defaultScopes ?? allowed).ToList()
             : requested.Where(s => allowed.Contains(s, StringComparer.Ordinal)).ToList();
 
     private static string GenerateRefreshTokenHandle()

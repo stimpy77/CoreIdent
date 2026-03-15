@@ -41,6 +41,14 @@ public class CoreIdentClient
     public ICollection<string> AllowedScopes { get; set; } = [];
 
     /// <summary>
+    /// Scopes granted when the client does not explicitly request any.
+    /// Null = use AllowedScopes (backwards-compatible default).
+    /// Empty = require explicit scope in every request.
+    /// Non-empty = grant exactly these scopes.
+    /// </summary>
+    public ICollection<string>? DefaultScopes { get; set; }
+
+    /// <summary>
     /// Grant types the client is allowed to use.
     /// </summary>
     public ICollection<string> AllowedGrantTypes { get; set; } = [];

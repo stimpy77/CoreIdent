@@ -38,6 +38,11 @@ public class ClientEntity
     /// </summary>
     public string AllowedGrantTypesJson { get; set; } = "[]";
     /// <summary>
+    /// Gets or sets the JSON-serialized list of default scopes.
+    /// Null means use AllowedScopes as default (backwards-compatible).
+    /// </summary>
+    public string? DefaultScopesJson { get; set; }
+    /// <summary>
     /// Gets or sets the access token lifetime in seconds.
     /// </summary>
     public int AccessTokenLifetimeSeconds { get; set; } = 3600;

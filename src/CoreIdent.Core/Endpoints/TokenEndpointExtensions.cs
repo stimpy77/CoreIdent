@@ -360,7 +360,7 @@ public static class TokenEndpointExtensions
         var issuanceStart = Stopwatch.GetTimestamp();
 
         var requestedScopes = ParseScopes(tokenRequest.Scope);
-        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes);
+        var grantedScopes = ValidateScopes(requestedScopes, client.AllowedScopes, client.DefaultScopes);
 
         if (requestedScopes.Count > 0 && grantedScopes.Count == 0)
         {
@@ -628,11 +628,14 @@ public static class TokenEndpointExtensions
         return scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
     }
 
-    private static List<string> ValidateScopes(List<string> requestedScopes, ICollection<string> allowedScopes)
+    private static List<string> ValidateScopes(List<string> requestedScopes, ICollection<string> allowedScopes, ICollection<string>? defaultScopes)
     {
         if (requestedScopes.Count == 0)
         {
-            return allowedScopes.ToList();
+            // null DefaultScopes → grant all allowed (backwards-compatible)
+            // empty DefaultScopes → grant none (caller will reject as invalid_scope)
+            // non-empty DefaultScopes → grant exactly those
+            return (defaultScopes ?? allowedScopes).ToList();
         }
 
         return requestedScopes.Where(s => allowedScopes.Contains(s, StringComparer.Ordinal)).ToList();

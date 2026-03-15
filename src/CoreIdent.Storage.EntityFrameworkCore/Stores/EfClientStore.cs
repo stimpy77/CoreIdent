@@ -105,6 +105,7 @@ public sealed class EfClientStore : IClientStore
         RedirectUris = JsonSerializer.Deserialize<List<string>>(entity.RedirectUrisJson) ?? [],
         PostLogoutRedirectUris = JsonSerializer.Deserialize<List<string>>(entity.PostLogoutRedirectUrisJson) ?? [],
         AllowedScopes = JsonSerializer.Deserialize<List<string>>(entity.AllowedScopesJson) ?? [],
+        DefaultScopes = entity.DefaultScopesJson is not null ? JsonSerializer.Deserialize<List<string>>(entity.DefaultScopesJson) ?? [] : null,
         AllowedGrantTypes = JsonSerializer.Deserialize<List<string>>(entity.AllowedGrantTypesJson) ?? [],
         AccessTokenLifetimeSeconds = entity.AccessTokenLifetimeSeconds,
         RefreshTokenLifetimeSeconds = entity.RefreshTokenLifetimeSeconds,
@@ -125,6 +126,7 @@ public sealed class EfClientStore : IClientStore
         RedirectUrisJson = JsonSerializer.Serialize(client.RedirectUris),
         PostLogoutRedirectUrisJson = JsonSerializer.Serialize(client.PostLogoutRedirectUris),
         AllowedScopesJson = JsonSerializer.Serialize(client.AllowedScopes),
+        DefaultScopesJson = client.DefaultScopes is not null ? JsonSerializer.Serialize(client.DefaultScopes) : null,
         AllowedGrantTypesJson = JsonSerializer.Serialize(client.AllowedGrantTypes),
         AccessTokenLifetimeSeconds = client.AccessTokenLifetimeSeconds,
         RefreshTokenLifetimeSeconds = client.RefreshTokenLifetimeSeconds,
@@ -144,6 +146,7 @@ public sealed class EfClientStore : IClientStore
         entity.RedirectUrisJson = JsonSerializer.Serialize(client.RedirectUris);
         entity.PostLogoutRedirectUrisJson = JsonSerializer.Serialize(client.PostLogoutRedirectUris);
         entity.AllowedScopesJson = JsonSerializer.Serialize(client.AllowedScopes);
+        entity.DefaultScopesJson = client.DefaultScopes is not null ? JsonSerializer.Serialize(client.DefaultScopes) : null;
         entity.AllowedGrantTypesJson = JsonSerializer.Serialize(client.AllowedGrantTypes);
         entity.AccessTokenLifetimeSeconds = client.AccessTokenLifetimeSeconds;
         entity.RefreshTokenLifetimeSeconds = client.RefreshTokenLifetimeSeconds;
