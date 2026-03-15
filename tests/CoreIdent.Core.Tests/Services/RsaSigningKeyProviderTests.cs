@@ -100,6 +100,21 @@ public class RsaSigningKeyProviderTests : IDisposable
     }
 
     [Fact]
+    public async Task GetValidationKeysAsync_returns_same_instance_on_repeated_calls()
+    {
+        // Arrange
+        var provider = CreateProvider(new CoreIdentKeyOptions { RsaKeySize = 2048 });
+
+        // Act
+        var keys1 = (await provider.GetValidationKeysAsync()).ToList();
+        var keys2 = (await provider.GetValidationKeysAsync()).ToList();
+
+        // Assert
+        ReferenceEquals(keys1[0].Key, keys2[0].Key)
+            .ShouldBeTrue("Validation key should be the same cached instance across calls.");
+    }
+
+    [Fact]
     public async Task GetSigningCredentialsAsync_throws_when_pem_file_not_found()
     {
         // Arrange

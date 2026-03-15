@@ -18,6 +18,7 @@ public class EcdsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     private readonly ILogger<EcdsaSigningKeyProvider> _logger;
     private readonly Lazy<ECDsaSecurityKey> _signingKey;
     private readonly Lazy<string> _keyId;
+    private readonly Lazy<ECDsaSecurityKey> _publicValidationKey;
     private bool _disposed;
 
     /// <inheritdoc />
@@ -34,6 +35,12 @@ public class EcdsaSigningKeyProvider : ISigningKeyProvider, IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _signingKey = new Lazy<ECDsaSecurityKey>(LoadOrGenerateKey);
         _keyId = new Lazy<string>(() => ComputeKeyId(_signingKey.Value));
+        _publicValidationKey = new Lazy<ECDsaSecurityKey>(() =>
+        {
+            var publicEcdsa = ECDsa.Create();
+            publicEcdsa.ImportSubjectPublicKeyInfo(_signingKey.Value.ECDsa.ExportSubjectPublicKeyInfo(), out _);
+            return new ECDsaSecurityKey(publicEcdsa) { KeyId = _keyId.Value };
+        });
     }
 
     /// <inheritdoc />
@@ -48,17 +55,7 @@ public class EcdsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     /// <inheritdoc />
     public Task<IEnumerable<SecurityKeyInfo>> GetValidationKeysAsync(CancellationToken ct = default)
     {
-        var key = _signingKey.Value;
-        key.KeyId = _keyId.Value;
-
-        // Return only the public key for validation
-        var publicEcdsa = ECDsa.Create();
-        publicEcdsa.ImportSubjectPublicKeyInfo(key.ECDsa.ExportSubjectPublicKeyInfo(), out _);
-        var publicKey = new ECDsaSecurityKey(publicEcdsa)
-        {
-            KeyId = _keyId.Value
-        };
-
+        var publicKey = _publicValidationKey.Value;
         var keyInfo = new SecurityKeyInfo(_keyId.Value, publicKey, expiresAt: null);
         return Task.FromResult<IEnumerable<SecurityKeyInfo>>([keyInfo]);
     }
@@ -147,6 +144,11 @@ public class EcdsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        if (_publicValidationKey.IsValueCreated)
+        {
+            _publicValidationKey.Value.ECDsa?.Dispose();
+        }
 
         if (_signingKey.IsValueCreated)
         {

@@ -18,6 +18,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     private readonly ILogger<RsaSigningKeyProvider> _logger;
     private readonly Lazy<RsaSecurityKey> _signingKey;
     private readonly Lazy<string> _keyId;
+    private readonly Lazy<RsaSecurityKey> _publicValidationKey;
     private bool _disposed;
 
     /// <inheritdoc />
@@ -34,6 +35,11 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _signingKey = new Lazy<RsaSecurityKey>(LoadOrGenerateKey);
         _keyId = new Lazy<string>(() => ComputeKeyId(_signingKey.Value));
+        _publicValidationKey = new Lazy<RsaSecurityKey>(() =>
+            new RsaSecurityKey(_signingKey.Value.Rsa.ExportParameters(includePrivateParameters: false))
+            {
+                KeyId = _keyId.Value
+            });
     }
 
     /// <inheritdoc />
@@ -48,15 +54,7 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     /// <inheritdoc />
     public Task<IEnumerable<SecurityKeyInfo>> GetValidationKeysAsync(CancellationToken ct = default)
     {
-        var key = _signingKey.Value;
-        key.KeyId = _keyId.Value;
-
-        // Return only the public key for validation
-        var publicKey = new RsaSecurityKey(key.Rsa.ExportParameters(includePrivateParameters: false))
-        {
-            KeyId = _keyId.Value
-        };
-
+        var publicKey = _publicValidationKey.Value;
         var keyInfo = new SecurityKeyInfo(_keyId.Value, publicKey, expiresAt: null);
         return Task.FromResult<IEnumerable<SecurityKeyInfo>>([keyInfo]);
     }
@@ -145,6 +143,11 @@ public class RsaSigningKeyProvider : ISigningKeyProvider, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        if (_publicValidationKey.IsValueCreated)
+        {
+            _publicValidationKey.Value.Rsa?.Dispose();
+        }
 
         if (_signingKey.IsValueCreated)
         {
