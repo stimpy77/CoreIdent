@@ -126,4 +126,60 @@ public class InMemoryUserGrantStoreTests
         var missingClient = new CoreIdentUserGrant { SubjectId = "s", ClientId = "", Scopes = [], CreatedAt = DateTime.UtcNow };
         await Should.ThrowAsync<ArgumentException>(() => store.SaveAsync(missingClient), "SaveAsync should throw when ClientId is missing.");
     }
+
+    [Fact]
+    public async Task MergeScopesAsync_creates_new_grant_when_none_exists()
+    {
+        var time = new MutableTimeProvider(new DateTimeOffset(2025, 12, 12, 0, 0, 0, TimeSpan.Zero));
+        var store = new InMemoryUserGrantStore(time);
+
+        await store.MergeScopesAsync("sub-m1", "client-m1", ["openid", "profile"]);
+
+        var grant = await store.FindAsync("sub-m1", "client-m1");
+        grant.ShouldNotBeNull("MergeScopesAsync should create a new grant when none exists.");
+        grant!.Scopes.ShouldBe(new[] { "openid", "profile" }, "New grant should contain the merged scopes.");
+        grant.SubjectId.ShouldBe("sub-m1", "Grant SubjectId should match.");
+        grant.ClientId.ShouldBe("client-m1", "Grant ClientId should match.");
+    }
+
+    [Fact]
+    public async Task MergeScopesAsync_merges_into_existing_grant()
+    {
+        var store = new InMemoryUserGrantStore();
+
+        await store.SaveAsync(new CoreIdentUserGrant
+        {
+            SubjectId = "sub-m2",
+            ClientId = "client-m2",
+            Scopes = ["openid", "profile"],
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await store.MergeScopesAsync("sub-m2", "client-m2", ["email", "openid"]);
+
+        var grant = await store.FindAsync("sub-m2", "client-m2");
+        grant.ShouldNotBeNull("Grant should still exist after merge.");
+        grant!.Scopes.Count.ShouldBe(3, "Merged grant should have union of scopes.");
+        grant.Scopes.ShouldContain("openid", "Existing scope should be preserved.");
+        grant.Scopes.ShouldContain("profile", "Existing scope should be preserved.");
+        grant.Scopes.ShouldContain("email", "New scope should be added.");
+    }
+
+    [Fact]
+    public async Task MergeScopesAsync_throws_for_invalid_arguments()
+    {
+        var store = new InMemoryUserGrantStore();
+
+        await Should.ThrowAsync<ArgumentException>(
+            () => store.MergeScopesAsync("", "client", ["openid"]),
+            "MergeScopesAsync should throw for empty subjectId.");
+
+        await Should.ThrowAsync<ArgumentException>(
+            () => store.MergeScopesAsync("sub", "", ["openid"]),
+            "MergeScopesAsync should throw for empty clientId.");
+
+        await Should.ThrowAsync<ArgumentNullException>(
+            () => store.MergeScopesAsync("sub", "client", null!),
+            "MergeScopesAsync should throw for null scopes.");
+    }
 }
