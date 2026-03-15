@@ -79,6 +79,8 @@ public sealed class FileTokenStorage : ISecureTokenStorage
     /// <inheritdoc />
     public Task ClearTokensAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+
         if (File.Exists(_filePath))
         {
             File.Delete(_filePath);

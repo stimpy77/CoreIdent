@@ -130,8 +130,7 @@ public class GoogleAuthProvider : IExternalAuthProvider
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Google userinfo request failed: {StatusCode} {Body}",
-                response.StatusCode, responseBody);
+            _logger.LogError("Google userinfo request failed: {StatusCode}", response.StatusCode);
             throw new InvalidOperationException("Failed to get user info from Google");
         }
 

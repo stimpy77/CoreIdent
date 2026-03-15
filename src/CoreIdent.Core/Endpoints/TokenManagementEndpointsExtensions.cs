@@ -167,7 +167,7 @@ public static class TokenManagementEndpointsExtensions
                 await TryRevokeRefreshTokenAsync(token, clientId, services, metrics, logger, ct);
                 return Results.Ok();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // RFC 7009 §2.1: always return 200; revocation is best-effort.
                 logger.LogError(ex, "Error processing token revocation request.");

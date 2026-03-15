@@ -19,7 +19,7 @@ public sealed class NullUserClaimsPrincipalFactory : IUserClaimsPrincipalFactory
 
         var identity = new ClaimsIdentity("Passkey");
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id));
-        identity.AddClaim(new Claim(ClaimTypes.Name, user.UserName));
+        identity.AddClaim(new Claim(ClaimTypes.Name, user.UserName ?? user.Id));
 
         return Task.FromResult(new ClaimsPrincipal(identity));
     }
