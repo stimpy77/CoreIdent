@@ -52,7 +52,7 @@ CoreIdent occupies a unique position in the .NET identity landscape. Here's how 
 |-----------|-----------|----------------------|
 | **License** | MIT — free forever, no production restrictions | RPL — requires paid license for production use |
 | **Architecture** | Minimal API native, .NET 10 only | MVC-based, supports older .NET versions |
-| **Auth model** | Passwordless-first (magic links, passkeys, SMS OTP) | Password-first, passwordless as add-on |
+| **Auth model** | Passwordless-first (passkeys, magic links); SMS OTP as fallback | Password-first, passwordless as add-on |
 | **Developer tooling** | CLI tool, `dotnet new` templates, Aspire integration, client libraries | Limited tooling, more manual setup |
 | **Language support** | First-class F# templates and compatibility | C# only |
 | **OpenID certification** | Not yet (planned) | OpenID Foundation certified |
@@ -106,12 +106,12 @@ CoreIdent is built as a **composable ecosystem of packages**, not a monolithic f
 │   STORAGE     │         │   PROVIDERS     │         │   FEATURES      │  │   CLIENTS       │
 ├───────────────┤         ├─────────────────┤         ├─────────────────┤  ├─────────────────┤
 │ .EFCore       │         │ .Google         │         │ .Passwordless   │  │ .Client         │
-│ .Sqlite       │         │ .Microsoft      │         │ .Passkeys       │  │ .Client.Maui    │
+│ .Sqlite†      │         │ .Microsoft      │         │ .Passkeys       │  │ .Client.Maui    │
 │ .MongoDB*     │         │ .GitHub         │         │ .MFA            │  │ .Client.Wpf     │
 │ .Redis*       │         │ .Apple          │         │ .UI.Web         │  │ .Client.Console │
-│ .Adapters     │         │ .SAML*          │         │ .AdminApi       │  │ .Client.Blazor  │
+│ .Adapters     │         │ .SAML*‡         │         │ .AdminApi       │  │ .Client.Blazor  │
 └───────────────┘         └─────────────────┘         └─────────────────┘  └─────────────────┘
-                                                      * = community/future
+                          * = community/future  |  † = provided via .EFCore package, not separate  |  ‡ = excluded from core roadmap; community contribution only
 ```
 
 **Key modularity principles:**
@@ -516,7 +516,7 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 - Update JWKS endpoint for asymmetric keys
 - Token Revocation endpoint (RFC 7009)
 - Token Introspection endpoint (RFC 7662)
-- Remove/deprecate HS256-only code paths (keep as opt-in for dev/testing)
+- Remove/deprecate HS256-only code paths (ephemeral RSA keys are auto-generated for dev; HS256 retained only for edge-case compatibility)
 
 > **Note on JWT revocation:** Revoking a JWT access token only works for resource servers that perform an online check (e.g., introspection or a shared revocation store). Default guidance is short-lived access tokens + refresh token rotation/revocation. See Phase 3 for “revocable access” in controlled distributed systems.
 

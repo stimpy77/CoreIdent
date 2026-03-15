@@ -24,12 +24,12 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 >
 > Do **not** move partially complete features. If even one checkbox is unchecked or there are known concerns, the feature stays here in full detail until resolved.
 
-**Key priorities:**
-- Phase 0 (Foundation) is now first priority — asymmetric keys, revocation, introspection
-- Passwordless authentication is Phase 1
-- Test infrastructure overhaul is a dedicated effort
-- Removed: Web3, LNURL, AI integrations
-- Added: DPoP, RAR, SPIFFE/SPIRE (later phases)
+**Key priorities (updated 2026-03-15 — review-driven resequencing):**
+- Phase 0 ✅ and most of Phase 1 ✅ are complete
+- **Immediate v1.0 blockers:** Account Recovery (1.18), Basic Rate Limiting (1.26), Refresh Token Atomicity (1.25), OAuth 2.1 Declaration (1.14), `grant_types_supported` discovery fix, README.md
+- **Next priority:** Social login providers (2.2–2.4), CORS (1.20), Auth Session (1.17), OIDC Params (1.16), MFA (promoted from 5.1 to 2.8)
+- **Deferred:** WPF/WinForms client (1.5.4), Console client (1.5.5), Blazor WASM client (1.5.6 — merge into BlazorWeb), JAR (3.9), SPIFFE/SPIRE (5.5)
+- Removed: Web3, LNURL, AI SDK integrations
 
 > **Note:** References to "creating" components mean implementing the feature within the current architecture.
 
@@ -84,13 +84,17 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | RFC 8414 OAuth AS Metadata | 1 | 1.21 | 🔲 Planned |
 | ROPC Extraction to Legacy Package | 1 | 1.22 | ✅ Complete |
 | Blazor Unification (Rename) | 1 | 1.23 | 🔲 Planned |
+| AuthorizationCode Delivery for Passwordless | 1 | 1.24 | 🔲 Planned |
+| Refresh Token Rotation Atomicity | 1 | 1.25 | 🔲 Planned (v1.0 blocker — correctness) |
+| Basic Rate Limiting (IP-based) | 1 | 1.26 | 🔲 Planned (v1.0 blocker — security) |
 | Provider Abstraction Layer | 2 | 2.1 | ✅ Complete |
-| Google Provider | 2 | 2.2 | 🔲 Planned |
+| Google Provider | 2 | 2.2 | 🔶 In Progress (code exists, DEVPLAN tasks remain) |
 | Microsoft Provider | 2 | 2.3 | 🔲 Planned |
 | GitHub Provider | 2 | 2.4 | 🔲 Planned |
 | Apple Provider | 2 | 2.5 | 🔲 Planned |
 | JS/TS Client Documentation | 2 | 2.6 | 🔲 Planned |
 | Rate Limiting (IRateLimiter) | 2 | 2.7 | 🔲 Planned |
+| MFA Framework (TOTP + Backup Codes) | 2 | 2.8 | 🔲 Planned (promoted from Phase 5) |
 | Key Rotation | 3 | 3.1 | 🔲 Planned |
 | Session Management & OIDC Logout (incl. Back-Channel) | 3 | 3.2 | 🔲 Planned |
 | Dynamic Client Registration | 3 | 3.3 | 🔲 Planned |
@@ -104,10 +108,13 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 | Admin API | 4 | 4.3 | 🔲 Planned |
 | Domain Verification | 4 | 4.5 | 🔲 Planned |
 | Connected Apps (Post-Auth Account Linking) | 4 | 4.6 | 🔲 Planned |
-| MFA Framework | 5 | 5.1 | 🔲 Planned |
+| MFA Framework (TOTP + Backup Codes) | 2 | 2.8 | 🔲 Planned (promoted from 5.1) |
 | SCIM | 5 | 5.4 | 🔲 Planned |
 | SPIFFE/SPIRE | 5 | 5.5 | 🔲 Planned |
-| Verifiable Credentials | 5 | 5.10 | 🔲 Planned |
+| CIBA (Client Initiated Backchannel Auth) | 5 | 5.6 | 🔲 Planned (reconsidered — financial/healthcare/IoT) |
+| SD-JWT (Selective Disclosure) | 5 | 5.11 | 🔲 Planned (EU Digital Identity Wallet) |
+| OID4VCI / OID4VP Protocols | 5 | 5.12 | 🔲 Planned (VC issuance/presentation) |
+| Verifiable Credentials + SD-JWT | 5 | 5.10 | 🔲 Planned (expanded scope) |
 
 ---
 
@@ -352,7 +359,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.14: OAuth 2.1 Compliance Declaration
+### Feature 1.14: OAuth 2.1 Compliance Declaration (v1.0 Blocker)
+
+> **Review finding (2026-03-15):** Marketing and trust signal. Also add RFC 9700 (OAuth 2.0 Security BCP) compliance claim alongside OAuth 2.1 declaration.
 
 - [ ] (L2) Verify exact redirect URI matching in `AuthorizationEndpointExtensions.cs`
 - [ ] (L1) Verify no implicit grant response types accepted
@@ -409,7 +418,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.18: Account Recovery / Password Reset
+### Feature 1.18: Account Recovery / Password Reset (v1.0 Blocker)
+
+> **Review finding (2026-03-15):** No production app can ship without account recovery. This is the most basic flow every app needs.
 
 *   **Component:** Recovery Endpoints
     - [ ] (L2) Create `POST /auth/account/recover` — accept email, send reset link via IEmailSender
@@ -492,7 +503,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 1.25: Refresh Token Rotation Atomicity
+### Feature 1.25: Refresh Token Rotation Atomicity (v1.0 Blocker)
+
+> **Review finding (2026-03-15):** If rotation fails mid-operation, it can lead to token theft going undetected or legitimate users being locked out. This is a correctness bug, not a feature.
 
 *   **Component:** Atomic Token Exchange
     - [ ] (L2) Add compensating rollback to `IRefreshTokenStore` — if new token storage fails after old token consumption, restore the old token
@@ -504,13 +517,27 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 1.26: Basic Rate Limiting (v1.0 Blocker)
+
+> **Review finding (2026-03-15):** Login, registration, and token endpoints have no rate limiting. This is a production security gap. This feature provides a basic IP-based rate limiter as a v1.0 prerequisite. The full `IRateLimiter` abstraction (Feature 2.7) expands on this later.
+
+*   **Component:** IP-Based Rate Limiting Middleware
+    - [ ] (L2) Create `AddCoreIdentBasicRateLimiting()` extension using ASP.NET Core `Microsoft.AspNetCore.RateLimiting`
+    - [ ] (L2) Apply fixed-window IP-based rate limits to: `/auth/login`, `/auth/register`, `/auth/token`
+    - [ ] (L1) Configurable limits via `CoreIdentRateLimitOptions` (requests per window, window duration)
+    - [ ] (L1) Return `429 Too Many Requests` with `Retry-After` header
+*   **Test Case:**
+    - [ ] (L2) Exceeding limit returns 429 on login/register/token endpoints
+
+---
+
 ## Phase 1.5: Client Libraries
 
 **Goal:** Enable any .NET application to authenticate against CoreIdent (or any OAuth/OIDC server) with minimal code.
 
 **Estimated Duration:** 3-4 weeks
 
-**Prerequisites:** Phase 1 complete (server-side passwordless)
+**Prerequisites:** Phase 1 core features complete (0.x–1.13). Features 1.14–1.26 may be completed in parallel.
 
 ---
 
@@ -598,6 +625,10 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 **Prerequisites:** Phase 1.5 complete
 
+> **Review finding (2026-03-15):** Social login (Google/Microsoft/GitHub) is table stakes — the 80% expects these to "just work." Prioritize 2.2–2.4 before Phase 3 hardening.
+>
+> **Cross-cutting feature:** `login_hint` → provider auto-redirect. When the authorize endpoint receives `login_hint=user@example.com` and the email domain matches a configured external provider, auto-redirect to that provider. This is a common B2B UX pattern (WorkOS, Auth0). Implement alongside or after providers ship.
+
 ---
 
 ### Feature 2.1: Provider Abstraction Layer — COMPLETE
@@ -608,16 +639,18 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 2.2: Google Provider
+### Feature 2.2: Google Provider (In Progress)
+
+> **Note:** `CoreIdent.Providers.Google` project and `GoogleAuthProvider` class already exist with ID token validation and claim extraction. Remaining tasks below track completion of the full feature.
 
 *   **Component:** `CoreIdent.Providers.Google` Package
-    - [ ] (L1) Create new project
-    - [ ] (L3) Implement `IExternalAuthProvider` for Google
-    - [ ] (L3) Handle OAuth flow with Google
-    - [ ] (L1) Map Google profile to `ExternalUserProfile`
+    - [x] (L1) Create new project
+    - [x] (L3) Implement `IExternalAuthProvider` for Google
+    - [~] (L3) Handle OAuth flow with Google (code exchange exists; full redirect flow integration TBD)
+    - [x] (L1) Map Google profile to `ExternalUserProfile`
 *   **Component:** Configuration
-    - [ ] (L1) Create `GoogleProviderOptions` (ClientId, ClientSecret, Scopes)
-    - [ ] (L1) Add `AddGoogleProvider()` extension method
+    - [~] (L1) Create `GoogleProviderOptions` (ClientId, ClientSecret, Scopes) — partially exists via `ExternalProviderOptions<GoogleAuthProvider>`
+    - [x] (L1) Add `AddGoogleProvider()` extension method
 *   **Test Case (Integration):**
     - [ ] (L1) Configuration validation works
     - [ ] (Full flow requires manual testing or mock)
@@ -692,13 +725,37 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
+### Feature 2.8: MFA Framework — TOTP + Backup Codes (Promoted from Phase 5)
+
+> **Review finding (2026-03-15):** MFA is table stakes for any production auth system in 2026. Required by SOC 2, PCI-DSS, HIPAA. Promoted from Phase 5.1 to Phase 2. More important than PAR, RAR, or JAR for the 80% market.
+
+*   **Component:** TOTP Support
+    - [ ] (L2) Implement TOTP generation and validation (RFC 6238)
+    - [ ] (L2) QR code provisioning URI generation
+    - [ ] (L2) Store TOTP secret per user (encrypted)
+    - [ ] (L2) MFA enrollment endpoints: `POST /auth/mfa/totp/setup`, `POST /auth/mfa/totp/verify`
+*   **Component:** Backup Codes
+    - [ ] (L2) Generate set of one-time backup codes at MFA enrollment
+    - [ ] (L2) Hash and store backup codes
+    - [ ] (L2) Recovery via backup code endpoint: `POST /auth/mfa/backup/verify`
+*   **Component:** MFA Enforcement
+    - [ ] (L2) Per-user MFA status tracking
+    - [ ] (L2) MFA challenge step in login flow (after primary auth, before token issuance)
+    - [ ] (L2) Configuration: require MFA for all users, or opt-in per user
+*   **Test Case:**
+    - [ ] (L3) Full TOTP enrollment + login flow
+    - [ ] (L2) Backup code recovery works and is single-use
+    - [ ] (L2) MFA enforcement blocks login without second factor
+
+---
+
 ## Phase 3: OAuth/OIDC Server Hardening
 
 **Goal:** Production-grade OAuth 2.0 / OIDC server capabilities.
 
 **Estimated Duration:** 4-5 weeks
 
-**Prerequisites:** Phase 2 complete
+**Prerequisites:** Phase 1 core + Phase 2 providers. Features like Key Rotation (3.1) and Session Management (3.2) do not depend on external providers and may start earlier.
 
 ---
 
@@ -1113,11 +1170,9 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 5.1: MFA Framework
+### Feature 5.1: MFA Framework — PROMOTED TO 2.8
 
-*   **Component:** TOTP Support (L2)
-*   **Component:** Backup Codes (L2)
-*   **Component:** MFA Enforcement Policies (L2)
+> **Moved to Feature 2.8 (Phase 2).** MFA is table stakes for production auth systems and compliance (SOC 2, PCI-DSS, HIPAA). See Feature 2.8 for full checklist.
 
 ---
 
@@ -1248,9 +1303,11 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 5.9: Blazor Server Integration
+### Feature 5.9: Blazor Web App Integration (Unified)
 
-*   **Component:** `CoreIdent.Client.BlazorServer` Package
+> **Review finding (2026-03-15):** Renamed from `BlazorServer` to `BlazorWeb` per Feature 1.23. .NET 10's unified Blazor Web App model makes separate Server/WASM packages unnecessary. This feature and Feature 1.5.6 (Blazor WASM) should be merged into a single `CoreIdent.Client.BlazorWeb` package targeting all render modes (InteractiveServer, InteractiveWebAssembly, InteractiveAuto).
+
+*   **Component:** `CoreIdent.Client.BlazorWeb` Package
     - [ ] (L3) Circuit-aware token storage
     - [ ] (L3) Automatic token refresh in circuit
     - [ ] (L3) Handle circuit disconnection gracefully
@@ -1268,10 +1325,40 @@ This document provides a detailed breakdown of tasks, components, test cases, an
 
 ---
 
-### Feature 5.10: Verifiable Credentials
+### Feature 5.10: Verifiable Credentials + SD-JWT (Expanded Scope)
+
+> **Review finding (2026-03-15):** W3C VC data model alone isn't useful without issuance/presentation protocols. Expanded to include OID4VC family and SD-JWT for EU Digital Identity Wallet compatibility.
 
 *   **Component:** W3C VC issuance (L3)
 *   **Component:** VC verification (L3)
+*   **Component:** SD-JWT (Selective Disclosure JWT)
+    - [ ] (L3) SD-JWT token creation and verification
+    - [ ] (L2) Integration with VC issuance for selective disclosure
+    - [ ] (L1) Documentation: SD-JWT use cases (EU Digital Identity Wallet, mDL)
+*   **Component:** OID4VCI (OpenID for Verifiable Credential Issuance)
+    - [ ] (L3) Credential offer and issuance endpoints
+    - [ ] (L3) Credential format negotiation
+*   **Component:** OID4VP (OpenID for Verifiable Presentations)
+    - [ ] (L3) Presentation request and response handling
+    - [ ] (L3) Verifier endpoint integration
+
+---
+
+### Feature 5.11: CIBA — Client Initiated Backchannel Authentication (Reconsidered)
+
+> **Review finding (2026-03-15):** Previously removed as "CIBA for AI Actions." Reconsidered for legitimate non-AI use cases: financial services (PSD2 SCA), healthcare consent flows, and IoT device authorization where the device can't render a browser.
+
+*   **Component:** Backchannel Authentication Endpoint
+    - [ ] (L3) `POST /auth/bc-authorize` — accept `login_hint`, `binding_message`, `scope`
+    - [ ] (L3) Push and poll notification modes
+    - [ ] (L2) User consent via out-of-band channel (push notification, SMS)
+*   **Component:** Token Endpoint Extension
+    - [ ] (L3) `grant_type=urn:openid:params:grant-type:ciba` support
+    - [ ] (L3) Polling with `slow_down` and `authorization_pending` responses
+*   **Test Case:**
+    - [ ] (L3) Full CIBA flow with polling mode
+*   **Documentation:**
+    - [ ] (L1) CIBA use case guide (financial, healthcare, IoT)
 
 ---
 
@@ -1315,7 +1402,7 @@ The following items are tracked here for completeness and cross-referencing:
 | Web3 Wallet Login | Niche adoption |
 | LNURL-auth | Very niche |
 | AI Framework SDK Integrations | Premature (note: MCP-compatible authorization in Feature 3.13 is a distinct, protocol-level OAuth 2.1 extension — not an AI SDK integration) |
-| CIBA for AI Actions | Specialized (note: MCP Auth in Feature 3.13 addresses AI agent authorization via standard OAuth flows, not the niche CIBA backchannel protocol) |
+| ~~CIBA for AI Actions~~ | **Reconsidered (2026-03-15).** Removed the AI framing but restored CIBA for legitimate non-AI use cases (PSD2 SCA, healthcare, IoT). See Feature 5.11. |
 | Token Vault / Secrets Management | Out of scope |
 | Feature Flags / Rollout Control | Out of scope; not an identity concern. Use dedicated tools (LaunchDarkly, Unleash, Flagsmith, etc.) |
 | **Resource Owner Password Credentials (ROPC)** | Deprecated in OAuth 2.1 (RFC 9725). Extracted to `CoreIdent.Legacy.PasswordGrant` for migration support. |

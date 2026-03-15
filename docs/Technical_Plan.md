@@ -71,8 +71,8 @@ public enum KeyType
 
 1. **Create `ISigningKeyProvider` interface** in `CoreIdent.Core/Services/`
 2. **Implement providers:**
-   - `RsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured
-   - `EcdsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured
+   - `RsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured *(implemented)*
+   - `EcdsaSigningKeyProvider` — Load from PEM string, PEM file, or X509 certificate; generates ephemeral key if none configured *(implemented)*
    - `SymmetricSigningKeyProvider` — HS256 (development/testing only)
 3. **Update `JwtTokenService`** to use `ISigningKeyProvider` instead of raw key from options
 4. **Update JWKS endpoint** to return multiple keys with `kid` (key ID)
@@ -427,16 +427,17 @@ public class ClientBuilder
 ```csharp
 public static class JwtAssertionExtensions
 {
+    // .NET 10 recommends JsonWebTokenHandler; this sample uses JwtSecurityTokenHandler for backwards-compatible reading.
     public static JwtSecurityToken ShouldBeValidJwt(this string token, SecurityKey? validationKey = null)
     {
         token.ShouldNotBeNullOrWhiteSpace();
-        
+
         var handler = new JwtSecurityTokenHandler();
         handler.CanReadToken(token).ShouldBeTrue("Token should be a valid JWT format");
-        
+
         var jwt = handler.ReadJwtToken(token);
         jwt.ShouldNotBeNull();
-        
+
         return jwt;
     }
 
@@ -920,31 +921,31 @@ src/
 
 ## Sequencing (non-authoritative)
 
-Implementation status is tracked in `docs/DEVPLAN.md`. This section describes the intended roadmap without using checkbox-based completion markers.
+Implementation status is tracked in `docs/DEVPLAN.md`. The sequencing below reflects the original estimate; actual progress has diverged. See DEVPLAN.md for current status.
 
-### Week 1-2: Phase 0 Foundation
+### Phase 0 Foundation
 - Asymmetric key infrastructure
 - Update JWKS endpoint
 - Token revocation endpoint
 - Token introspection endpoint
 
-### Week 3-4: Test Infrastructure
+### Test Infrastructure
 - Create `CoreIdent.Testing` package
 - Implement fixtures and builders
 - Refactor existing tests to use new infrastructure
 - Ensure all existing tests pass
 
-### Week 4-5: Phase 0 DevEx & Tooling
+### Phase 0 DevEx & Tooling
 - OpenTelemetry metrics integration
 - CLI tool (`dotnet coreident`)
 - `.devcontainer` configuration
 
-### Week 5-6: Passwordless
+### Passwordless
 - Email magic link flow
 - Passkey wrapper
 - SMS abstraction (interface only)
 
-### Week 7-8: Developer Experience
+### Developer Experience
 - `dotnet new` templates
 - ClaimsPrincipal extensions
 - Documentation site setup
@@ -953,6 +954,8 @@ Implementation status is tracked in `docs/DEVPLAN.md`. This section describes th
 ---
 
 ## Planned Interfaces (Post-1.0)
+
+> **Note:** `IGrantTypeHandler` is now implemented (Feature 1.22). The interface below reflects the current implementation.
 
 ### `IGrantTypeHandler` — Extensible Grant Type Dispatch
 
@@ -1030,12 +1033,12 @@ Rate limited per email address using the same mechanism as passwordless flows.
 
 ## Open Questions
 
-1. **Key storage for generated keys** — Current behavior is to generate an ephemeral key at startup (with a warning) if none is configured. Persisted key storage and rotation are deferred.
+1. **Key storage for generated keys** — Ephemeral key generation at startup is implemented (with warning). Persisted key storage and rotation are planned in Feature 3.1.
 2. **Multi-tenancy** — Deferred; current scope is a single issuer per host.
 3. **Blazor support** — Phase 1.5 client library planned as `CoreIdent.Client.BlazorWeb` targeting the unified Blazor Web App model (InteractiveServer, InteractiveWebAssembly, InteractiveAuto render modes).
-4. **Rate limiting** — Now planned as Feature 2.7 with first-class `IRateLimiter` interface. Passwordless endpoints have built-in per-recipient throttling as interim.
+4. **Rate limiting** — Basic IP-based rate limiting planned as Feature 1.26 (v1.0 blocker). Full `IRateLimiter` abstraction planned as Feature 2.7.
 5. **Session storage approach** — `AddCoreIdentAuthSession()` uses ASP.NET Core cookie authentication. Whether to also support ASP.NET Core distributed session for server-side session state is TBD.
-6. **ROPC extraction** — Password grant extracted to `CoreIdent.Legacy.PasswordGrant` via `IGrantTypeHandler` registry. Handler resolution order: built-in grants first, then registered handlers.
+6. **ROPC extraction** — Complete. Password grant extracted to `CoreIdent.Legacy.PasswordGrant` via `IGrantTypeHandler` registry.
 
 ---
 
