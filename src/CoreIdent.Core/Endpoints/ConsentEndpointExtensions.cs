@@ -88,7 +88,12 @@ public static class ConsentEndpointExtensions
 
         var scopes = ParseScopes(scope);
 
-        var html = BuildConsentHtml(client.ClientName, clientId, redirectUri, responseType, scope, state, nonce, codeChallenge, codeChallengeMethod, scopes);
+        // Filter displayed scopes to only those the client is allowed to request.
+        var allowedScopes = client.AllowedScopes.ToHashSet(StringComparer.Ordinal);
+        scopes = scopes.Where(s => allowedScopes.Contains(s)).ToList();
+        var filteredScope = string.Join(' ', scopes);
+
+        var html = BuildConsentHtml(client.ClientName, clientId, redirectUri, responseType, filteredScope, state, nonce, codeChallenge, codeChallengeMethod, scopes);
 
         return Results.Text(html, "text/html", Encoding.UTF8, statusCode: (int)HttpStatusCode.OK);
     }

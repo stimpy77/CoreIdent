@@ -101,7 +101,7 @@ public sealed class EfClientStore : IClientStore
         ClientId = entity.ClientId,
         ClientSecretHash = entity.ClientSecretHash,
         ClientName = entity.ClientName,
-        ClientType = Enum.Parse<ClientType>(entity.ClientType),
+        ClientType = Enum.TryParse<ClientType>(entity.ClientType, out var parsedType) ? parsedType : ClientType.Confidential,
         RedirectUris = JsonSerializer.Deserialize<List<string>>(entity.RedirectUrisJson) ?? [],
         PostLogoutRedirectUris = JsonSerializer.Deserialize<List<string>>(entity.PostLogoutRedirectUrisJson) ?? [],
         AllowedScopes = JsonSerializer.Deserialize<List<string>>(entity.AllowedScopesJson) ?? [],

@@ -188,11 +188,6 @@ public static class TokenEndpointExtensions
             return TokenError(TokenErrors.InvalidRequest, "The redirect_uri parameter is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(tokenRequest.CodeVerifier))
-        {
-            return TokenError(TokenErrors.InvalidRequest, "The code_verifier parameter is required.");
-        }
-
         var code = await authorizationCodeStore.GetAsync(tokenRequest.Code, ct);
         if (code is null)
         {

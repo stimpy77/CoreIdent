@@ -163,26 +163,42 @@ public class GoogleAuthProvider : IExternalAuthProvider
             ["token"] = accessToken
         });
 
-        await client.PostAsync(_options.RevokeEndpoint, content, ct);
+        var revokeResponse = await client.PostAsync(_options.RevokeEndpoint, content, ct);
+        if (!revokeResponse.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Google token revocation failed with status {StatusCode}.", revokeResponse.StatusCode);
+        }
     }
 
     private class GoogleTokenResponse
     {
+        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
         public string? AccessToken { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("refresh_token")]
         public string? RefreshToken { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("token_type")]
         public string? TokenType { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
         public int? ExpiresIn { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
         public string? Scope { get; set; }
     }
 
     private class GoogleUserInfoResponse
     {
+        [System.Text.Json.Serialization.JsonPropertyName("sub")]
         public string? Sub { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string? Name { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("given_name")]
         public string? GivenName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("family_name")]
         public string? FamilyName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("picture")]
         public string? Picture { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
         public string? Email { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("email_verified")]
         public bool? EmailVerified { get; set; }
     }
 }

@@ -436,7 +436,7 @@ public static class TokenManagementEndpointsExtensions
                 IssuedAtUnixTimeSeconds: issuedAt
             );
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return null;
         }
@@ -579,7 +579,7 @@ public static class TokenManagementEndpointsExtensions
 
             return new ValidatedJwt(jti, expiresAtUtc, clientId);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return null;
         }

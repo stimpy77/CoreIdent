@@ -251,10 +251,11 @@ public static class ResourceOwnerEndpointsExtensions
 
         var redirectUri = request.Query["redirect_uri"].ToString();
         if (!string.IsNullOrWhiteSpace(redirectUri) &&
-            Uri.TryCreate(redirectUri, UriKind.RelativeOrAbsolute, out var parsedUri) &&
-            !parsedUri.IsAbsoluteUri)
+            Uri.TryCreate(redirectUri, UriKind.Relative, out var _parsed) &&
+            !redirectUri.StartsWith("//", StringComparison.Ordinal))
         {
             // Only allow relative paths to prevent open-redirect attacks.
+            // UriKind.Relative rejects absolute URIs; the // check blocks protocol-relative.
             return Results.Redirect(redirectUri);
         }
 
