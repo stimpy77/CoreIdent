@@ -10,32 +10,38 @@ public record ExternalAuthResult(
     /// Whether the authentication was successful.
     /// </summary>
     bool Success,
-    
+
     /// <summary>
     /// The external user profile if successful.
     /// </summary>
     ExternalUserProfile? Profile,
-    
+
     /// <summary>
     /// Error message if authentication failed.
     /// </summary>
     string? ErrorMessage,
-    
+
     /// <summary>
     /// Error code if authentication failed.
     /// </summary>
-    string? ErrorCode)
+    string? ErrorCode,
+
+    /// <summary>
+    /// The raw ID token from the provider, if available.
+    /// Useful for id_token_hint in logout flows.
+    /// </summary>
+    string? IdToken = null)
 {
     /// <summary>
     /// Creates a successful authentication result.
     /// </summary>
-    public static ExternalAuthResult Succeeded(ExternalUserProfile profile) 
-        => new(true, profile, null, null);
-    
+    public static ExternalAuthResult Succeeded(ExternalUserProfile profile, string? idToken = null)
+        => new(true, profile, null, null, idToken);
+
     /// <summary>
     /// Creates a failed authentication result.
     /// </summary>
-    public static ExternalAuthResult Failed(string errorMessage, string? errorCode = null) 
+    public static ExternalAuthResult Failed(string errorMessage, string? errorCode = null)
         => new(false, null, errorMessage, errorCode);
 }
 

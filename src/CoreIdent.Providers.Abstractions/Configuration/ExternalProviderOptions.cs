@@ -62,6 +62,16 @@ public class GoogleProviderOptions : ExternalProviderOptions, IProviderOptions
     /// Google OAuth 2.0 revoke endpoint.
     /// </summary>
     public string RevokeEndpoint { get; set; } = "https://oauth2.googleapis.com/revoke";
+
+    /// <summary>
+    /// Google JWKS endpoint for ID token signature validation.
+    /// </summary>
+    public string JwksUri { get; set; } = "https://www.googleapis.com/oauth2/v3/certs";
+
+    /// <summary>
+    /// Expected issuer for ID token validation.
+    /// </summary>
+    public string Issuer { get; set; } = "https://accounts.google.com";
 }
 
 /// <summary>
